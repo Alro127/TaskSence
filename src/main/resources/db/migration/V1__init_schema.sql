@@ -9,7 +9,7 @@ CREATE TABLE users (
     gender VARCHAR(20),
     dob DATE,
     bio TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTA,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMPTZ
 );
