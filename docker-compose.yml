@@ -17,6 +17,29 @@ services:
       - tasksense_net
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  flyway:
+    image: flyway/flyway:9
+    container_name: task_flyway
+    command: >
+      -url=jdbc:postgresql://postgres:5432/taskdb
+      -user=postgres
+      -password=postgres
+      -connectRetries=60
+      migrate
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tasksense_net
+
   pgadmin:
     image: dpage/pgadmin4
     container_name: task_pgadmin
