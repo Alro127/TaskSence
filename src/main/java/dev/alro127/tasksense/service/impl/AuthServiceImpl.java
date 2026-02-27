@@ -9,14 +9,17 @@ import dev.alro127.tasksense.exception.UnauthorizedException;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
 import dev.alro127.tasksense.security.jwt.JwtTokenProvider;
 import dev.alro127.tasksense.service.AuthService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -27,11 +30,14 @@ import java.util.Random;
 public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final StringRedisTemplate stringRedisTemplate;
     private final RedisTemplate<String, Object> redisTemplate;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
+    private final ObjectMapper objectMapper;
 
     @Override
+    @Transactional
     public void register(AuthRequest request) {
         var user = UserEntity.builder()
                 .email(request.getEmail())
@@ -70,7 +76,7 @@ public class AuthServiceImpl implements AuthService {
 
         String otp = String.valueOf(100000 + new Random().nextInt(900000));
 
-        redisTemplate.opsForValue().set(
+        stringRedisTemplate.opsForValue().set(
                 "OTP:" + email,
                 otp,
                 Duration.ofMinutes(5)
@@ -82,13 +88,21 @@ public class AuthServiceImpl implements AuthService {
                 "Your OTP is: " + otp
         );
 
-        redisTemplate.convertAndSend("otp-email-channel", message);
+        try {
+            String json = objectMapper.writeValueAsString(message);
+
+            redisTemplate.convertAndSend("otp-email-channel", json);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to publish email message", e);
+        }
     }
 
     @Override
     public AuthResponse verifyOtp(String email, String otp) {
 
-        String savedOtp = Objects.requireNonNull(redisTemplate.opsForValue().get("OTP:" + email)).toString();
+        String key = "OTP:" + email;
+        String savedOtp = stringRedisTemplate.opsForValue().get(key);
 
         if (savedOtp == null) {
             throw new UnauthorizedException("OTP expired or not found");

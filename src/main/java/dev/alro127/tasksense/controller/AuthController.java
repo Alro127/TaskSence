@@ -39,7 +39,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> Login(@RequestBody AuthRequest request) {
         ApiResponse<AuthResponse> response = new ApiResponse<>(
                 "200",
-                "Please verify OTP",
+                "Welcome",
                 authService.login(request)
         );
 
