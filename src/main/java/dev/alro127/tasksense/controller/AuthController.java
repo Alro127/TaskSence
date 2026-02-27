@@ -35,7 +35,7 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/login")
+    @PostMapping("/login/local")
     public ResponseEntity<ApiResponse<AuthResponse>> Login(@RequestBody AuthRequest request) {
         ApiResponse<AuthResponse> response = new ApiResponse<>(
                 "200",
@@ -43,6 +43,16 @@ public class AuthController {
                 authService.login(request)
         );
 
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/login/google")
+    public ResponseEntity<ApiResponse<AuthResponse>> loginWithGoogle(@RequestParam String code) {
+        ApiResponse<AuthResponse> response = new ApiResponse<>(
+                "200",
+                "Welcome",
+                authService.loginWithGoogle(code)
+        );
         return ResponseEntity.ok(response);
     }
 }

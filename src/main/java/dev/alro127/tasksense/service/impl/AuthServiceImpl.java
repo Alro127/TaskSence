@@ -1,5 +1,12 @@
 package dev.alro127.tasksense.service.impl;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import dev.alro127.tasksense.config.provider.GoogleConfig;
 import dev.alro127.tasksense.dto.message.EmailMessage;
 import dev.alro127.tasksense.dto.request.AuthRequest;
 import dev.alro127.tasksense.dto.response.AuthResponse;
@@ -22,8 +29,9 @@ import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
-import java.util.Objects;
+import java.util.Collections;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final ObjectMapper objectMapper;
+    private final GoogleConfig googleConfig;
 
     @Override
     @Transactional
@@ -125,5 +134,78 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
 
         return new AuthResponse(accessToken, refreshToken);
+    }
+
+    @Override
+    public AuthResponse loginWithGoogle(String code) {
+        GoogleIdToken.Payload payload = null;
+        try {
+            payload = getGoogleUserProfile(code);
+        } catch (Exception ex) {
+            throw new UnauthorizedException(ex.getMessage());
+        }
+        var email = payload.getEmail();
+
+        AtomicReference<AuthResponse> authResponse = new AtomicReference<>();
+
+        GoogleIdToken.Payload finalPayload = payload;
+        userRepository.findByEmail(email).ifPresentOrElse(account -> {
+            String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail());
+            String refreshToken = jwtTokenProvider.generateRefreshToken(account.getEmail());
+
+            authResponse.set(new AuthResponse(accessToken, refreshToken));
+        }, () -> {
+            String fullName   = (String) finalPayload.get("name");
+            String picture    = (String) finalPayload.get("picture");
+            var accountEntity = UserEntity.builder()
+                    .email(email)
+                    .password("")
+                    .fullName(fullName)
+                    .avatarUrl(picture)
+                    .build();
+            var account = userRepository.save(accountEntity);
+            String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail());
+            String refreshToken = jwtTokenProvider.generateRefreshToken(account.getEmail());
+            authResponse.set(new AuthResponse(accessToken, refreshToken));
+        });
+
+        return authResponse.get();
+    }
+
+    private GoogleIdToken.Payload getGoogleUserProfile(String code) throws Exception {
+        GoogleTokenResponse tokenResponse =
+                new GoogleAuthorizationCodeTokenRequest(
+                        new NetHttpTransport(),
+                        GsonFactory.getDefaultInstance(),
+                        "https://oauth2.googleapis.com/token",
+                        googleConfig.getClientId(),
+                        googleConfig.getClientSecret(),
+                        code,
+                        googleConfig.getRedirectUri()
+                ).execute();
+
+        String idTokenString = tokenResponse.getIdToken();
+
+        GoogleIdTokenVerifier verifier =
+                new GoogleIdTokenVerifier.Builder(
+                        new NetHttpTransport(),
+                        GsonFactory.getDefaultInstance()
+                )
+                        .setAudience(Collections.singletonList(googleConfig.getClientId()))
+                        .build();
+
+        GoogleIdToken idToken = verifier.verify(idTokenString);
+
+        if (idToken == null) {
+            throw new RuntimeException("Invalid ID token");
+        }
+
+        GoogleIdToken.Payload payload = idToken.getPayload();
+
+        if (!Boolean.TRUE.equals(payload.getEmailVerified())) {
+            throw new RuntimeException("Email not verified");
+        }
+
+        return payload;
     }
 }

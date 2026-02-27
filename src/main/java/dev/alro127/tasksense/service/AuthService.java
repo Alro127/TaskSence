@@ -4,8 +4,10 @@ import dev.alro127.tasksense.dto.request.AuthRequest;
 import dev.alro127.tasksense.dto.response.AuthResponse;
 
 public interface AuthService {
-    public void register(AuthRequest request);
-    public AuthResponse login(AuthRequest request);
-    public void sendOtp(String email);
-    public AuthResponse verifyOtp(String email, String otp);
+    void register(AuthRequest request);
+    AuthResponse login(AuthRequest request);
+    void sendOtp(String email);
+    AuthResponse verifyOtp(String email, String otp);
+
+    AuthResponse loginWithGoogle(String code);
 }
