@@ -1,4 +1,4 @@
-package dev.alro127.tasksense.entity;
+package dev.alro127.tasksense.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -66,4 +66,3 @@ public class UserEntity implements Serializable {
         this.updatedAt = OffsetDateTime.now();
     }
 }
-

@@ -12,7 +12,7 @@ import dev.alro127.tasksense.dto.message.EmailMessage;
 import dev.alro127.tasksense.dto.request.AuthRequest;
 import dev.alro127.tasksense.dto.request.TokenRequest;
 import dev.alro127.tasksense.dto.response.AuthResponse;
-import dev.alro127.tasksense.entity.UserEntity;
+import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.exception.BadRequestException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.exception.UnauthorizedException;
@@ -63,8 +63,7 @@ public class AuthServiceImpl implements AuthService {
         stringRedisTemplate.opsForValue().set(
                 redisKey,
                 user.getId().toString(),
-                Duration.ofDays(7)
-        );
+                Duration.ofDays(7));
 
         return refreshToken;
     }
@@ -89,17 +88,14 @@ public class AuthServiceImpl implements AuthService {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getEmail(),
-                            request.getPassword()
-                    )
-            );
+                            request.getPassword()));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             String accessToken = jwtTokenProvider.generateAccessToken(authentication.getName());
 
             UserEntity user = userRepository.findByEmail(request.getEmail())
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException("User not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
             String refreshToken = generateAndStoreRefreshToken(user);
 
@@ -123,8 +119,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         UserEntity user = userRepository.findById(Long.parseLong(userId))
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         String newAccessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
 
@@ -138,22 +133,19 @@ public class AuthServiceImpl implements AuthService {
     public void sendOtp(String email) {
 
         UserEntity user = userRepository.findByEmail(email)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         String otp = String.valueOf(100000 + new Random().nextInt(900000));
 
         stringRedisTemplate.opsForValue().set(
                 "OTP:" + email,
                 otp,
-                Duration.ofMinutes(5)
-        );
+                Duration.ofMinutes(5));
 
         EmailMessage message = new EmailMessage(
                 email,
                 "Your OTP Code",
-                "Your OTP is: " + otp
-        );
+                "Your OTP is: " + otp);
 
         try {
             String json = objectMapper.writeValueAsString(message);
@@ -180,8 +172,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         UserEntity user = userRepository.findByEmail(email)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         user.setIsActive(true);
         userRepository.save(user);
@@ -199,8 +190,7 @@ public class AuthServiceImpl implements AuthService {
     public void forgotPassword(String email) {
 
         UserEntity user = userRepository.findByEmail(email)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         String rawToken = tokenProvider.generate();
         String hashedToken = tokenHasher.hash(rawToken);
@@ -212,8 +202,7 @@ public class AuthServiceImpl implements AuthService {
         stringRedisTemplate.opsForValue().set(
                 redisKey,
                 user.getId().toString(),
-                Duration.ofMinutes(5)
-        );
+                Duration.ofMinutes(5));
 
         String resetLink = appConfig.getFrontendUrl() + "/reset-password?token=" + rawToken;
 
@@ -247,8 +236,7 @@ public class AuthServiceImpl implements AuthService {
         EmailMessage message = new EmailMessage(
                 email,
                 "Reset Your Password",
-                htmlContent
-        );
+                htmlContent);
 
         try {
             String json = objectMapper.writeValueAsString(message);
@@ -302,8 +290,8 @@ public class AuthServiceImpl implements AuthService {
 
             authResponse.set(new AuthResponse(accessToken, refreshToken));
         }, () -> {
-            String fullName   = (String) finalPayload.get("name");
-            String picture    = (String) finalPayload.get("picture");
+            String fullName = (String) finalPayload.get("name");
+            String picture = (String) finalPayload.get("picture");
             var accountEntity = UserEntity.builder()
                     .email(email)
                     .password("")
@@ -321,26 +309,22 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private GoogleIdToken.Payload getGoogleUserProfile(String code) throws Exception {
-        GoogleTokenResponse tokenResponse =
-                new GoogleAuthorizationCodeTokenRequest(
-                        new NetHttpTransport(),
-                        GsonFactory.getDefaultInstance(),
-                        "https://oauth2.googleapis.com/token",
-                        googleConfig.getClientId(),
-                        googleConfig.getClientSecret(),
-                        code,
-                        googleConfig.getRedirectUri()
-                ).execute();
+        GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
+                new NetHttpTransport(),
+                GsonFactory.getDefaultInstance(),
+                "https://oauth2.googleapis.com/token",
+                googleConfig.getClientId(),
+                googleConfig.getClientSecret(),
+                code,
+                googleConfig.getRedirectUri()).execute();
 
         String idTokenString = tokenResponse.getIdToken();
 
-        GoogleIdTokenVerifier verifier =
-                new GoogleIdTokenVerifier.Builder(
-                        new NetHttpTransport(),
-                        GsonFactory.getDefaultInstance()
-                )
-                        .setAudience(Collections.singletonList(googleConfig.getClientId()))
-                        .build();
+        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                new NetHttpTransport(),
+                GsonFactory.getDefaultInstance())
+                .setAudience(Collections.singletonList(googleConfig.getClientId()))
+                .build();
 
         GoogleIdToken idToken = verifier.verify(idTokenString);
 
