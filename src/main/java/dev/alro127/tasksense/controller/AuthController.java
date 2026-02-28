@@ -2,8 +2,11 @@ package dev.alro127.tasksense.controller;
 
 import dev.alro127.tasksense.dto.request.AuthRequest;
 import dev.alro127.tasksense.dto.common.ApiResponse;
+import dev.alro127.tasksense.dto.request.ResetPasswordRequest;
+import dev.alro127.tasksense.dto.request.TokenRequest;
 import dev.alro127.tasksense.dto.response.AuthResponse;
 import dev.alro127.tasksense.service.AuthService;
+import jakarta.websocket.server.PathParam;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,11 +39,22 @@ public class AuthController {
     }
 
     @PostMapping("/login/local")
-    public ResponseEntity<ApiResponse<AuthResponse>> Login(@RequestBody AuthRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@RequestBody AuthRequest request) {
         ApiResponse<AuthResponse> response = new ApiResponse<>(
                 "200",
                 "Welcome",
                 authService.login(request)
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<AuthResponse>> refresh(@RequestBody TokenRequest request) {
+        ApiResponse<AuthResponse> response = new ApiResponse<>(
+                "200",
+                "Welcome",
+                authService.refresh(request)
         );
 
         return ResponseEntity.ok(response);
@@ -53,6 +67,47 @@ public class AuthController {
                 "Welcome",
                 authService.loginWithGoogle(code)
         );
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@RequestParam String email) {
+        authService.forgotPassword(email);
+        ApiResponse<Void> response = new ApiResponse<>(
+                "200",
+                "If the email exists, a reset link has been sent.",
+                null
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @RequestBody ResetPasswordRequest request
+    ) {
+
+        authService.resetPassword(
+                request.getToken(),
+                request.getNewPassword()
+        );
+
+        ApiResponse<Void> response = new ApiResponse<>(
+                "200",
+                "Your password is reset",
+                null
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(@RequestBody TokenRequest request) {
+        authService.logout(request);
+        ApiResponse<Void> response = new ApiResponse<>(
+                "200",
+                "Logout successfully",
+                null
+        );
+
         return ResponseEntity.ok(response);
     }
 }

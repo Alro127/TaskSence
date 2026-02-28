@@ -26,8 +26,8 @@ public class OpenApiConfig {
 
         Contact contact = new Contact()
                 .name(" Development Team")
-                .email("dev@retrade.com")
-                .url("https://retrades.trade");
+                .email("dev@tasksense.com")
+                .url("https://tasksense.trade");
 
         License license = new License()
                 .name("MIT License")
