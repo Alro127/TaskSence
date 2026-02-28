@@ -12,7 +12,7 @@ import dev.alro127.tasksense.dto.message.EmailMessage;
 import dev.alro127.tasksense.dto.request.AuthRequest;
 import dev.alro127.tasksense.dto.request.TokenRequest;
 import dev.alro127.tasksense.dto.response.AuthResponse;
-import dev.alro127.tasksense.entity.UserEntity;
+import domain.entity.UserEntity;
 import dev.alro127.tasksense.exception.BadRequestException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.exception.UnauthorizedException;

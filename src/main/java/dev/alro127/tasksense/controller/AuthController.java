@@ -6,7 +6,6 @@ import dev.alro127.tasksense.dto.request.ResetPasswordRequest;
 import dev.alro127.tasksense.dto.request.TokenRequest;
 import dev.alro127.tasksense.dto.response.AuthResponse;
 import dev.alro127.tasksense.service.AuthService;
-import jakarta.websocket.server.PathParam;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

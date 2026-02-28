@@ -1,4 +1,4 @@
-package dev.alro127.tasksense.entity;
+package domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
