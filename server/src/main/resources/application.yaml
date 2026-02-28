@@ -1,6 +1,8 @@
 spring:
   application:
     name: TaskSense
+    backend-url: http://localhost:8080
+    frontend-url: http:/localhost:3000
 
   datasource:
     url: jdbc:postgresql://localhost:5432/taskdb?options=-c%20TimeZone=Asia/Ho_Chi_Minh
@@ -33,8 +35,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: nhuttan373@gmail.com
-    password: pvwu ysch bfrs cbcl
+    username: ${EMAIL_USERNAME:}
+    password: ${EMAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -56,6 +58,10 @@ security:
     secret: my-super-secret-key-which-is-very-long-123456
     short-expiration: 3600
     long-expiration: 604800
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+    redirect-uri: ${GOOGLE_REDIRECT_URL:http://localhost:8080/auth/google/callback}
 
 logging:
   level:

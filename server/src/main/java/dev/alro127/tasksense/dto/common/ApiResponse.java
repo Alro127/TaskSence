@@ -1,12 +1,10 @@
 package dev.alro127.tasksense.dto.common;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 
 @RequiredArgsConstructor
 @AllArgsConstructor
-@Getter
+@Data
 public class ApiResponse<T> {
     private String code;
     private String message;

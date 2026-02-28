@@ -38,7 +38,7 @@ public class RedisConfig {
         container.setConnectionFactory(connectionFactory);
         container.addMessageListener(
                 subscriber,
-                new ChannelTopic("otp-email-channel")
+                new ChannelTopic("auth-email-channel")
         );
 
         return container;

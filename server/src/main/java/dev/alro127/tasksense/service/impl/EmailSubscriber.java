@@ -2,12 +2,14 @@ package dev.alro127.tasksense.service.impl;
 
 import dev.alro127.tasksense.dto.message.EmailMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -26,13 +28,14 @@ public class EmailSubscriber implements MessageListener {
             EmailMessage emailMessage =
                     objectMapper.readValue(body, EmailMessage.class);
 
-            SimpleMailMessage mail = new SimpleMailMessage();
-            mail.setTo(emailMessage.getTo());
-            mail.setSubject(emailMessage.getSubject());
-            mail.setText(emailMessage.getContent());
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
-            mailSender.send(mail);
+            helper.setTo(emailMessage.getTo());
+            helper.setSubject(emailMessage.getSubject());
+            helper.setText(emailMessage.getContent(), true); // true = HTML
 
+            mailSender.send(mimeMessage);
         } catch (Exception e) {
             System.err.println("Failed to process email message: " + e.getMessage());
         }
