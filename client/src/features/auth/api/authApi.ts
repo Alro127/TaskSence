@@ -17,7 +17,7 @@ export const authApi = createApi({
   endpoints: (builder) => ({
     login: builder.mutation<ApiResponse<AuthResponse>, AuthRequest>({
       query: (credentials) => ({
-        url: "/api/auth/login",
+        url: "/auth/login/local",
         method: "POST",
         body: credentials,
       }),
@@ -25,7 +25,7 @@ export const authApi = createApi({
 
     register: builder.mutation<ApiResponse<void>, AuthRequest>({
       query: (credentials) => ({
-        url: "/api/auth/register",
+        url: "/auth/register",
         method: "POST",
         body: credentials,
       }),
@@ -33,7 +33,7 @@ export const authApi = createApi({
 
     verifyOtp: builder.mutation<ApiResponse<AuthResponse>, VerifyOtpParams>({
       query: ({ email, otp }) => ({
-        url: `/api/auth/verify-otp?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`,
+        url: `/auth/verify-otp?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`,
         method: "POST",
       }),
     }),
@@ -41,7 +41,7 @@ export const authApi = createApi({
     // Forgot password - UI ready, will connect when BE is ready
     forgotPassword: builder.mutation<ApiResponse<void>, ForgotPasswordRequest>({
       query: (body) => ({
-        url: "/api/auth/forgot-password",
+        url: "/auth/forgot-password",
         method: "POST",
         body,
       }),
