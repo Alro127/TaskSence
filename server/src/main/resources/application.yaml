@@ -60,6 +60,9 @@ security:
 logging:
   level:
     org.springframework.security: DEBUG
+#    org.springframework.boot.autoconfigure.jdbc: DEBUG
+#    com.zaxxer.hikari: DEBUG
+#    org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator: DEBUG
 
 springdoc:
   api-docs:
@@ -72,3 +75,4 @@ springdoc:
     tags-sorter: alpha
     filter: true
     path: /swagger-ui
+
