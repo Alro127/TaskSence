@@ -1,12 +1,12 @@
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255),
     is_active BOOLEAN DEFAULT TRUE,
     avatar_url TEXT,
     phone VARCHAR(50),
-    gender VARCHAR(20),
+    gender VARCHAR(20) CHECK (gender IN ('male', 'female', 'other')),
     dob DATE,
     bio TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -28,6 +28,8 @@ CREATE TABLE team_templates (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMPTZ,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -35,6 +37,9 @@ CREATE TABLE team_member_templates (
     id BIGSERIAL PRIMARY KEY,
     team_template_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMPTZ,
     UNIQUE (team_template_id, user_id),
     FOREIGN KEY (team_template_id) REFERENCES team_templates(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -43,8 +48,10 @@ CREATE TABLE team_member_templates (
 CREATE TABLE workspaces (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    description TEXT,
     owner_id BIGINT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMPTZ,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE RESTRICT
 );
@@ -55,6 +62,9 @@ CREATE TABLE workspace_members (
     user_id BIGINT NOT NULL,
     role VARCHAR(100) NOT NULL CHECK (role IN ('WORKSPACE_OWNER', 'PROJECT_MANAGER', 'MEMBER', 'VIEWER')),
     joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMPTZ,
     UNIQUE (workspace_id, user_id),
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -65,11 +75,13 @@ CREATE TABLE projects (
     workspace_id BIGINT NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    status VARCHAR(100) CHECK (status IN ('ACTIVE', 'COMPLETED', 'ARCHIVED', 'ON_HOLD')),
+    status VARCHAR(100) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'COMPLETED', 'ARCHIVED', 'ON_HOLD')),
     start_date DATE,
     end_date DATE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMPTZ,
+    CHECK (end_date IS NULL OR start_date IS NULL OR end_date >= start_date),
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 );
 
@@ -78,6 +90,9 @@ CREATE TABLE project_members (
     project_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
     role VARCHAR(100) NOT NULL CHECK (role IN ('PROJECT_MANAGER', 'MEMBER', 'VIEWER')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMPTZ,
     UNIQUE (project_id, user_id),
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -91,12 +106,16 @@ CREATE TABLE tasks (
     description TEXT,
     priority VARCHAR(50) CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH', 'URGENT')),
     status VARCHAR(50) NOT NULL CHECK (status IN ('TODO', 'IN_PROGRESS', 'REVIEW', 'DONE')) DEFAULT 'TODO',
+    start_date DATE,
     due_date DATE,
+    completed_at TIMESTAMPTZ,
     position INT DEFAULT 0,
     created_by BIGINT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMPTZ,
+    CHECK (due_date IS NULL OR start_date IS NULL OR due_date >= start_date),
+    CHECK (completed_at IS NULL OR status = 'DONE'),
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
@@ -115,6 +134,9 @@ CREATE TABLE tags (
     project_id BIGINT NOT NULL,
     name VARCHAR(255) NOT NULL,
     color VARCHAR(50),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMPTZ,
     UNIQUE (project_id, name),
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
@@ -135,6 +157,8 @@ CREATE TABLE attachments (
     file_type VARCHAR(100),
     file_size BIGINT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMPTZ,
     FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
     FOREIGN KEY (uploader_id) REFERENCES users(id) ON DELETE RESTRICT
 );
@@ -151,7 +175,7 @@ CREATE TABLE comments (
     deleted_at TIMESTAMPTZ,
     FOREIGN KEY (parent_comment_id) REFERENCES comments(id) ON DELETE SET NULL,
     FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
 );
 
 CREATE TABLE comment_mentions (
@@ -179,8 +203,10 @@ CREATE TABLE notifications (
     content TEXT,
     related_task_id BIGINT,
     related_project_id BIGINT,
-    is_read BOOLEAN DEFAULT FALSE,
+    read_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMPTZ,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (related_task_id) REFERENCES tasks(id) ON DELETE CASCADE,
     FOREIGN KEY (related_project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -195,5 +221,7 @@ CREATE TABLE activities (
     description TEXT,
     metadata JSONB,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMPTZ,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
