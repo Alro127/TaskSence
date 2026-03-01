@@ -77,7 +77,7 @@ CREATE TABLE project_members (
     id BIGSERIAL PRIMARY KEY,
     project_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
-    role VARCHAR(100) CHECK (role IN ('PROJECT_MANAGER', 'MEMBER', 'VIEWER')),
+    role VARCHAR(100) NOT NULL CHECK (role IN ('PROJECT_MANAGER', 'MEMBER', 'VIEWER')),
     UNIQUE (project_id, user_id),
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
