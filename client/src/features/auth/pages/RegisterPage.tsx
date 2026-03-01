@@ -1,18 +1,23 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useGoogleLogin } from "@react-oauth/google";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { PasswordInput, GoogleButton } from "@/components/common";
-import { useRegisterMutation } from "@/features/auth/api/authApi";
+import {
+  useLoginWithGoogleMutation,
+  useRegisterMutation,
+} from "@/features/auth/api/authApi";
 import { useAppDispatch } from "@/app/hooks";
-import { setPendingEmail } from "@/features/auth/authSlice";
+import { setCredentials, setPendingEmail } from "@/features/auth/authSlice";
 
 const registerSchema = z
   .object({
@@ -41,6 +46,8 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [registerUser, { isLoading }] = useRegisterMutation();
+  const [loginWithGoogle] = useLoginWithGoogleMutation();
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const {
     register,
@@ -79,11 +86,54 @@ export function RegisterPage() {
     }
   };
 
+  const googleLogin = useGoogleLogin({
+    flow: "auth-code",
+    onSuccess: async (codeResponse) => {
+      try {
+        const result = await loginWithGoogle({ code: codeResponse.code }).unwrap();
+        dispatch(
+          setCredentials({
+            accessToken: result.data.accessToken,
+            refreshToken: result.data.refreshToken,
+          })
+        );
+        toast.success("Welcome!", {
+          description: "Your Google account is ready to use TaskSense.",
+        });
+        navigate("/dashboard");
+      } catch (error: unknown) {
+        const err = error as { data?: { message?: string } };
+        toast.error("Google sign up failed", {
+          description:
+            err?.data?.message ||
+            "Unable to complete Google sign up. Please try again.",
+        });
+      } finally {
+        setGoogleLoading(false);
+      }
+    },
+    onError: () => {
+      setGoogleLoading(false);
+      toast.error("Google sign up cancelled", {
+        description: "Please try again to continue with Google.",
+      });
+    },
+  });
+
   const handleGoogleLogin = () => {
-    toast.info("Google sign up is coming soon!", {
-      description: "This feature will be available in the next update.",
-    });
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId || clientId === "your-google-client-id-here") {
+      toast.error("Google Client ID is missing", {
+        description: "Please set VITE_GOOGLE_CLIENT_ID in your .env file.",
+      });
+      return;
+    }
+
+    setGoogleLoading(true);
+    googleLogin();
   };
+
+  const isSubmitting = isLoading || googleLoading;
 
   return (
     <div className="space-y-6">
@@ -102,7 +152,7 @@ export function RegisterPage() {
             type="email"
             placeholder="name@example.com"
             autoComplete="email"
-            disabled={isLoading}
+            disabled={isSubmitting}
             {...register("email")}
           />
           {errors.email && (
@@ -116,7 +166,7 @@ export function RegisterPage() {
             id="password"
             placeholder="Create a strong password"
             autoComplete="new-password"
-            disabled={isLoading}
+            disabled={isSubmitting}
             {...register("password")}
           />
           {errors.password && (
@@ -132,7 +182,7 @@ export function RegisterPage() {
             id="confirmPassword"
             placeholder="Confirm your password"
             autoComplete="new-password"
-            disabled={isLoading}
+            disabled={isSubmitting}
             {...register("confirmPassword")}
           />
           {errors.confirmPassword && (
@@ -142,7 +192,7 @@ export function RegisterPage() {
           )}
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -165,8 +215,15 @@ export function RegisterPage() {
         </div>
       </div>
 
-      <GoogleButton onClick={handleGoogleLogin}>
-        Sign up with Google
+      <GoogleButton onClick={handleGoogleLogin} disabled={isSubmitting}>
+        {googleLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Connecting...
+          </>
+        ) : (
+          "Sign up with Google"
+        )}
       </GoogleButton>
 
       <p className="text-center text-sm text-muted-foreground">

@@ -5,6 +5,8 @@ import type {
   AuthResponse,
   VerifyOtpParams,
   ForgotPasswordRequest,
+  GoogleLoginRequest,
+  TokenRequest,
 } from "@/types/api";
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
@@ -23,6 +25,16 @@ export const authApi = createApi({
       }),
     }),
 
+    loginWithGoogle: builder.mutation<
+      ApiResponse<AuthResponse>,
+      GoogleLoginRequest
+    >({
+      query: ({ code }) => ({
+        url: `/auth/login/google?code=${encodeURIComponent(code)}`,
+        method: "POST",
+      }),
+    }),
+
     register: builder.mutation<ApiResponse<void>, AuthRequest>({
       query: (credentials) => ({
         url: "/auth/register",
@@ -38,10 +50,16 @@ export const authApi = createApi({
       }),
     }),
 
-    // Forgot password - UI ready, will connect when BE is ready
     forgotPassword: builder.mutation<ApiResponse<void>, ForgotPasswordRequest>({
+      query: ({ email }) => ({
+        url: `/auth/forgot-password?email=${encodeURIComponent(email)}`,
+        method: "POST",
+      }),
+    }),
+
+    logout: builder.mutation<ApiResponse<void>, TokenRequest>({
       query: (body) => ({
-        url: "/auth/forgot-password",
+        url: "/auth/logout",
         method: "POST",
         body,
       }),
@@ -51,7 +69,9 @@ export const authApi = createApi({
 
 export const {
   useLoginMutation,
+  useLoginWithGoogleMutation,
   useRegisterMutation,
   useVerifyOtpMutation,
   useForgotPasswordMutation,
+  useLogoutMutation,
 } = authApi;

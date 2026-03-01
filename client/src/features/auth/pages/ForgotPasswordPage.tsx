@@ -9,6 +9,7 @@ import { Loader2, ArrowLeft, Mail, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useForgotPasswordMutation } from "@/features/auth/api/authApi";
 
 const forgotPasswordSchema = z.object({
   email: z
@@ -22,7 +23,7 @@ type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 export function ForgotPasswordPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
 
   const {
     register,
@@ -36,25 +37,22 @@ export function ForgotPasswordPage() {
   });
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
-    setIsLoading(true);
     try {
-      // TODO: Replace with actual API call when BE endpoint is ready
-      // await forgotPassword({ email: data.email }).unwrap();
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await forgotPassword({ email: data.email }).unwrap();
 
       setSubmittedEmail(data.email);
       setIsSubmitted(true);
       toast.success("Reset link sent!", {
-        description: "Please check your email for password reset instructions.",
+        description:
+          response.message ||
+          "Please check your email for password reset instructions.",
       });
-    } catch {
+    } catch (error: unknown) {
+      const err = error as { data?: { message?: string } };
       toast.error("Failed to send reset link", {
-        description: "Something went wrong. Please try again later.",
+        description:
+          err?.data?.message || "Something went wrong. Please try again later.",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
