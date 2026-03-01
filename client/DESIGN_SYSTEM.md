@@ -139,11 +139,35 @@ Sử dụng shadcn/ui Button component:
 - Max width form area: `max-w-md` (448px)
 - Center vertically: `flex items-center justify-center min-h-screen`
 
-### Main App Layout (Future)
+### Main App Layout (Current)
 
 - Sidebar + Main content area
-- Sidebar width: 256px (collapsed: 64px)
+- Sidebar width: 256px
 - Top header: 64px height
+- Dashboard body ưu tiên hiển thị task board
+- Profile không đặt trực tiếp trong dashboard content
+- Truy cập profile qua avatar button (mở right drawer)
+
+### User Profile Card (Sprint 2)
+
+- **Layout**: Horizontal flex with avatar on left, info on right
+- **Avatar**: 120px square, rounded-lg, image or fallback icon
+- **Info Section**: Grid layout (2 columns for metadata)
+- **Sections**:
+  - Name + Email (always visible)
+  - Metadata grid: Phone, Gender, Date of Birth (optional)
+  - Bio section (optional, with border-top separator)
+  - Edit button (if edit handler provided)
+- **Responsive**: Flex to stack on mobile if needed
+- **Spacing**: gap-6 between avatar and info, gap-4 for grid
+
+### Profile Access Pattern (Sprint 2)
+
+- **Primary access**: Avatar button ở header
+- **Interaction**: Mở right drawer chứa profile summary + quick actions
+- **Quick actions**:
+  - Edit Profile (navigate `/dashboard/edit-profile`)
+  - Logout
 
 ## 🔔 Toast/Notification
 
@@ -183,23 +207,25 @@ Dùng Tailwind default breakpoints:
 - `md:` prefix cho tablet+
 - `lg:` prefix cho desktop+
 
-## 🎯 Component Naming Convention
+## 📋 Component Library
 
-```
-src/components/
-├── ui/               # shadcn/ui primitives (auto-generated, KHÔNG sửa)
-└── common/           # Custom shared components
-    ├── LoadingSpinner.tsx
-    ├── PasswordInput.tsx
-    └── GoogleButton.tsx
+### Reusable Components Location: `src/components/`
 
-src/features/
-└── [feature]/
-    ├── components/   # Feature-specific components
-    ├── pages/        # Page-level components
-    ├── api/          # RTK Query API
-    └── [feature]Slice.ts  # Redux slice
-```
+| Component       | Location                    | Purpose                                                 |
+| --------------- | --------------------------- | ------------------------------------------------------- |
+| UI Components   | `components/ui/`            | shadcn/ui primitives (Button, Input, Label, Card, etc.) |
+| LoadingSpinner  | `components/common/`        | Full-page or inline loading state                       |
+| PasswordInput   | `components/common/`        | Password field with show/hide toggle                    |
+| GoogleButton    | `components/common/`        | OAuth button wrapper                                    |
+| UserProfileCard | `features/user/components/` | Profile display card (Avatar + Info)                    |
+
+### Feature-specific Components Location: `src/features/[feature]/`
+
+| Feature   | Components                       | Purpose               |
+| --------- | -------------------------------- | --------------------- |
+| auth      | LoginPage, RegisterPage, etc.    | Auth flows            |
+| user      | UserProfileCard, EditProfilePage | Profile management    |
+| dashboard | DashboardPage                    | Home page after login |
 
 ## ✅ Do's and Don'ts
 

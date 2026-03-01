@@ -3,10 +3,9 @@ import {
   Navigate,
   type RouteObject,
 } from "react-router-dom";
-import { LogOut } from "lucide-react";
 
 import { AuthLayout } from "@/layouts/AuthLayout";
-import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { MainLayout } from "@/layouts/MainLayout";
 import {
   LoginPage,
   RegisterPage,
@@ -14,48 +13,16 @@ import {
   ForgotPasswordPage,
   ResetPasswordPage,
 } from "@/features/auth/pages";
-import { useLogoutMutation } from "@/features/auth/api/authApi";
-import { logout } from "@/features/auth/authSlice";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { DashboardPage } from "@/features/dashboard/pages";
+import { EditProfilePage } from "@/features/user/pages";
 
-function DashboardPage() {
-  const dispatch = useAppDispatch();
-  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const refreshToken = useAppSelector((state) => state.auth.refreshToken);
-  const [logoutApi, { isLoading }] = useLogoutMutation();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/auth/login" replace />;
-  }
-
-  const handleLogout = async () => {
-    try {
-      if (refreshToken) {
-        await logoutApi({ token: refreshToken }).unwrap();
-      }
-    } catch {
-      toast.error("Logout sync failed", {
-        description: "Session was cleared on this device.",
-      });
-    } finally {
-      dispatch(logout());
-      toast.success("Logged out successfully");
-    }
-  };
-
+function PlaceholderPage({ title }: { title: string }) {
   return (
-    <div className="flex min-h-screen items-center justify-center p-6">
-      <div className="w-full max-w-xl rounded-xl border bg-card p-8 text-center space-y-5">
-        <h1 className="text-3xl font-bold">Welcome to TaskSense!</h1>
-        <p className="text-muted-foreground">
-          Dashboard will be expanded in the next sprint.
-        </p>
-        <Button onClick={handleLogout} disabled={isLoading} className="w-full sm:w-auto">
-          <LogOut className="mr-2 h-4 w-4" />
-          {isLoading ? "Logging out..." : "Logout"}
-        </Button>
-      </div>
+    <div className="rounded-lg border border-dashed bg-muted p-6">
+      <h2 className="text-xl font-semibold">{title}</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        This section is mocked for quick access and will be implemented in a future sprint.
+      </p>
     </div>
   );
 }
@@ -92,8 +59,38 @@ const routes: RouteObject[] = [
     ],
   },
   {
-    path: "/dashboard",
-    element: <DashboardPage />,
+    path: "/",
+    element: <MainLayout />,
+    children: [
+      {
+        index: true,
+        element: <Navigate to="/dashboard" replace />,
+      },
+      {
+        path: "dashboard",
+        element: <DashboardPage />,
+      },
+      {
+        path: "dashboard/edit-profile",
+        element: <EditProfilePage />,
+      },
+      {
+        path: "tasks",
+        element: <PlaceholderPage title="My Tasks" />,
+      },
+      {
+        path: "calendar",
+        element: <PlaceholderPage title="Calendar" />,
+      },
+      {
+        path: "analytics",
+        element: <PlaceholderPage title="Analytics" />,
+      },
+      {
+        path: "settings",
+        element: <PlaceholderPage title="Settings" />,
+      },
+    ],
   },
   {
     path: "*",

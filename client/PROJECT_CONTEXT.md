@@ -23,106 +23,80 @@
   - `POST /auth/forgot-password?email=...` → gửi email reset password
   - `POST /auth/reset-password` → body: `{token, newPassword}` → reset password
   - `POST /auth/logout` → body: `{token}` (refresh token)
+- **User Endpoints (planned/waiting backend)**:
+  - `GET /user/me`
+  - `PUT /user/profile`
 - **API Response format**: `{code: string, message: string, data: T}`
 - **CORS allowed**: `http://localhost:5173`
 - **JWT**: Access Token + Refresh Token
-- **context-path**: `/api/v1` (set in server)
+- **context-path**: `/api/v1`
 
-> ✅ **Lưu ý**: FE đã tích hợp thật với backend cho Login, Register, Google Login, Forgot Password, Logout.
+## 🗂️ Cấu trúc thư mục FE (hiện tại)
 
-## 🗂️ Cấu trúc thư mục FE (Hiện tại)
-
-```
+```text
 client/
 ├── src/
 │   ├── app/
-│   │   ├── store.ts          # Redux store configuration
-│   │   └── hooks.ts          # Typed useDispatch/useSelector
+│   │   ├── store.ts
+│   │   └── hooks.ts
 │   ├── components/
-│   │   ├── ui/               # shadcn/ui components (auto-generated)
-│   │   │   ├── button.tsx
-│   │   │   ├── input.tsx
-│   │   │   ├── label.tsx
-│   │   │   ├── card.tsx
-│   │   │   ├── separator.tsx
-│   │   │   ├── sonner.tsx
-│   │   │   └── input-otp.tsx
-│   │   └── common/           # Custom shared components
-│   │       ├── LoadingSpinner.tsx
-│   │       ├── PasswordInput.tsx  # Input with show/hide toggle
-│   │       ├── GoogleButton.tsx   # Google OAuth button
-│   │       └── index.ts
+│   │   ├── ui/
+│   │   └── common/
 │   ├── features/
-│   │   └── auth/
-│   │       ├── api/
-│   │       │   └── authApi.ts    # RTK Query auth endpoints
-│   │       ├── pages/
-│   │       │   ├── LoginPage.tsx
-│   │       │   ├── RegisterPage.tsx
-│   │       │   ├── VerifyOtpPage.tsx
-│   │       │   ├── ForgotPasswordPage.tsx
-│   │       │   ├── ResetPasswordPage.tsx
-│   │       │   └── index.ts
-│   │       └── authSlice.ts      # Auth Redux slice (tokens, state)
+│   │   ├── auth/
+│   │   │   ├── api/authApi.ts
+│   │   │   ├── pages/
+│   │   │   └── authSlice.ts
+│   │   ├── dashboard/
+│   │   │   └── pages/DashboardPage.tsx
+│   │   └── user/
+│   │       ├── api/userApi.ts
+│   │       ├── components/UserProfileCard.tsx
+│   │       ├── pages/EditProfilePage.tsx
+│   │       └── userSlice.ts
 │   ├── layouts/
-│   │   └── AuthLayout.tsx        # Split layout (branding + form)
-│   ├── lib/
-│   │   └── utils.ts              # cn() utility (shadcn)
-│   ├── routes/
-│   │   └── index.tsx             # Route definitions
-│   ├── types/
-│   │   └── api.ts                # TypeScript types (API models)
-│   ├── styles/                   # (reserved for future global styles)
-│   ├── App.tsx                   # Root component (Router + Toaster)
-│   ├── main.tsx                  # Entry point (Redux Provider)
-│   └── index.css                 # Tailwind + shadcn theme variables
-├── .env                          # Environment variables
-├── .env.example
-├── DESIGN_SYSTEM.md              # Quy tắc thiết kế
-├── PROJECT_CONTEXT.md            # File này
-├── components.json               # shadcn/ui config
-├── tsconfig.json
-├── tsconfig.app.json
-└── vite.config.ts
+│   │   ├── AuthLayout.tsx
+│   │   └── MainLayout.tsx
+│   ├── routes/index.tsx
+│   ├── types/api.ts
+│   ├── App.tsx
+│   ├── main.tsx
+│   └── index.css
+├── DESIGN_SYSTEM.md
+└── PROJECT_CONTEXT.md
 ```
 
 ## 🚀 Sprint Progress
 
-### Sprint 1 - Authentication (Current) ✅
+### Sprint 1 - Authentication ✅ COMPLETED
 
-| Feature          | Status  | Notes                                        |
-| ---------------- | ------- | -------------------------------------------- |
-| Login            | ✅ Done | Email + Password, form validation, RTK Query |
-| Register         | ✅ Done | Email + Password + confirm, navigates to OTP |
-| OTP Verification | ✅ Done | 6-digit input, auto-submit, resend timer     |
-| Reset Password   | ✅ Done | Token từ email, đặt password mới             |
-| Forgot Password  | ✅ Done | Đã gọi API thật `/auth/forgot-password`      |
-| Google OAuth     | ✅ Done | Đã login thật qua `code` + backend exchange  |
-| Logout           | ✅ Done | Gọi API `/auth/logout` + clear local session |
-| Auth Layout      | ✅ Done | Split layout, responsive, branding left      |
-| Routing          | ✅ Done | React Router v6, auth guard                  |
-| State Management | ✅ Done | Redux Toolkit + RTK Query                    |
+- ✅ Login (local + Google OAuth)
+- ✅ Register + Verify OTP
+- ✅ Forgot Password
+- ✅ Reset Password
+- ✅ Logout
 
-### Pending / Next Sprint
+### Sprint 2 - Dashboard & Profile Layout ✅ IN PROGRESS
 
-- [ ] Dashboard layout (sidebar + main)
-- [ ] User profile
-- [ ] Task management CRUD
-- [ ] Performance analytics
-- [ ] Refresh token interceptor
+- ✅ Dashboard ưu tiên task management UI
+- ✅ Kanban mini mock (`To Do / Doing / Done`) bằng mock cards
+- ✅ Sidebar đầy đủ icon + label cho quick access
+- ✅ Profile di dời khỏi dashboard content
+- ✅ Profile drawer mở từ avatar button ở header (bên phải)
+- ✅ Trang `Edit Profile` riêng (`/dashboard/edit-profile`)
+- ✅ Mock pages cho quick access: `tasks`, `calendar`, `analytics`, `settings`
+- ⏳ Chờ backend user endpoints để bỏ mock data
 
-## 📝 Quyết định thiết kế
+## 📝 Quyết định thiết kế hiện tại
 
-1. **Theme**: Modern Minimalist, Blue primary (oklch 0.546 0.245 262.881 ≈ #2563EB)
-2. **Layout auth pages**: Split layout - left side branding/features, right side form
-3. **Form validation**: React Hook Form + Zod schemas
-4. **Toast notifications**: Dùng sonner (tích hợp shadcn/ui), position top-right
-5. **Responsive**: Mobile-first, ẩn left panel dưới lg breakpoint
-6. **Routing guard**: AuthLayout redirect authenticated users to /dashboard
-7. **Password rules**: Min 8 chars, 1 uppercase, 1 lowercase, 1 number
-8. **OTP**: 6 digits, auto-submit khi nhập đủ, resend cooldown 60s
-9. **Token storage**: localStorage (accessToken, refreshToken)
-10. **Google OAuth**: dùng `@react-oauth/google` (`auth-code flow`) và gửi `code`13. **Reset Password**: Nhận token từ URL query param, validate password mới, auto redirect sau success11. **Logout**: gọi backend revoke refresh token trước khi clear local auth state
+1. **Ưu tiên trang chủ sau login**: tập trung task board, không hiển thị profile trực tiếp trong dashboard body.
+2. **Profile access**: mở bằng **drawer bên phải** từ avatar/header.
+3. **Sidebar**: hiển thị icon + label (Dashboard, My Tasks, Calendar, Analytics, Profile, Settings).
+4. **Profile fields**:
+   - Read-only: `email`
+   - Editable: `fullName`, `phone`, `gender`, `dob`, `bio`
+   - `avatar` tạm thời chỉ hiển thị (upload để sau)
+5. **Profile data hiện tại**: dùng mock data trong `userSlice` đến khi backend sẵn sàng.
 
 ## 🔧 Environment Variables
 
@@ -134,21 +108,18 @@ VITE_GOOGLE_CLIENT_ID=<to-be-configured>
 ## 🛠️ Commands
 
 ```bash
-npm run dev      # Start dev server (port 5173)
-npm run build    # TypeScript check + Vite build
-npm run lint     # ESLint
-npm run preview  # Preview production build
+npm run dev
+npm run build
+npm run lint
+npm run preview
 ```
 
-## 📌 Lưu ý cho AI/Developer tiếp theo
+## 📌 Ghi chú cho AI/Developer tiếp theo
 
-- Đọc `DESIGN_SYSTEM.md` trước khi tạo component mới
-- Tuân thủ color palette và spacing đã định nghĩa
-- Sử dụng shadcn/ui components khi có thể, tránh tạo component từ đầu
-- RTK Query handles caching và loading states - không cần tự quản lý
-- Tất cả API calls đi qua RTK Query, không dùng fetch/axios trực tiếp
-- `PasswordInput` đã hỗ trợ `forwardRef` cho react-hook-form
-- Auth flow: Register → OTP Verify → Dashboard; Login → Dashboard; Google Login → Dashboard
-- ForgotPassword đã kết nối backend thật; success message lấy từ response server
-
-- ResetPassword: Validate token từ URL (?token=...), password rules giống Register, auto redirect sau 3s
+- Đọc `DESIGN_SYSTEM.md` trước khi tạo component mới.
+- Ưu tiên dùng shadcn/ui + Tailwind token, tránh hardcode style.
+- API call đi qua RTK Query.
+- Khi backend user API sẵn sàng:
+  - thay mock data bằng `GET /user/me`
+  - submit `EditProfilePage` qua `PUT /user/profile`
+- Profile drawer là entry chính cho thông tin cá nhân ở giai đoạn hiện tại.
