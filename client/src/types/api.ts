@@ -16,6 +16,14 @@ export interface AuthResponse {
   refreshToken: string;
 }
 
+export interface TokenRequest {
+  token: string;
+}
+
+export interface GoogleLoginRequest {
+  code: string;
+}
+
 // OTP verification
 export interface VerifyOtpParams {
   email: string;
@@ -28,8 +36,7 @@ export interface ForgotPasswordRequest {
 }
 
 export interface ResetPasswordRequest {
-  email: string;
-  otp: string;
+  token: string;
   newPassword: string;
 }
 

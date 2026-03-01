@@ -5,13 +5,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useGoogleLogin } from "@react-oauth/google";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { PasswordInput, GoogleButton } from "@/components/common";
-import { useLoginMutation } from "@/features/auth/api/authApi";
+import {
+  useLoginMutation,
+  useLoginWithGoogleMutation,
+} from "@/features/auth/api/authApi";
 import { useAppDispatch } from "@/app/hooks";
 import { setCredentials } from "@/features/auth/authSlice";
 
@@ -32,7 +36,8 @@ export function LoginPage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
-  const [_googleLoading, setGoogleLoading] = useState(false);
+  const [loginWithGoogle] = useLoginWithGoogleMutation();
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const {
     register,
@@ -67,14 +72,54 @@ export function LoginPage() {
     }
   };
 
+  const googleLogin = useGoogleLogin({
+    flow: "auth-code",
+    onSuccess: async (codeResponse) => {
+      try {
+        const result = await loginWithGoogle({ code: codeResponse.code }).unwrap();
+        dispatch(
+          setCredentials({
+            accessToken: result.data.accessToken,
+            refreshToken: result.data.refreshToken,
+          })
+        );
+        toast.success("Welcome!", {
+          description: "You have successfully logged in with Google.",
+        });
+        navigate("/dashboard");
+      } catch (error: unknown) {
+        const err = error as { data?: { message?: string } };
+        toast.error("Google login failed", {
+          description:
+            err?.data?.message ||
+            "Unable to complete Google login. Please try again.",
+        });
+      } finally {
+        setGoogleLoading(false);
+      }
+    },
+    onError: () => {
+      setGoogleLoading(false);
+      toast.error("Google login cancelled", {
+        description: "Please try again to continue with Google.",
+      });
+    },
+  });
+
   const handleGoogleLogin = () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId || clientId === "your-google-client-id-here") {
+      toast.error("Google Client ID is missing", {
+        description: "Please set VITE_GOOGLE_CLIENT_ID in your .env file.",
+      });
+      return;
+    }
+
     setGoogleLoading(true);
-    // TODO: Implement Google OAuth when BE is ready
-    toast.info("Google login is coming soon!", {
-      description: "This feature will be available in the next update.",
-    });
-    setGoogleLoading(false);
+    googleLogin();
   };
+
+  const isSubmitting = isLoading || googleLoading;
 
   return (
     <div className="space-y-6">
@@ -93,7 +138,7 @@ export function LoginPage() {
             type="email"
             placeholder="name@example.com"
             autoComplete="email"
-            disabled={isLoading}
+            disabled={isSubmitting}
             {...register("email")}
           />
           {errors.email && (
@@ -115,7 +160,7 @@ export function LoginPage() {
             id="password"
             placeholder="Enter your password"
             autoComplete="current-password"
-            disabled={isLoading}
+            disabled={isSubmitting}
             {...register("password")}
           />
           {errors.password && (
@@ -125,7 +170,7 @@ export function LoginPage() {
           )}
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -148,7 +193,16 @@ export function LoginPage() {
         </div>
       </div>
 
-      <GoogleButton onClick={handleGoogleLogin} />
+      <GoogleButton onClick={handleGoogleLogin} disabled={isSubmitting}>
+        {googleLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Connecting...
+          </>
+        ) : (
+          "Continue with Google"
+        )}
+      </GoogleButton>
 
       <p className="text-center text-sm text-muted-foreground">
         Don't have an account?{" "}
