@@ -5,6 +5,7 @@ import type {
   AuthResponse,
   VerifyOtpParams,
   ForgotPasswordRequest,
+  ResetPasswordRequest,
   GoogleLoginRequest,
   TokenRequest,
 } from "@/types/api";
@@ -57,6 +58,14 @@ export const authApi = createApi({
       }),
     }),
 
+    resetPassword: builder.mutation<ApiResponse<void>, ResetPasswordRequest>({
+      query: (body) => ({
+        url: "/auth/reset-password",
+        method: "POST",
+        body,
+      }),
+    }),
+
     logout: builder.mutation<ApiResponse<void>, TokenRequest>({
       query: (body) => ({
         url: "/auth/logout",
@@ -73,5 +82,6 @@ export const {
   useRegisterMutation,
   useVerifyOtpMutation,
   useForgotPasswordMutation,
+  useResetPasswordMutation,
   useLogoutMutation,
 } = authApi;
