@@ -1,361 +1,230 @@
-# Detailed Use Cases Specification (Full Scope)
+# Detailed Use Cases Specification (Aligned Scope)
 
-Tài liệu này định nghĩa chi tiết toàn bộ 21 Use Case (UC) cho hệ thống, bao phủ đầy đủ các chức năng trong FR.md. Cấu trúc được chuẩn hóa để làm đầu vào cho đội phát triển và kiểm thử.
+Tài liệu này mô tả các use case đã được đồng bộ theo phạm vi mới:
+
+- **MVP (Phase 1)**: không triển khai AI trực tiếp
+- **Phase 2**: triển khai AI nâng cao
+- **Performance**: không dùng manual timer/time logging
+- **Elasticsearch**: dùng cho search + analytics trong MVP
 
 ---
 
-## 1. Authentication & User Profile (Quản lý tài khoản)
+## 1. Authentication & User Profile
 
-### UC-AUTH-01: Đăng ký & Tạo Workspace (Register)
-
-- **Actor**: Guest (Người dùng mới chưa có tài khoản)
-- **Trigger**: User truy cập trang chủ và nhấn nút "Đăng ký".
-- **Pre-conditions**: User chưa đăng nhập.
-- **Post-conditions**:
-  - Tài khoản User mới được tạo.
-  - Một Workspace mới được tạo.
-  - User được gán role `OWNER` của Workspace đó.
-  - User được tự động đăng nhập.
-
-**Main Flow:**
-
-1.  User nhấn nút "Đăng ký".
-2.  Hệ thống hiển thị form yêu cầu: Email, Full Name, Password, Workspace Name (Tên công ty/nhóm).
-3.  User nhập thông tin và nhấn "Submit".
-4.  Hệ thống validate:
-    - Email hợp lệ và chưa tồn tại.
-    - Password đủ độ mạnh (min 8 ký tự).
-    - Workspace Name không để trống.
-5.  Hệ thống thực hiện transaction tạo dữ liệu: `User` -> `Workspace` -> `WorkspaceMember (Role=OWNER)`.
-6.  Hệ thống cấp JWT Token và chuyển hướng User vào Dashboard.
-
-**Alternative Flows:**
-
-- **Email đã tồn tại**: Hệ thống hiển thị lỗi "Email này đã được sử dụng" và gợi ý Đăng nhập.
-- **Lỗi hệ thống**: Hiển thị thông báo "Đã có lỗi xảy ra, vui lòng thử lại sau".
-
-### UC-AUTH-02: Đăng nhập (Login)
+### UC-AUTH-01: Đăng ký tài khoản
 
 - **Actor**: Guest
-- **Pre-conditions**: Đã có tài khoản.
-- **Post-conditions**: User nhận được Access Token để truy cập API.
+- **Main Flow**:
 
-**Main Flow:**
+1. User nhập email/password.
+2. Hệ thống gửi OTP xác thực email.
+3. User xác thực OTP.
+4. Hệ thống tạo tài khoản và profile mặc định.
 
-1.  User truy cập trang Login.
-2.  User nhập Email và Password.
-3.  Hệ thống kiểm tra thông tin đăng nhập (Verify Password Hash).
-4.  Nếu đúng: Hệ thống trả về JWT Token (bao gồm UserID, WorkspaceID mặc định).
-5.  User được chuyển hướng vào Dashboard.
-
-**Alternative Flows:**
-
-- **Sai mật khẩu/Email**: Hệ thống báo lỗi chung "Thông tin đăng nhập không chính xác".
-- **Tài khoản bị khóa**: Hệ thống báo "Tài khoản của bạn đã bị vô hiệu hóa".
-
-### UC-AUTH-03: Quên mật khẩu (Forgot Password)
+### UC-AUTH-02: Đăng nhập
 
 - **Actor**: Guest
-- **Trigger**: User quên mật khẩu đăng nhập.
+- **Main Flow**:
 
-**Main Flow:**
+1. User nhập email/password.
+2. Hệ thống xác thực và cấp JWT.
+3. User vào dashboard.
 
-1.  User nhấn "Quên mật khẩu" tại màn hình Login.
-2.  User nhập Email đã đăng ký.
-3.  Hệ thống kiểm tra Email có tồn tại không.
-4.  Nếu tồn tại: Hệ thống tạo mã OTP (hoặc Reset Link) và gửi qua Email.
-5.  User check mail, lấy OTP và nhập vào màn hình xác thực.
-6.  Hệ thống verify OTP.
-7.  User nhập Mật khẩu mới (2 lần).
-8.  Hệ thống cập nhật mật khẩu mới và yêu cầu user đăng nhập lại.
+### UC-AUTH-03: Quên mật khẩu
 
-### UC-AUTH-04: Cập nhật Hồ sơ cá nhân (Update Profile)
+- **Actor**: Guest
+- **Main Flow**:
+
+1. User nhập email.
+2. Hệ thống gửi reset OTP/link.
+3. User đặt mật khẩu mới.
+
+### UC-AUTH-04: Cập nhật hồ sơ
 
 - **Actor**: Authenticated User
-- **Trigger**: User muốn thay đổi thông tin cá nhân.
-- **Post-conditions**: Thông tin `users` và `user_skills` được cập nhật.
+- **Main Flow**:
 
-**Main Flow:**
-
-1.  User truy cập trang "Profile Settings".
-2.  Hệ thống hiển thị thông tin hiện tại (Avatar, Name, Bio, Skills).
-3.  User thay đổi thông tin (VD: Upload ảnh mới, thêm Skill "ReactJS").
-4.  User nhấn "Save Changes".
-5.  Hệ thống validate dữ liệu (Định dạng ảnh, độ dài text).
-6.  Hệ thống lưu xuống DB và trả về thông báo thành công.
+1. User chỉnh avatar, tên, bio, skills.
+2. Hệ thống validate và lưu.
 
 ---
 
-## 2. Workspace Management (Quản lý Workspace)
+## 2. Workspace & Project Management
 
-### UC-WS-01: Mời thành viên vào Workspace
-
-- **Actor**: Workspace Owner / Admin
-- **Trigger**: Cần thêm nhân sự vào công ty/tổ chức.
-- **Post-conditions**: Email mời được gửi hoặc User được add thẳng vào Workspace.
-
-**Main Flow:**
-
-1.  User vào "Workspace Settings" -> Tab "Members".
-2.  User nhấn "Invite Member".
-3.  User nhập danh sách Email (có thể nhập nhiều).
-4.  User chọn Role mặc định cho họ trong Workspace (thường là `MEMBER`).
-5.  Hệ thống kiểm tra từng Email:
-    - **Case A (Đã có tk)**: Tạo record `workspace_members`, gửi Notify.
-    - **Case B (Chưa có tk)**: Gửi Email Invite chứa link đăng ký đặc biệt.
-6.  Hệ thống hiển thị danh sách đã mời thành công.
-
-### UC-WS-02: Quản lý Team Template
+### UC-WS-01: Tạo workspace
 
 - **Actor**: Authenticated User
-- **Trigger**: User muốn tạo nhóm mẫu để invite nhanh vào các dự án sau này.
-- **Post-conditions**: Record mới trong `team_templates`.
+- **Main Flow**:
 
-**Main Flow:**
+1. User tạo workspace mới.
+2. Hệ thống gán quyền owner cho user tạo.
 
-1.  User truy cập menu "My Teams".
-2.  User nhấn "Create Team".
-3.  User nhập Tên Team (VD: "Mobile Squad") và mô tả.
-4.  User thêm thành viên vào Team (Search theo email/tên).
-5.  User nhấn "Save".
-6.  Hệ thống lưu `team_templates` và `team_member_templates`.
+### UC-WS-02: Mời thành viên vào workspace
 
----
+- **Actor**: Workspace Owner/Admin
+- **Main Flow**:
 
-## 3. Project Management (Quản lý Dự án)
+1. Nhập email và role.
+2. Hệ thống thêm member hoặc gửi lời mời.
 
-### UC-PROJ-01: Tạo Project mới
+### UC-PROJ-01: Tạo project
 
-- **Actor**: Workspace Owner / Admin / Member (tùy cấu hình)
-- **Post-conditions**: Project mới được tạo, User tạo trở thành Project Manager.
+- **Actor**: Workspace Owner/Admin/Manager
+- **Main Flow**:
 
-**Main Flow:**
+1. Nhập thông tin project.
+2. Chọn member và role.
+3. Hệ thống tạo project và mapping thành viên.
 
-1.  User nhấn "New Project" trên thanh điều hướng.
-2.  User nhập: Tên dự án, Key/Mã dự án (nếu có), Mô tả.
-3.  User cấu hình:
-    - **Access**: Private (chỉ thành viên được mời) hay Public (cả Workspace thấy).
-    - **Dates**: Start Date, End Date.
-4.  User chọn "Create Project".
-5.  Hệ thống tạo Project -> Add User làm Manager -> Chuyển hướng tới trang Project Board.
-
-### UC-PROJ-02: Cấu hình Project & Thành viên
+### UC-PROJ-02: Cập nhật project settings
 
 - **Actor**: Project Manager
-- **Pre-conditions**: User phải có role `MANAGER` trong Project hoặc `ADMIN` Workspace.
+- **Main Flow**:
 
-**Main Flow:**
-
-1.  User vào "Project Settings" -> "Members".
-2.  User nhấn "Add Member".
-3.  Hệ thống cho phép chọn:
-    - Từng User lẻ từ Workspace.
-    - Hoặc chọn "Import from Team" (sử dụng UC-WS-02).
-4.  User chọn Role trong Project cho các thành viên (Manager, Member, Viewer).
-5.  User xác nhận "Add".
-6.  Hệ thống cập nhật `project_members` và gửi thông báo cho thành viên mới.
-
-### UC-PROJ-03: Xem Dashboard Project
-
-- **Actor**: Member cuả Project
-- **Trigger**: User muốn xem tổng quan tiến độ.
-
-**Main Flow:**
-
-1.  User truy cập vào Project.
-2.  Hệ thống hiển thị mặc định là "Kanban Board".
-3.  User có thể switch view:
-    - **List View**: Xem dạng danh sách.
-    - **Timeline**: Xem Gantt chart (nếu có data start/due date).
-    - **Dashboard**: Xem biểu đồ Burn-down, tỷ lệ hoàn thành.
+1. Sửa thông tin project.
+2. Điều chỉnh membership/permissions theo role.
 
 ---
 
-## 4. Task Management (Quản lý Công việc)
+## 3. Task Management (MVP Core)
 
-### UC-TASK-01: Tạo Task mới
+### UC-TASK-01: Tạo task
 
-- **Actor**: Member, Manager
-- **Pre-conditions**: Project đang Active.
+- **Actor**: Member/Manager
+- **Main Flow**:
 
-**Main Flow:**
+1. Nhập title, description, priority, due date.
+2. Chọn assignee (1 hoặc nhiều).
+3. Hệ thống lưu task.
 
-1.  Tại giao diện Board/List, User nhấn "Add Task".
-2.  User nhập Title (Bắt buộc).
-3.  User nhập các thông tin bổ sung (Optional):
-    - Assignees: Chọn người thực hiện (Multi-select).
-    - Due Date: Hạn chót.
-    - Priority: Low/Medium/High/Urgent.
-    - Tags: Gắn nhãn (Bug, Feature...).
-4.  User nhấn "Create".
-5.  Hệ thống lưu Task và hiển thị ngay trên UI (không cần reload).
+### UC-TASK-02: Quản lý subtask/checklist
 
-### UC-TASK-02: Chỉnh sửa Task & Subtasks
+- **Actor**: Member/Manager
+- **Main Flow**:
 
-- **Actor**: Member, Manager
-- **Trigger**: Cần cập nhật chi tiết công việc.
+1. Mở task detail.
+2. Thêm/sửa/xóa checklist items.
+3. Hệ thống auto-save.
 
-**Main Flow:**
+### UC-TASK-03: Chuyển trạng thái task
 
-1.  User click vào Task để mở Task Detail Modal.
-2.  User update Description (Rich Text Editor).
-3.  User thêm Checklist (Subtasks):
-    - Nhập tên checklist item -> Enter.
-    - Có thể tick chọn hoàn thành checklist item.
-4.  Hệ thống tự động lưu (Auto-save) sau mỗi thay đổi hoặc khi blur input.
+- **Actor**: Assignee/Manager
+- **Main Flow**:
 
-### UC-TASK-03: Chuyển trạng thái Task (Kanban Drag-drop)
+1. Kéo thả task trên Kanban.
+2. Hệ thống cập nhật status.
+3. Status dùng cố định: `TODO`, `IN_PROGRESS`, `REVIEW`, `DONE`.
 
-- **Actor**: Assignee, Manager
-- **Trigger**: Tiến độ công việc thay đổi.
-
-**Main Flow:**
-
-1.  Trên Kanban Board, User kéo thẻ Task từ cột A (Todo) sang cột B (In Progress).
-2.  Hệ thống kiểm tra quyền hạn (Viewer không được kéo).
-3.  Hệ thống cập nhật `status_id` của Task.
-4.  **Logic tự động**:
-    - Nếu vào "Done": Cập nhật `actual_end_date` = now.
-    - Nếu vào "In Progress" từ "Todo": Có thể trigger start timer (UC-PERF-01).
-
-### UC-TASK-04: Đính kèm file (Upload Attachments)
+### UC-TASK-04: Đính kèm file
 
 - **Actor**: Member
-- **Post-conditions**: File được lưu và link vào Task.
+- **Main Flow**:
 
-**Main Flow:**
+1. Upload file từ task detail.
+2. Backend lưu qua MinIO (MVP).
+3. Hệ thống liên kết file với task.
 
-1.  Trong Task Detail, User nhấn icon "Attach".
-2.  User chọn file từ máy tính.
-3.  Frontend upload file lên Server/Cloud Storage.
-4.  Server trả về File URL.
-5.  Frontend gọi API attach file vào Task.
-6.  Hệ thống hiển thị thumbnail file trong Task.
-
-### UC-TASK-05: Bình luận & Mention (Collaboration)
+### UC-TASK-05: Bình luận và mention
 
 - **Actor**: Project Member
-- **Trigger**: Cần thảo luận, feedback.
+- **Main Flow**:
 
-**Main Flow:**
-
-1.  User scroll xuống phần Comments.
-2.  User nhập nội dung. Có thể gõ "@" để list thành viên và chọn.
-3.  User nhấn "Send".
-4.  Hệ thống lưu Comment.
-5.  Hệ thống bắn Notification cho những người được Mention và Assignee của Task.
-6.  Comment mới xuất hiện ngay lập tức (Realtime update nếu có).
+1. Gửi comment trong task.
+2. Mention thành viên bằng @.
+3. Hệ thống tạo notification cho người liên quan.
 
 ---
 
-## 5. Performance & Time Tracking
+## 4. Search & Analytics (Elasticsearch - MVP)
 
-### UC-PERF-01: Log Time (Chấm công)
+### UC-SEA-01: Tìm kiếm full-text
 
-- **Actor**: Assignee
-- **Trigger**: Bắt đầu làm việc trên 1 task.
+- **Actor**: Authenticated User
+- **Main Flow**:
 
-**Main Flow (Timer Mode):**
+1. User nhập keyword.
+2. Hệ thống tìm trên Task/Project/User profile.
+3. Trả kết quả với filter/sort/highlight.
 
-1.  User nhấn nút "Start Timer" (Play icon) trên Task.
-2.  Hệ thống ghi nhận thời điểm bắt đầu (`started_at`).
-3.  User làm việc.
-4.  User nhấn "Stop Timer".
-5.  Hệ thống tính `duration` = Now - `started_at` và lưu vào `time_entries`.
+### UC-SEA-02: Dashboard KPI - Task Throughput
 
-**Alternative Flow (Manual Mode):**
+- **Actor**: Project Member/Manager
+- **Main Flow**:
 
-1.  User nhấn "Log Work".
-2.  User nhập thời gian (VD: "2h 30m") và ngày thực hiện.
-3.  Hệ thống quy đổi ra giây và lưu vào `time_entries`.
+1. User mở dashboard.
+2. Hệ thống truy vấn index analytics.
+3. Hiển thị số task done theo ngày/tuần.
 
-### UC-PERF-02: Xem Báo cáo Hiệu suất Cá nhân
+### UC-SEA-03: Dashboard KPI - Overdue Trends
 
-- **Actor**: Member
-- **Trigger**: Muốn kiểm tra KPI bản thân.
+- **Actor**: Project Member/Manager
+- **Main Flow**:
 
-**Main Flow:**
+1. User mở dashboard.
+2. Hệ thống tính xu hướng task quá hạn theo thời gian.
+3. Hiển thị chart xu hướng.
 
-1.  User vào trang "My Performance".
-2.  Hệ thống hiển thị Dashboard cá nhân:
-    - **Workload**: Số task đang giữ, số task quá hạn.
-    - **Time Logged**: Biểu đồ cột thời gian làm việc trong 7 ngày qua.
-    - **Efficiency**: Tỷ lệ hoàn thành task (Done / Total Assigned).
+### UC-SEA-04: Đồng bộ dữ liệu sang Elasticsearch
 
-### UC-PERF-03: Xem Báo cáo Hiệu suất Project
+- **Actor**: System Scheduler/Admin
+- **Main Flow**:
 
-- **Actor**: Project Manager
-- **Trigger**: Cần báo cáo tiến độ tuần cho cấp trên.
-
-**Main Flow:**
-
-1.  Manager vào tab "Reports" của Project.
-2.  Hệ thống tổng hợp dữ liệu toàn bộ thành viên trong Project.
-3.  Hiển thị bảng `Member Performance`:
-    - Columns: Name, Tasks Assigned, Tasks Done, Total Time, Overdue Count.
-4.  Hiển thị biểu đồ phân bổ Task theo Status và theo Member.
+1. Batch job chạy theo lịch.
+2. Đồng bộ dữ liệu từ PostgreSQL sang Elasticsearch.
+3. Admin có thể chạy manual reindex command khi cần.
 
 ---
 
-## 6. AI Features (Tính năng thông minh)
+## 5. Notifications
 
-### UC-AI-01: AI Gợi ý Assignee (Smart Assign)
-
-- **Actor**: Manager/Member
-- **Trigger**: Khi đang tạo/edit task và chưa biết giao cho ai.
-
-**Main Flow:**
-
-1.  Tại field Assignee, User nhấn nút "AI Suggest".
-2.  Hệ thống gửi `Task Title`, `Description`, `Tags` và `User Profiles (Skills)` lên AI Engine.
-3.  AI phân tích độ phù hợp (Matching Score).
-4.  Hệ thống hiển thị danh sách User được gợi ý kèm lý do (VD: "Hoang (90% match - Skill ReactJS)").
-5.  User click chọn user để assign.
-
-### UC-AI-02: AI Tóm tắt Task (Summarize)
-
-- **Actor**: Member
-- **Trigger**: Task có phần mô tả quá dài hoặc luồng comment tranh luận dài.
-
-**Main Flow:**
-
-1.  User nhấn nút "Summarize with AI" trên header Task.
-2.  Hệ thống gửi toàn bộ text (Description + History Comments) lên AI.
-3.  AI xử lý và trả về đoạn text ngắn gọn (Bullet points).
-4.  Hệ thống hiển thị Popup tóm tắt cho User đọc nhanh.
-
-### UC-AI-03: AI Tạo Task từ Mô tả Natural Language
-
-- **Actor**: Manager
-- **Trigger**: Có ý tưởng dự án nhưng lười tạo từng task thủ công.
-
-**Main Flow:**
-
-1.  Manager nhấn "AI Task Generator".
-2.  User nhập mô tả tự nhiên: "Setup dự án ReactJS, cài Tailwind, cấu hình Router và trang Login".
-3.  AI phân tích và trả về danh sách Preview các Task:
-    - [ ] Init React App (FE)
-    - [ ] Install TailwindCSS (FE)
-    - [ ] Setup React Router (FE)
-    - [ ] Create Login UI (FE)
-4.  User có thể bỏ chọn các task không muốn.
-5.  User nhấn "Create Selected Tasks".
-6.  Hệ thống tạo hàng loạt Task vào Project.
-
----
-
-## 7. Notifications (Hệ thống thông báo)
-
-### UC-NOTI-01: Nhận và Xem Thông báo
+### UC-NOTI-01: Nhận và xem thông báo
 
 - **Actor**: User
-- **Trigger**: Có sự kiện liên quan (Assign, Mention, Due Date).
+- **Main Flow**:
 
-**Main Flow:**
+1. Sự kiện xảy ra (mention/assign/update liên quan).
+2. Hệ thống tạo notification.
+3. UI hiển thị badge trên chuông.
+4. User mở danh sách và điều hướng tới task/project.
 
-1.  Sự kiện xảy ra (VD: A comment vào task của B).
-2.  Hệ thống tạo record `notification` cho B.
-3.  UI của B hiện badge đỏ trên icon Chuông.
-4.  B click vào icon Chuông.
-5.  Hệ thống hiện danh sách thông báo mới nhất.
-6.  B click vào thông báo -> Hệ thống đánh dấu "Đã đọc" và chuyển hướng B đến Task đó.
+> MVP realtime scope: ưu tiên realtime cho notification bell.
+
+---
+
+## 6. AI Features (Phase 2)
+
+### UC-AI-01: AI Smart Assign
+
+- **Actor**: Manager
+- **Main Flow**:
+
+1. User chọn AI suggest tại assignee field.
+2. AI trả danh sách ứng viên phù hợp.
+3. User chọn và xác nhận.
+
+### UC-AI-02: AI Auto Subtask Generation
+
+- **Actor**: Manager/Member
+- **Main Flow**:
+
+1. User nhập mô tả task lớn.
+2. AI sinh danh sách subtasks.
+3. User duyệt và tạo checklist/subtasks.
+
+### UC-AI-03: AI Chatbot RAG
+
+- **Actor**: Authenticated User
+- **Main Flow**:
+
+1. User đặt câu hỏi về tiến độ dự án.
+2. Chatbot truy vấn retrieval từ Elasticsearch.
+3. LLM tổng hợp câu trả lời và trả kết quả.
+
+### UC-AI-04: AI Performance Evaluation
+
+- **Actor**: Manager
+- **Main Flow**:
+
+1. Hệ thống thu thập activity signals.
+2. AI phân tích xu hướng hiệu suất.
+3. Trả báo cáo đánh giá và cảnh báo rủi ro.
