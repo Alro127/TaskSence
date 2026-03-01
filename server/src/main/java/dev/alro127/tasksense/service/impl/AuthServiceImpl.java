@@ -204,7 +204,7 @@ public class AuthServiceImpl implements AuthService {
                 user.getId().toString(),
                 Duration.ofMinutes(5));
 
-        String resetLink = appConfig.getFrontendUrl() + "/reset-password?token=" + rawToken;
+        String resetLink = appConfig.getFrontendUrl() + "/auth/reset-password?token=" + rawToken;
 
         String htmlContent = """
                 <div style="font-family: Arial, sans-serif;">

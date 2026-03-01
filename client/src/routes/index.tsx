@@ -12,6 +12,7 @@ import {
   RegisterPage,
   VerifyOtpPage,
   ForgotPasswordPage,
+  ResetPasswordPage,
 } from "@/features/auth/pages";
 import { useLogoutMutation } from "@/features/auth/api/authApi";
 import { logout } from "@/features/auth/authSlice";
@@ -83,6 +84,10 @@ const routes: RouteObject[] = [
       {
         path: "forgot-password",
         element: <ForgotPasswordPage />,
+      },
+      {
+        path: "reset-password",
+        element: <ResetPasswordPage />,
       },
     ],
   },

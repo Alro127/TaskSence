@@ -21,6 +21,7 @@
   - `POST /auth/login/local` → body: `{email, password}` → `{accessToken, refreshToken}`
   - `POST /auth/login/google?code=...` → `{accessToken, refreshToken}`
   - `POST /auth/forgot-password?email=...` → gửi email reset password
+  - `POST /auth/reset-password` → body: `{token, newPassword}` → reset password
   - `POST /auth/logout` → body: `{token}` (refresh token)
 - **API Response format**: `{code: string, message: string, data: T}`
 - **CORS allowed**: `http://localhost:5173`
@@ -60,6 +61,7 @@ client/
 │   │       │   ├── RegisterPage.tsx
 │   │       │   ├── VerifyOtpPage.tsx
 │   │       │   ├── ForgotPasswordPage.tsx
+│   │       │   ├── ResetPasswordPage.tsx
 │   │       │   └── index.ts
 │   │       └── authSlice.ts      # Auth Redux slice (tokens, state)
 │   ├── layouts/
@@ -93,6 +95,7 @@ client/
 | Login            | ✅ Done | Email + Password, form validation, RTK Query |
 | Register         | ✅ Done | Email + Password + confirm, navigates to OTP |
 | OTP Verification | ✅ Done | 6-digit input, auto-submit, resend timer     |
+| Reset Password   | ✅ Done | Token từ email, đặt password mới             |
 | Forgot Password  | ✅ Done | Đã gọi API thật `/auth/forgot-password`      |
 | Google OAuth     | ✅ Done | Đã login thật qua `code` + backend exchange  |
 | Logout           | ✅ Done | Gọi API `/auth/logout` + clear local session |
@@ -119,8 +122,7 @@ client/
 7. **Password rules**: Min 8 chars, 1 uppercase, 1 lowercase, 1 number
 8. **OTP**: 6 digits, auto-submit khi nhập đủ, resend cooldown 60s
 9. **Token storage**: localStorage (accessToken, refreshToken)
-10. **Google OAuth**: dùng `@react-oauth/google` (`auth-code flow`) và gửi `code` về backend
-11. **Logout**: gọi backend revoke refresh token trước khi clear local auth state
+10. **Google OAuth**: dùng `@react-oauth/google` (`auth-code flow`) và gửi `code`13. **Reset Password**: Nhận token từ URL query param, validate password mới, auto redirect sau success11. **Logout**: gọi backend revoke refresh token trước khi clear local auth state
 
 ## 🔧 Environment Variables
 
@@ -148,3 +150,5 @@ npm run preview  # Preview production build
 - `PasswordInput` đã hỗ trợ `forwardRef` cho react-hook-form
 - Auth flow: Register → OTP Verify → Dashboard; Login → Dashboard; Google Login → Dashboard
 - ForgotPassword đã kết nối backend thật; success message lấy từ response server
+
+- ResetPassword: Validate token từ URL (?token=...), password rules giống Register, auto redirect sau 3s
