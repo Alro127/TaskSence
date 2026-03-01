@@ -90,7 +90,7 @@ CREATE TABLE tasks (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     priority VARCHAR(50) CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH', 'URGENT')),
-    status VARCHAR(50) CHECK (status IN ('TODO', 'IN_PROGRESS', 'REVIEW', 'DONE')) DEFAULT 'TODO',
+    status VARCHAR(50) NOT NULL CHECK (status IN ('TODO', 'IN_PROGRESS', 'REVIEW', 'DONE')) DEFAULT 'TODO',
     due_date DATE,
     position INT DEFAULT 0,
     created_by BIGINT NOT NULL,
