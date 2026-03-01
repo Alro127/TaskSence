@@ -23,6 +23,7 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponse<>(
                 "200",
                 "Please check OTP in your email",
+                null,
                 null
         ));
     }
@@ -32,7 +33,8 @@ public class AuthController {
         ApiResponse<AuthResponse> response = new ApiResponse<>(
                 "200",
                 "Your OTP is verified",
-                authService.verifyOtp(email, otp)
+                authService.verifyOtp(email, otp),
+                null
         );
         return ResponseEntity.ok(response);
     }
@@ -42,7 +44,8 @@ public class AuthController {
         ApiResponse<AuthResponse> response = new ApiResponse<>(
                 "200",
                 "Welcome",
-                authService.login(request)
+                authService.login(request),
+                null
         );
 
         return ResponseEntity.ok(response);
@@ -53,7 +56,8 @@ public class AuthController {
         ApiResponse<AuthResponse> response = new ApiResponse<>(
                 "200",
                 "Welcome",
-                authService.refresh(request)
+                authService.refresh(request),
+                null
         );
 
         return ResponseEntity.ok(response);
@@ -64,7 +68,8 @@ public class AuthController {
         ApiResponse<AuthResponse> response = new ApiResponse<>(
                 "200",
                 "Welcome",
-                authService.loginWithGoogle(code)
+                authService.loginWithGoogle(code),
+                null
         );
         return ResponseEntity.ok(response);
     }
@@ -75,6 +80,7 @@ public class AuthController {
         ApiResponse<Void> response = new ApiResponse<>(
                 "200",
                 "If the email exists, a reset link has been sent.",
+                null,
                 null
         );
         return ResponseEntity.ok(response);
@@ -93,6 +99,7 @@ public class AuthController {
         ApiResponse<Void> response = new ApiResponse<>(
                 "200",
                 "Your password is reset",
+                null,
                 null
         );
         return ResponseEntity.ok(response);
@@ -104,6 +111,7 @@ public class AuthController {
         ApiResponse<Void> response = new ApiResponse<>(
                 "200",
                 "Logout successfully",
+                null,
                 null
         );
 

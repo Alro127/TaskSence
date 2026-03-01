@@ -4,6 +4,7 @@ import dev.alro127.tasksense.dto.common.ApiResponse;
 import dev.alro127.tasksense.dto.request.UpdateUserRequest;
 import dev.alro127.tasksense.dto.response.UserResponse;
 import dev.alro127.tasksense.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,29 +23,8 @@ public class UserController {
         ApiResponse<UserResponse> response = new ApiResponse<>(
                 "200",
                 "Get profile successfully",
-                userService.getCurrentUser()
-        );
-
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long id) {
-        ApiResponse<UserResponse> response = new ApiResponse<>(
-                "200",
-                "Get user successfully",
-                userService.getUserById(id)
-        );
-
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
-        ApiResponse<List<UserResponse>> response = new ApiResponse<>(
-                "200",
-                "Get user list successfully",
-                userService.getAllUsers()
+                userService.getCurrentUser(),
+                null
         );
 
         return ResponseEntity.ok(response);
@@ -52,12 +32,13 @@ public class UserController {
 
     @PutMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
-            @RequestBody UpdateUserRequest request
+            @Valid @RequestBody UpdateUserRequest request
     ) {
         ApiResponse<UserResponse> response = new ApiResponse<>(
                 "200",
                 "Update profile successfully",
-                userService.updateCurrentUser(request)
+                userService.updateCurrentUser(request),
+                null
         );
 
         return ResponseEntity.ok(response);
@@ -70,6 +51,7 @@ public class UserController {
         ApiResponse<Void> response = new ApiResponse<>(
                 "200",
                 "Delete user successfully",
+                null,
                 null
         );
 

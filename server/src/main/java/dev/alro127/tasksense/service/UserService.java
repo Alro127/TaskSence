@@ -2,15 +2,12 @@ package dev.alro127.tasksense.service;
 
 import dev.alro127.tasksense.dto.request.UpdateUserRequest;
 import dev.alro127.tasksense.dto.response.UserResponse;
+import org.springframework.stereotype.Service;
 
-import java.util.List;
 
+@Service
 public interface UserService {
     UserResponse getCurrentUser();
-
-    UserResponse getUserById(Long id);
-
-    List<UserResponse> getAllUsers();
 
     UserResponse updateCurrentUser(UpdateUserRequest request);
 

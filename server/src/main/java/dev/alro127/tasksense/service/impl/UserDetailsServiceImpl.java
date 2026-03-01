@@ -19,6 +19,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @NullMarked
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         var user = userRepository.findByEmail(username).orElseThrow(() -> new UsernameNotFoundException(username));
+        if (user.getDeletedAt() != null) {
+            throw new UsernameNotFoundException("User not found");
+        }
         return User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
