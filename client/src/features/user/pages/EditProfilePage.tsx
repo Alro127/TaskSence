@@ -25,7 +25,7 @@ const profileEditSchema = z.object({
       (val) => !val || /^(\+84|0)[0-9]{9}$/.test(val),
       "Phone must be a valid Vietnamese number (e.g., 0123456789 or +84123456789)"
     ),
-  gender: z.enum(["MALE", "FEMALE", "OTHER"]).optional(),
+  gender: z.enum(["male", "female", "other"]).optional(),
   dob: z.string().optional(),
   bio: z.string().max(1000, "Bio must be at most 1000 characters").optional(),
 });
@@ -48,7 +48,7 @@ export function EditProfilePage() {
     defaultValues: {
       fullName: user?.fullName || "",
       phone: user?.phone || "",
-      gender: (user?.gender as "MALE" | "FEMALE" | "OTHER") || undefined,
+      gender: (user?.gender as "male" | "female" | "other") || undefined,
       dob: user?.dob ? user.dob.split("T")[0] : "",
       bio: user?.bio || "",
     },
@@ -157,9 +157,9 @@ export function EditProfilePage() {
                 className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="">Select a gender</option>
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-                <option value="OTHER">Other</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
               </select>
               {errors.gender && (
                 <p className="text-sm text-destructive">{errors.gender.message}</p>

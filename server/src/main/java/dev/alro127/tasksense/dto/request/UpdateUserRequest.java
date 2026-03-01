@@ -20,7 +20,7 @@ public class UpdateUserRequest {
     private String phone;
 
     @Pattern(
-            regexp = "MALE|FEMALE|OTHER",
+            regexp = "male|female|other",
             message = "Gender must be MALE, FEMALE or OTHER"
     )
     private String gender;
