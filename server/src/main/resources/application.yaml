@@ -56,8 +56,8 @@ server:
 security:
   jwt:
     secret: my-super-secret-key-which-is-very-long-123456
-    short-expiration: 3600
-    long-expiration: 604800
+    short-expiration: 3600000
+    long-expiration: 604800000
   google:
     client-id: ${GOOGLE_CLIENT_ID:}
     client-secret: ${GOOGLE_CLIENT_SECRET:}
