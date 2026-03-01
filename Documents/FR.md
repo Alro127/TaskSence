@@ -43,7 +43,7 @@
 
 ### 2. Project
 
-- Tạo, sửa, xóa/archieve project
+- Tạo, sửa, xóa/archive project
 - Mô tả và cấu hình project
 - Theo dõi tiến độ tổng thể project
 
