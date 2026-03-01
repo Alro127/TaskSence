@@ -49,6 +49,7 @@ erDiagram
         boolean is_active
         timestamp created_at
         timestamp updated_at
+        timestamp deleted_at
     }
 
     user_skills {
