@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { logout } from "@/features/auth/authSlice";
 import { useLogoutMutation } from "@/features/auth/api/authApi";
 import { UserProfileCard } from "@/features/user/components";
+import { useGetCurrentUserQuery } from "@/features/user/api/userApi";
+import { updateCurrentUser } from "@/features/user/userSlice";
 
 const navItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -35,12 +37,21 @@ export function MainLayout() {
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
   const [logoutApi, { isLoading: isLogoutLoading }] = useLogoutMutation();
+  const { data: userData } = useGetCurrentUserQuery();
 
+  // Fetch current user on component mount
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/auth/login", { replace: true });
     }
   }, [isAuthenticated, navigate]);
+
+  // Update Redux store with fetched user data
+  useEffect(() => {
+    if (userData?.data) {
+      dispatch(updateCurrentUser(userData.data));
+    }
+  }, [userData?.data, dispatch]);
 
   if (!isAuthenticated) {
     return <Navigate to="/auth/login" replace />;
