@@ -1,399 +1,211 @@
-# Project Plan: Task Management & Performance Evaluation System (Enhanced Scope)
+# Project Plan: TaskSense (Aligned Scope)
 
-> **Thông tin tổng quan**
->
-> | Danh mục                | Chi tiết                                                                   |
-> | :---------------------- | :------------------------------------------------------------------------- |
-> | **Thời gian thực hiện** | **15 Tuần** (27/02/2026 - 29/06/2026)                                      |
-> | **Deadline Bảo vệ**     | 29/06/2026                                                                 |
-> | **Nhân sự**             | 2 Dev (52 giờ/tuần tương đương 0.65 FTE/người)                             |
-> | **Công nghệ**           | **Java (Spring Boot)** + **ReactJS** + **PostgreSQL** + **AI Integration** |
-> | **Buffer Time**         | 2 Tuần dự phòng rủi ro                                                     |
+> Phiên bản này đồng bộ theo quyết định mới: **MVP không AI**, dùng **Elasticsearch cho Search + Analytics cơ bản**, AI chuyển sang **Phase 2**.
 
----
+## I. Tổng quan
 
-## I. Work Breakdown Structure (WBS) - Expanded Scope
-
-Với quỹ thời gian 15 tuần, scope dự án được mở rộng thêm phân hệ **Advanced AI Assistant** và **Notification System** hoàn chỉnh hơn.
-
-### Phase 1: Foundation (Tuần 1-3)
-
-**Target**: Hoàn thiện Kiến trúc + Auth + Quản lý Workspace.
-
-- **1.1. System Design & Setup**:
-  - Database Schema (Finalize with advanced fields).
-  - CI/CD Setup (GitHub Actions cơ bản để auto-build).
-  - Backend Skeleton (Security, Exception Handling, Logging).
-  - Frontend Skeleton (Theme, Layout, Common Components).
-- **1.2. Authentication Module**:
-  - Register, Login, Refresh Token (Security chuẩn).
-  - Email Verification (gửi mail thật).
-- **1.3. Workspace & User Management**:
-  - Workspace settings.
-  - Member Invite (Email service integration).
-
-### Phase 2: Project Management Core (Tuần 4-7)
-
-**Target**: Hoàn thiện tính năng quản lý dự án cơ bản.
-
-- **2.1. Project & Teams**:
-  - Create Project, Project Settings.
-  - Team Templates (Quản lý nhóm mẫu).
-- **2.2. Task Management**:
-  - CRUD Task đầy đủ (Priority, Due date, Labels).
-  - Subtasks/Checklists control.
-- **2.3. Kanban Board**:
-  - Drag and Drop status update.
-  - Filter tasks by Assignee/Label.
-
-### Phase 3: Collaboration & Performance (Tuần 8-10)
-
-**Target**: Tính năng cộng tác & Báo cáo.
-
-- **3.1. Rich Communication**:
-  - Comments with Mentions (@user).
-  - Validation Realtime (WebSocket).
-  - File Attachments (AWS S3/Cloudinary).
-- **3.2. Performance Tracking**:
-  - Time Logging System (Manual + Timer).
-  - Personal & Project Dashboard (ChartJS/Recharts).
-  - Report Export (PDF/Excel - _feature mới_).
-
-### Phase 4: AI Enhanced Features (Tuần 11-13)
-
-**Target**: Triển khai các tính năng AI thông minh (Mở rộng Scope).
-
-- **4.1. AI Task Assistant**:
-  - **Auto-Schedule**: Gợi ý lịch làm việc dựa trên deadline task.
-  - **Prioritize Suggestion**: Gợi ý mức độ ưu tiên dựa trên deadline.
-- **4.2. Chatbot Assistant (New)**:
-  - Chatbox hỏi đáp về dự án: "Tiến độ dự án A thế nào?", "Ai đang rảnh?".
-  - Integration with LLM (OpenAI/Gemini/Local LLM).
-- **4.3. Content Generation**:
-  - Summarize Task/Discussion.
-  - Auto-generate Subtasks from Description.
-
-### Phase 5: Stabilization & Delivery (Tuần 14-15)
-
-**Target**: Ổn định hệ thống và chuẩn bị bảo vệ.
-
-- **5.1. Buffer Week (Tuần 14)**:
-  - Dành trọn vẹn để fix bug phát sinh từ các Phase trước.
-  - Performance Tuning (Index DB, Cache).
-- **5.2. Final Delivery (Tuần 15)**:
-  - User Acceptance Testing (UAT).
-  - Final Presentation & Demo Script.
-  - Deploy Production.
+| Danh mục       | Chi tiết                                                |
+| :------------- | :------------------------------------------------------ |
+| Thời gian      | 15 tuần (27/02/2026 - 29/06/2026)                       |
+| Nhân sự        | 2 thành viên fullstack                                  |
+| Mô hình        | Workspace-based cho team nhỏ 5-15 người                 |
+| Stack chính    | Spring Boot + React + PostgreSQL + Elasticsearch        |
+| Triển khai MVP | Local Docker Compose (Postgres + Elasticsearch + MinIO) |
 
 ---
 
-## II. Product Backlog (Sprint-Mapped)
+## II. Phase Strategy
 
-Danh sách các User Stories (US) được chia nhỏ và map trực tiếp vào từng Sprint để dễ dàng tracking.
+### Phase 1 (Sprint 1-4) - MVP Delivery
 
-#### Sprint 1: Foundation & Auth (Tuần 1-2)
+Mục tiêu: đưa sản phẩm chạy được end-to-end cho nhóm nhỏ, có search + dashboard cơ bản.
 
-| ID        | Name                |   Type    | Description                                                       | Priority | Points |
-| :-------- | :------------------ | :-------: | :---------------------------------------------------------------- | :------: | :----: |
-| **US-01** | **System Setup**    | Tech Task | Init Spring Boot & ReactJS structure, Config Database connection. |   High   |   3    |
-| **US-02** | **Register**        |  Feature  | User đăng ký tài khoản mới qua Email/Password, xác thực email.    |   High   |   5    |
-| **US-03** | **Login**           |  Feature  | User đăng nhập an toàn, server trả về JWT Access & Refresh Token. |   High   |   5    |
-| **US-04** | **Forgot Password** |  Feature  | User yêu cầu reset mật khẩu qua email khi quên pass.              |  Medium  |   3    |
+- Auth + Profile cơ bản
+- Workspace + Project + Membership
+- Task CRUD + Kanban + fixed workflow status
+- Comment + Mention + Notification bell
+- File upload (MinIO)
+- Elasticsearch Search + Analytics (2 KPI)
+- Export PDF/Excel
 
-#### Sprint 2: Workspace & Project (Tuần 3-4)
+### Phase 2 (Sprint 5-8) - AI & Advanced
 
-| ID        | Name               |  Type   | Description                                                      | Priority | Points |
-| :-------- | :----------------- | :-----: | :--------------------------------------------------------------- | :------: | :----: |
-| **US-05** | **Workspace CRUD** | Feature | User tạo, đổi tên, và xóa Workspace (không gian làm việc chung). |   High   |   3    |
-| **US-06** | **Invite Member**  | Feature | Workspace Owner mời thành viên khác vào thông qua email.         |   High   |   5    |
-| **US-07** | **Project CRUD**   | Feature | Tạo project mới bên trong Workspace, cấu hình thông tin cơ bản.  |   High   |   3    |
-| **US-08** | **Permission**     | Feature | Phân quyền: Chỉ Owner/Admin mới được chỉnh sửa Setting Project.  |  Medium  |   3    |
+Mục tiêu: mở rộng năng lực thông minh và tối ưu chất lượng sản phẩm.
 
-#### Sprint 3: Task & Kanban (Tuần 5-6)
-
-| ID        | Name                 |  Type   | Description                                                              | Priority | Points |
-| :-------- | :------------------- | :-----: | :----------------------------------------------------------------------- | :------: | :----: |
-| **US-09** | **Task CRUD**        | Feature | Tạo, sửa, xóa task với các trường: Title, Desc, Priority, Expected Time. |   High   |   8    |
-| **US-10** | **Task Assign**      | Feature | Gán thành viên chịu trách nhiệm (Assignee) cho task.                     |   High   |   3    |
-| **US-11** | **Kanban Interface** |  UI/UX  | Hiển thị bảng Kanban với các cột Dynamic (Todo, In Progress, Done).      |   High   |   8    |
-| **US-12** | **Drag & Drop**      | Feature | Kéo thả task giữa các cột để cập nhật trạng thái nhanh.                  |   High   |   5    |
-
-#### Sprint 4: Collaboration (Tuần 7-8)
-
-| ID        | Name               |  Type   | Description                                                      | Priority | Points |
-| :-------- | :----------------- | :-----: | :--------------------------------------------------------------- | :------: | :----: |
-| **US-13** | **Comment System** | Feature | User thảo luận, trao đổi trực tiếp ngay trong Task Detail modal. |  Medium  |   5    |
-| **US-14** | **Attachments**    | Feature | Upload và đính kèm file (ảnh, doc) vào task hoặc comment.        |  Medium  |   5    |
-| **US-15** | **Realtime Noti**  | Feature | Nhận thông báo (bell notification) tức thì khi có hoạt động mới. |  Medium  |   5    |
-| **US-16** | **Mention**        | Feature | Tag tên thành viên (@username) trong comment để gây sự chú ý.    |   Low    |   3    |
-
-#### Sprint 5: Reporting (Tuần 9-10)
-
-| ID        | Name              |  Type   | Description                                                            | Priority | Points |
-| :-------- | :---------------- | :-----: | :--------------------------------------------------------------------- | :------: | :----: |
-| **US-17** | **Time Timer**    | Feature | Bấm giờ Start/Stop trực tiếp trên task để đo lường thời gian làm việc. |  Medium  |   5    |
-| **US-18** | **Project Stats** | Feature | Xem biểu đồ tổng quan tiến độ dự án (Pie Chart, Burn-down chart).      |  Medium  |   8    |
-| **US-19** | **My Dashboard**  | Feature | Dashboard cá nhân hiển thị: Task của tôi, Task quá hạn, Hiệu suất.     |   Low    |   5    |
-| **US-20** | **Export Excel**  | Feature | Xuất danh sách task và báo cáo chấm công ra file Excel/PDF.            |   Low    |   3    |
-
-#### Sprint 6: AI Features (Advanced) (Tuần 11-12)
-
-| ID        | Name                |  Type  | Description                                                   | Priority | Points |
-| :-------- | :------------------ | :----: | :------------------------------------------------------------ | :------: | :----: |
-| **US-21** | **AI Suggestion**   |   AI   | Gợi ý Assignee phù hợp dựa trên kỹ năng và lịch sử làm việc.  |   Low    |   5    |
-| **US-22** | **Auto-Schedule**   |   AI   | Gợi ý sắp xếp thứ tự thực hiện task để tối ưu thời gian.      |   Low    |   8    |
-| **US-23** | **Project Chatbot** | AI/RAG | Chatbot trả lời câu hỏi về dự án dựa trên dữ liệu thật (RAG). |   Low    |   13   |
-| **US-24** | **Summarization**   |   AI   | Tóm tắt nội dung thảo luận dài trong task thành action items. |   Low    |   3    |
+- AI Smart Assign
+- AI Auto Subtask Generation
+- AI Chatbot (RAG với Elasticsearch)
+- Performance AI Evaluation (mở rộng từ activity signals)
+- Analytics mở rộng (workload by assignee, comment activity)
+- Hardening, polish, defense preparation
 
 ---
 
-## III. Detailed 15-Week Timeline (Sprint Plan)
+## III. Sprint Plan (8 Sprints)
 
-_Mô hình: 2 tuần/Sprint (Sprint cuối 1 tuần)_.
-_Capacity: 2 người x 26h = 52h/tuần ~ 100h/Sprint._
+## Sprint 1 - Foundation & Auth
 
-### SPRINT 1: Foundation & Authentication (Tuần 1-2)
+**Goal**: Thiết lập kiến trúc và hoàn thiện luồng xác thực.
 
-**Goal**: Xây dựng xong nền móng dự án và luồng đăng nhập/đăng ký hoàn chỉnh.
-**Focus**: System Setup, Database, Auth Module.
+- Setup backend/frontend skeleton
+- JWT auth + OTP verify + forgot/reset password
+- Profile cơ bản
+- Flyway migration baseline
 
-#### 1. Tasks Breakdown
+**DoD**
 
-- **Backend (Dev A)**:
-  - [ ] Init Spring Boot Project (Dependency: Security, JPA, Lombok, JWT).
-  - [ ] Setup PostgreSQL & Flyway/Liquibase Migration (Create `users`, `roles`, `workspaces` tables).
-  - [ ] Implement `AuthProvider`: Login, Register, Refresh Token logic.
-  - [ ] Setup Global Exception Handler & API Response Wrapper.
-- **Frontend (Dev B)**:
-  - [ ] Init React + Vite + TailwindCSS.
-  - [ ] Setup Redux Toolkit (Auth Slice) & Axios Interceptors.
-  - [ ] Create UI: Login Page, Register Page, Forgot Password Page.
-  - [ ] Create Sidebar/Layout component (Responsive basics).
-
-#### 2. Definition of Done (DoD)
-
-- [ ] Database đã chạy trên local/docker.
-- [ ] API Login trả về JWT Token hợp lệ.
-- [ ] User đăng ký xong tự động redirect vào Dashboard.
-- [ ] Không hard-code credentials trong code.
-
-#### 3. Deliverables
-
-- Database ERD Diagram (Final).
-- Source Code v0.1 (Login/Register working).
-- API Docs (Swagger UI) cho Auth module.
+- Auth flows chạy ổn định
+- API response format thống nhất
 
 ---
 
-### SPRINT 2: Core Workspace & Project Structure (Tuần 3-4)
+## Sprint 2 - Workspace & Project Core
 
-**Goal**: User có thể tạo không gian làm việc và dự án để bắt đầu quản lý.
-**Focus**: CRUD Operations cứng.
+**Goal**: Quản lý không gian làm việc và dự án.
 
-#### 1. Tasks Breakdown
+- Workspace CRUD + invite members
+- Project CRUD + membership + RBAC cơ bản
+- UI dashboard workspace/project
 
-- **Backend (Dev A)**:
-  - [ ] API CRUD `Workspace` (Create, Edit name).
-  - [ ] API Invite Member (Add email to `workspace_members`).
-  - [ ] API CRUD `Project` (Create, Update, Delete/Archive).
-  - [ ] Logic: Check Permission (Only Owner can edit Workspace).
-- **Frontend (Dev B)**:
-  - [ ] Workspace Dashboard: List projects view.
-  - [ ] "Create Project" Modal (Form validation).
-  - [ ] Project Layout: Sidebar riêng cho Project (Board, List, Settings).
-  - [ ] Settings Page: Tab "Members" để mời user.
+**DoD**
 
-#### 2. Definition of Done (DoD)
-
-- [ ] Tạo được Project mới, dữ liệu lưu xuống DB thành công.
-- [ ] Mời thành viên mới, record xuất hiện trong DB.
-- [ ] Switch qua lại giữa các Project không bị crash trang.
-
-#### 3. Deliverables
-
-- Video demo: User flow từ Login -> Create Workspace -> Create Project.
+- User tạo được workspace/project và thêm member theo role
 
 ---
 
-### SPRINT 3: Task Management & Kanban Board (Tuần 5-6)
+## Sprint 3 - Task Management & Collaboration
 
-**Goal**: Hoàn thiện tính năng cốt lõi nhất - Quản lý công việc trên giao diện bảng.
-**Focus**: Task Logic, Drag & Drop UI.
+**Goal**: Triển khai core task workflow.
 
-#### 1. Tasks Breakdown
+- Task CRUD, checklist/subtask
+- Kanban drag-drop với status cố định: TODO, IN_PROGRESS, REVIEW, DONE
+- Comment + mention
+- Notification bell (realtime scope cho notification)
 
-- **Backend (Dev A)**:
-  - [ ] API CRUD `Task`: Title, Desc, Priority, Due Date.
-  - [ ] API Change Task Status (Move columns).
-  - [ ] API Assign User to Task & Remove.
-  - [ ] Design API filter (Get tasks by Status/Assignee).
-- **Frontend (Dev B)**:
-  - [ ] **Kanban Board UI**: Implement `dnd-kit` or `react-beautiful-dnd`.
-  - [ ] Task Card Component: Show Title, Priority Badge, Assignee Avatar.
-  - [ ] Logic: Optimistic Update (Update UI trước khi API trả về để mượt).
-  - [ ] "My Tasks" View: List các task được assign cho mình.
+**DoD**
 
-#### 2. Definition of Done (DoD)
-
-- [ ] Kéo thả Task giữa các cột (Todo -> Done) mượt mà, F5 không mất vị trí.
-- [ ] Task Card hiển thị đúng thông tin assignee.
-- [ ] API xử lý được concurrent updates cơ bản (Optional).
-
-#### 3. Deliverables
-
-- Feature hoàn chỉnh: Kanban Board.
+- Task lifecycle chạy end-to-end
+- Mention tạo notification đúng ngữ cảnh
 
 ---
 
-### SPRINT 4: Collaboration & Realtime (Tuần 7-8)
+## Sprint 4 - Search, Analytics, Attachments, Export (MVP Complete)
 
-**Goal**: Biến ứng dụng thành công cụ làm việc nhóm thời gian thực.
-**Focus**: WebSocket, Comments, Notifications.
+**Goal**: Chốt MVP có tìm kiếm và dashboard.
 
-#### 1. Tasks Breakdown
+- Elasticsearch integration (Spring Data Elasticsearch)
+- Batch sync PostgreSQL -> Elasticsearch
+- Search cho Task/Project/User (VI + EN)
+- KPI dashboard MVP:
+  - Task throughput
+  - Overdue trends
+- File upload với MinIO
+- Export PDF/Excel
 
-- **Backend (Dev A)**:
-  - [ ] Setup WebSocket Config (STOMP over SockJS).
-  - [ ] API CRUD `Comment` (Parent/Child threading).
-  - [ ] Logic: Push Notification khi có Comment/Assign mới.
-  - [ ] API Upload File (Integration w/ AWS S3 or Local Storage).
-- **Frontend (Dev B)**:
-  - [ ] Task Detail Modal: Tab "Comments".
-  - [ ] Integrate WebSocket Client: Auto-update comment list.
-  - [ ] Notification Dropdown (Hiển thị list thông báo).
-  - [ ] Rich Text Editor cho Comment (Bold, Italic, Link).
+**DoD**
 
-#### 2. Definition of Done (DoD)
-
-- [ ] A comment -> B thấy ngay lập tức không cần reload.
-- [ ] Upload ảnh đính kèm thành công.
-- [ ] Click thông báo chuyển hướng đúng vào Task đó.
-
-#### 3. Deliverables
-
-- Demo tính năng Realtime Chat/Comment.
+- Search trả kết quả đúng với filter/sort/highlight
+- KPI dashboard hiển thị đúng dữ liệu
+- File upload và export hoạt động
 
 ---
 
-### SPRINT 5: Dashboard & Performance Tracking (Tuần 9-10)
+## Sprint 5 - AI Foundation
 
-**Goal**: Cung cấp dữ liệu báo cáo và chấm công.
-**Focus**: Charts, Aggregation Queries.
+**Goal**: Tạo nền tảng AI cho phase nâng cao.
 
-#### 1. Tasks Breakdown
+- LLM integration layer
+- Prompt/response contract
+- Guardrail cơ bản + fallback
+- Bắt đầu AI Smart Assign
 
-- **Backend (Dev A)**:
-  - [ ] API `TimeEntry`: Start, Stop, Update duration.
-  - [ ] Complex Query: Tính % hoàn thành dự án, số task quá hạn.
-  - [ ] API Export Report (Generate PDF/Excel using Apache POI/iText).
-- **Frontend (Dev B)**:
-  - [ ] Timer Component: Nút Play/Pause trên Task Card.
-  - [ ] Dashboard UI: Integrate `Recharts`.
-    - Pie Chart: Task Status.
-    - Bar Chart: Members Workload.
-  - [ ] Export Button & Download flow.
+**DoD**
 
-#### 2. Definition of Done (DoD)
-
-- [ ] Bấm giờ chạy đúng, không bị reset khi chuyển trang.
-- [ ] Biểu đồ hiển thị đúng dữ liệu test.
-- [ ] File export tải về mở được, format đẹp.
-
-#### 3. Deliverables
-
-- Module Reporting hoàn chỉnh.
+- Pipeline AI gọi được với dữ liệu thật trong môi trường dev
 
 ---
 
-### SPRINT 6: AI Integration (Enhanced Scope) (Tuần 11-12)
+## Sprint 6 - AI Feature Completion
 
-**Goal**: Tích hợp trí tuệ nhân tạo để hỗ trợ người dùng.
-**Focus**: Integration with LLM (OpenAI/Gemini).
+**Goal**: Hoàn thiện AI nghiệp vụ chính.
 
-#### 1. Tasks Breakdown
+- AI Smart Assign hoàn chỉnh
+- AI Auto Subtask Generation
+- AI Chatbot RAG (Elasticsearch retrieval)
 
-- **Backend (Dev A)**:
-  - [ ] Setup Client kết nối OpenAI API (hoặc Gemini).
-  - [ ] Build Service: `AIService.generateSuggestion(taskList)`.
-  - [ ] Build Service: `AIService.chatWithProjectData(query)`.
-- **Frontend (Dev B)**:
-  - [ ] AI Suggest Button (On Task Create form).
-  - [ ] **AI Chat Widget**: Floating button ở góc màn hình.
-  - [ ] Chat UI: Bong bóng chat user vs bot.
-  - [ ] Loading skeletons khi chờ AI trả lời.
+**DoD**
 
-#### 2. Definition of Done (DoD)
-
-- [ ] Chatbot trả lời được câu hỏi cơ bản về dự án.
-- [ ] Gợi ý Assignee hoạt động dựa trên Skill của user (Mock data nếu cần).
-- [ ] Xử lý lỗi khi API AI timeout.
-
-#### 3. Deliverables
-
-- Video demo tính năng AI "thông minh".
+- 3 tính năng AI chạy được trong demo flow
 
 ---
 
-### SPRINT 7: Buffer & Stabilization (Tuần 13-14)
+## Sprint 7 - Performance AI & Advanced Analytics
 
-**Goal**: Đảm bảo hệ thống ổn định, không còn lỗi nghiêm trọng (Critical Bugs).
-**Focus**: Testing, Bug Fixing, Optimization.
+**Goal**: Mở rộng đánh giá hiệu suất từ activity signals.
 
-#### 1. Tasks Breakdown
+- Performance AI evaluation (không dùng manual timer)
+- Bổ sung analytics:
+  - Workload by assignee
+  - Comment activity
+- Tối ưu query + quality dashboard
 
-- **Team**:
-  - [ ] Rà soát lại toàn bộ 21 Use Cases.
-  - [ ] Stress Test: Thử spam comment, tạo nghìn task xem load nổi không.
-  - [ ] Fix UI glitches (Padding, Mobile responsive view).
-  - [ ] Refactor code backend (Clean Architecture check).
-  - [ ] Viết Unit Test bổ sung cho các luồng quan trọng (Payment/Auth).
+**DoD**
 
-#### 2. Definition of Done (DoD)
-
-- [ ] Zero Critical Bugs.
-- [ ] Lighthouse Score (Frontend) > 80.
-- [ ] Code coverage > 40% (Optional).
+- Báo cáo hiệu suất có khả năng giải thích được từ dữ liệu hoạt động
 
 ---
 
-### SPRINT 8: Final Delivery (Tuần 15)
+## Sprint 8 - Stabilization & Final Delivery
 
-**Goal**: Chuẩn bị tài nguyên tốt nhất cho buổi bảo vệ.
-**Focus**: Deploy, Docs, Slide.
+**Goal**: Ổn định, chốt chất lượng và chuẩn bị bảo vệ.
 
-#### 1. Tasks Breakdown
+- Regression test
+- Bug fixing
+- Demo script
+- Slide + report final
 
-- **Deploy**:
-  - [ ] Backend lên Cloud (Render/Railway).
-  - [ ] Frontend lên Vercel/Netlify.
-  - [ ] Database lên Cloud (Supabase/Neon).
-- **Docs**:
-  - [ ] Hoàn thiện Báo cáo khóa luận (Word).
-  - [ ] Slide PowerPoint (Tập trung vào giải pháp công nghệ & AI).
-  - [ ] Kịch bản demo (Script chi tiết từng click chuột).
+**DoD**
 
-#### 2. Definition of Done (DoD)
-
-- [ ] Hệ thống chạy live trên domain public.
-- [ ] Slide và Báo cáo đã in/nộp.
-
-#### 3. Deliverables
-
-- **Final Product Package**.
+- Demo ổn định toàn bộ flow chính
+- Tài liệu và trình bày hoàn thiện
 
 ---
 
-## IV. Risk Management (AI Integration Scope)
+## IV. Backlog ưu tiên
 
-Việc mở rộng AI Chatbot là rủi ro lớn nhất về mặt kỹ thuật và thời gian.
+### Must (MVP)
 
-1.  **Rủi ro**: AI phản hồi chậm hoặc không chính xác.
-    - _Mitigation_: Sử dụng mô hình đơn giản (GPT-3.5-turbo) để nhanh hơn. Cache các câu trả lời phổ biến.
-    - _Fallback_: Nếu tích hợp Chatbot quá phức tạp, chuyển về tính năng "Smart Search" (Tìm kiếm thông minh) hoặc Form-based AI (Click button -> Generate).
+- Auth/Workspace/Project
+- Task + Kanban + Comment + Notification bell
+- MinIO attachments
+- Elasticsearch search
+- Dashboard 2 KPI (throughput, overdue trends)
+- Export PDF/Excel
 
-2.  **Rủi ro**: Hết quota API hoặc chi phí cao.
-    - _Mitigation_: Giới hạn rate-limit mỗi user. Chuẩn bị sẵn API Key dự phòng.
-    - _Fallback_: Sử dụng Mock response cho buổi demo nếu API gặp vấn đề.
+### Should (Phase 2)
 
-3.  **Dự trữ thời gian**:
-    - Sprint 7 (2 tuần) là khoảng đệm an toàn. Nếu các Sprint trước bị trễ (ví dụ WebSocket làm lâu hơn dự kiến), cắn vào Sprint 7 để bù, chấp nhận cắt giảm bớt phần Testing/Optimize.
+- AI Smart Assign
+- AI Auto Subtask Generation
+- AI Chatbot RAG
+- Performance AI evaluation
+- Advanced analytics
+
+---
+
+## V. Risk & Mitigation
+
+1. **Scope overload với 2 dev**
+
+- Mitigation: khóa MVP ở Sprint 4, AI dồn Phase 2.
+
+2. **Dữ liệu search/analytics lệch với DB nguồn**
+
+- Mitigation: batch sync có retry + manual reindex command.
+
+3. **AI không ổn định khi demo**
+
+- Mitigation: fallback UX + mock response mode cho demo.
+
+4. **Upload/storage issue**
+
+- Mitigation: MinIO local ổn định trước; S3 để phase mở rộng.

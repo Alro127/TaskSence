@@ -1,219 +1,168 @@
-# User Stories & Acceptance Criteria
+# User Stories & Acceptance Criteria (Aligned Scope)
 
-Tài liệu này chuyển đổi toàn bộ 21 Use Cases từ `UseCases_Detailed_Full.md` thành User Stories theo định dạng chuẩn Agile, bao phủ đầy đủ các tính năng của hệ thống (bao gồm cả AI, Notifications, Attachments).
+## Epic 1: Authentication & Profile (MVP)
 
-## Epic 1: Authentication & User Profile
+### US-01: Register/Login/Reset
 
-### US-01: Đăng ký & Tạo Workspace (UC-AUTH-01)
+**As a** user, **I want** đăng ký/đăng nhập/khôi phục mật khẩu, **so that** tôi có thể truy cập hệ thống an toàn.
 
-**As a** Guest (Người dùng mới),
-**I want to** đăng ký tài khoản và tạo luôn một Workspace mặc định,
-**So that** tôi có thể bắt đầu sử dụng hệ thống ngay lập tức mà không cần chờ đợi admin phê duyệt.
+**Acceptance Criteria**
 
-**Acceptance Criteria:**
+- [ ] OTP email verification hoạt động.
+- [ ] Login trả JWT và redirect đúng.
+- [ ] Reset password flow hoàn chỉnh.
 
-- [ ] Form đăng ký yêu cầu: Email, Full Name, Password (min 8 chars), Workspace Name.
-- [ ] Email phải là duy nhất trong hệ thống `users`.
-- [ ] Sau khi submit thành công, hệ thống tự động đăng nhập.
-- [ ] User được chuyển hướng đến Dashboard của Workspace mới tạo.
-- [ ] User có role là `OWNER` trong Workspace này.
+### US-02: Profile Update
 
-### US-02: Đăng nhập (UC-AUTH-02)
+**As a** user, **I want** cập nhật hồ sơ và skills, **so that** thông tin cá nhân luôn chính xác.
 
-**As a** Registered User,
-**I want to** đăng nhập bằng email và mật khẩu,
-**So that** tôi có thể truy cập vào các dự án của mình.
+**Acceptance Criteria**
 
-**Acceptance Criteria:**
-
-- [ ] Form đăng nhập yêu cầu: Email, Password.
-- [ ] Nếu thông tin sai, hiển thị lỗi chung "Invalid credentials" (bảo mật).
-- [ ] Nếu thành công, nhận JWT token và chuyển hướng về trang trước đó hoặc Dashboard.
-- [ ] Có chức năng "Remember me".
-
-### US-03: Quên mật khẩu (UC-AUTH-03)
-
-**As a** Guest,
-**I want to** khôi phục mật khẩu qua Email,
-**So that** tôi có thể truy cập lại tài khoản nếu quên password.
-
-**Acceptance Criteria:**
-
-- [ ] Gửi mã OTP hoặc Link reset về email đã đăng ký.
-- [ ] Cho phép nhập mật khẩu mới sau khi verify OTP thành công.
-- [ ] Đăng nhập lại bằng mật khẩu mới sau khi đổi.
-
-### US-04: Cập nhật Hồ sơ (UC-AUTH-04)
-
-**As a** User,
-**I want to** cập nhật thông tin cá nhân và kỹ năng (Skills),
-**So that** đồng nghiệp nhận diện được tôi và AI có thể gợi ý task phù hợp.
-
-**Acceptance Criteria:**
-
-- [ ] Cho phép upload Avatar.
-- [ ] Cập nhật Bio và danh sách Skills.
+- [ ] Cho phép cập nhật avatar, bio, skills.
+- [ ] Validate dữ liệu đầu vào.
 
 ---
 
-## Epic 2: Workspace & Project Management
+## Epic 2: Workspace & Project (MVP)
 
-### US-05: Mời thành viên & Quản lý Team (UC-WS-01, UC-WS-02)
+### US-03: Workspace Management
 
-**As a** Workspace Owner/Admin,
-**I want to** mời thành viên vào Workspace và tạo các nhóm (Team Template),
-**So that** tôi có thể tổ chức nhân sự hiệu quả.
+**As a** workspace owner/admin, **I want** tạo workspace và mời thành viên, **so that** team có không gian làm việc chung.
 
-**Acceptance Criteria:**
+**Acceptance Criteria**
 
-- [ ] Gửi email invite cho người chưa có tài khoản.
-- [ ] Add thẳng người đã có tài khoản vào Workspace.
-- [ ] Tạo Team Template (VD: "Frontend Team") gồm nhiều thành viên để dùng lại sau này.
+- [ ] Tạo workspace thành công.
+- [ ] Invite member theo role.
 
-### US-06: Tạo & Cấu hình Project (UC-PROJ-01, UC-PROJ-02)
+### US-04: Project Setup
 
-**As a** Workspace Owner/Admin,
-**I want to** tạo một dự án mới và thiết lập thành viên,
-**So that** team của tôi có không gian làm việc.
+**As a** manager, **I want** tạo project và cấu hình member/role, **so that** có thể bắt đầu quản lý công việc.
 
-**Acceptance Criteria:**
+**Acceptance Criteria**
 
-- [ ] Tạo Project với các thông tin: Tên, Mô tả, Date, Visibility (Private/Public).
-- [ ] Import thành viên từ Team Template vào Project.
-- [ ] Phân quyền trong Project (Manager/Member/Viewer).
-
-### US-07: Xem Dashboard Project (UC-PROJ-03)
-
-**As a** Project Member,
-**I want to** xem tổng quan tiến độ dự án qua các view khác nhau,
-**So that** tôi nắm bắt được tình hình công việc.
-
-**Acceptance Criteria:**
-
-- [ ] Hỗ trợ Kanban Board view.
-- [ ] Hỗ trợ List View.
-- [ ] (Nice-to-have) Gantt Chart hoặc Timeline view.
+- [ ] Tạo project với các trường cơ bản.
+- [ ] Quản lý project members theo role.
 
 ---
 
-## Epic 3: Task Management (Core)
+## Epic 3: Task Management & Collaboration (MVP)
 
-### US-08: Tạo & Quản lý Task (UC-TASK-01, UC-TASK-02)
+### US-05: Task CRUD + Fixed Workflow
 
-**As a** Project Member,
-**I want to** tạo task mới và cập nhật chi tiết (Mô tả, Checklist, Due Date),
-**So that** công việc được định nghĩa rõ ràng.
+**As a** member, **I want** tạo và cập nhật task, **so that** công việc được quản lý rõ ràng.
 
-**Acceptance Criteria:**
+**Acceptance Criteria**
 
-- [ ] Quick Add Task trên cột Kanban.
-- [ ] Task Detail hỗ trợ Rich Text Editor.
-- [ ] Thêm/sửa/xóa Checklist items trong Task.
+- [ ] Task có title, desc, priority, due date, assignees.
+- [ ] Status cố định: TODO, IN_PROGRESS, REVIEW, DONE.
+
+### US-06: Kanban Drag & Drop
+
+**As a** member, **I want** kéo thả task giữa các cột, **so that** tiến độ được cập nhật trực quan.
+
+**Acceptance Criteria**
+
+- [ ] Drag-drop mượt.
+- [ ] Cập nhật trạng thái chính xác sau khi thả.
+
+### US-07: Checklist/Subtasks
+
+**As a** member, **I want** quản lý checklist trong task, **so that** task lớn được chia nhỏ dễ theo dõi.
+
+**Acceptance Criteria**
+
+- [ ] Thêm/sửa/xóa checklist item.
 - [ ] Auto-save khi chỉnh sửa.
 
-### US-09: Chuyển trạng thái Task (UC-TASK-03)
+### US-08: Comments + Mentions
 
-**As a** Project Member,
-**I want to** kéo thả task giữa các cột trạng thái (Todo -> Doing -> Done),
-**So that** mọi người nắm được tiến độ.
+**As a** member, **I want** bình luận và mention trong task, **so that** trao đổi diễn ra đúng ngữ cảnh.
 
-**Acceptance Criteria:**
+**Acceptance Criteria**
 
-- [ ] Kéo thả (Drag & Drop) mượt mà.
-- [ ] Cập nhật trạng thái ngay lập tức cho các user khác (Realtime/Optimistic UI).
-- [ ] Logic: Vào cột "Done" set ngày hoàn thành.
+- [ ] Comment text hoạt động ổn định.
+- [ ] Mention tạo notification cho user được nhắc.
 
-### US-10: Đính kèm file (UC-TASK-04)
+### US-09: Attachments via MinIO
 
-**As a** User,
-**I want to** upload tài liệu lên Task,
-**So that** mọi người có đủ thông tin để làm việc.
+**As a** member, **I want** tải file đính kèm lên task, **so that** thông tin liên quan được tập trung.
 
-**Acceptance Criteria:**
+**Acceptance Criteria**
 
-- [ ] Upload file từ máy tính.
-- [ ] Hiển thị danh sách file đính kèm trong Task Detail.
-- [ ] Preview ảnh/file nếu hỗ trợ.
-
-### US-11: Thảo luận & Collaboration (UC-TASK-05)
-
-**As a** User,
-**I want to** comment và mention (@ten_nshien) trong task,
-**So that** trao đổi công việc trực tiếp theo ngữ cảnh.
-
-**Acceptance Criteria:**
-
-- [ ] Comment hỗ trợ text và mention user.
-- [ ] Realtime update: Comment mới hiện ngay lập tức.
-- [ ] Gửi thông báo cho người được mention.
+- [ ] Upload file qua MinIO local (MVP).
+- [ ] Danh sách attachment hiển thị đúng trên task.
 
 ---
 
-## Epic 4: Performance & Time Tracking
+## Epic 4: Search & Analytics with Elasticsearch (MVP)
 
-### US-12: Log Time - Chấm công (UC-PERF-01)
+### US-10: Full-text Search
 
-**As a** Project Member,
-**I want to** bấm giờ (Start/Stop) hoặc nhập tay thời gian làm việc,
-**So that** hệ thống ghi nhận công sức của tôi.
+**As a** user, **I want** tìm kiếm task/project/user nhanh, **so that** truy xuất thông tin hiệu quả.
 
-**Acceptance Criteria:**
+**Acceptance Criteria**
 
-- [ ] Nút Start/Stop Timer trên task.
-- [ ] Hiển thị đồng hồ đếm giờ.
-- [ ] Form nhập tay (Manual Entry): Ngày, Số giờ.
+- [ ] Search trên Task/Project/User.
+- [ ] Có filter, sort, highlight.
+- [ ] Hỗ trợ tiếng Việt + tiếng Anh.
 
-### US-13: Xem Báo cáo Hiệu suất (UC-PERF-02, UC-PERF-03)
+### US-11: KPI Dashboard - Throughput
 
-**As a** Member/Manager,
-**I want to** xem biểu đồ thời gian làm việc và tỷ lệ hoàn thành task,
-**So that** đánh giá được hiệu quả công việc.
+**As a** manager, **I want** xem throughput theo thời gian, **so that** theo dõi tốc độ hoàn thành.
 
-**Acceptance Criteria:**
+**Acceptance Criteria**
 
-- [ ] **Member View**: Biểu đồ giờ làm việc cá nhân trong tuần, KPI hoàn thành (Done vs Overdue).
-- [ ] **Manager View**: Bảng tổng hợp performance của toàn bộ thành viên trong dự án.
+- [ ] Chart done task theo ngày/tuần.
+- [ ] Dữ liệu lấy từ analytics pipeline.
 
----
+### US-12: KPI Dashboard - Overdue Trends
 
-## Epic 5: AI Features (Smart Assistant)
+**As a** manager, **I want** xem xu hướng task trễ hạn, **so that** phát hiện rủi ro sớm.
 
-### US-14: AI Gợi ý Assignee (UC-AI-01)
+**Acceptance Criteria**
 
-**As a** Manager,
-**I want to** nhờ AI gợi ý người phù hợp nhất cho task dựa trên kỹ năng,
-**So that** tôi giao việc chính xác và hiệu quả hơn.
+- [ ] Chart overdue trends theo timeline.
+- [ ] Truy vấn ổn định và nhất quán dữ liệu.
 
-**Acceptance Criteria:**
+### US-13: Batch Sync + Manual Reindex
 
-- [ ] Nút "AI Suggest" tại trường Assignee.
-- [ ] AI phân tích Title/Desc của Task vs User Skills.
-- [ ] Hiển thị danh sách ứng viên phù hợp kèm lý do (Match score).
+**As a** admin/system owner, **I want** dữ liệu được sync định kỳ sang Elasticsearch, **so that** search và analytics luôn khả dụng.
 
-### US-15: AI Tóm tắt & Tạo Task (UC-AI-02, UC-AI-03)
+**Acceptance Criteria**
 
-**As a** User,
-**I want to** AI tóm tắt nội dung task dài hoặc tự tạo task từ mô tả thô,
-**So that** tôi tiết kiệm thời gian đọc hiểu và nhập liệu.
-
-**Acceptance Criteria:**
-
-- [ ] Tóm tắt Task: Nút "Summarize" trả về bullet points nội dung chính.
-- [ ] Tạo Task: Nhập đoạn văn mô tả dự án -> AI sinh ra danh sách Task draft -> User confirm để tạo.
+- [ ] Batch sync theo lịch hoạt động.
+- [ ] Có lệnh manual reindex.
 
 ---
 
-## Epic 6: Notifications
+## Epic 5: Notifications (MVP)
 
-### US-16: Hệ thống Thông báo (UC-NOTI-01)
+### US-14: Notification Bell
 
-**As a** User,
-**I want to** nhận thông báo khi có việc liên quan,
-**So that** tôi không bỏ lỡ thông tin quan trọng.
+**As a** user, **I want** nhận thông báo trên icon chuông, **so that** không bỏ lỡ update quan trọng.
 
-**Acceptance Criteria:**
+**Acceptance Criteria**
 
-- [ ] Badge đỏ trên icon chuông khi có noti mới.
-- [ ] Danh sách thông báo (Unread/All).
-- [ ] Click vào thông báo chuyển đến đúng Task/Project.
-- [ ] Mark as read khi đã xem.
+- [ ] Badge hiển thị unread count.
+- [ ] Click noti điều hướng đúng task/project.
+- [ ] MVP realtime ưu tiên cho notification bell.
+
+---
+
+## Epic 6: AI Features (Phase 2)
+
+### US-15: AI Smart Assign
+
+**As a** manager, **I want** AI gợi ý assignee phù hợp, **so that** giao việc hiệu quả hơn.
+
+### US-16: AI Auto Subtask Generation
+
+**As a** user, **I want** AI sinh subtasks từ mô tả, **so that** tiết kiệm thời gian chia việc.
+
+### US-17: AI Chatbot RAG
+
+**As a** user, **I want** chatbot trả lời câu hỏi dự án, **so that** nắm tình hình nhanh.
+
+### US-18: AI Performance Evaluation
+
+**As a** manager, **I want** AI đánh giá hiệu suất từ activity signals, **so that** có góc nhìn khách quan hơn.
