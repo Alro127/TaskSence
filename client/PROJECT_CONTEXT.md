@@ -16,15 +16,18 @@
 
 - **Base URL**: `http://localhost:8080/api/v1`
 - **Auth Endpoints**:
-  - `POST /api/auth/register` → body: `{email, password}` → gửi OTP email
-  - `POST /api/auth/verify-otp?email=...&otp=...` → `{accessToken, refreshToken}`
-  - `POST /api/auth/login` → body: `{email, password}` → `{accessToken, refreshToken}`
+  - `POST /auth/register` → body: `{email, password}` → gửi OTP email
+  - `POST /auth/verify-otp?email=...&otp=...` → `{accessToken, refreshToken}`
+  - `POST /auth/login/local` → body: `{email, password}` → `{accessToken, refreshToken}`
+  - `POST /auth/login/google?code=...` → `{accessToken, refreshToken}`
+  - `POST /auth/forgot-password?email=...` → gửi email reset password
+  - `POST /auth/logout` → body: `{token}` (refresh token)
 - **API Response format**: `{code: string, message: string, data: T}`
 - **CORS allowed**: `http://localhost:5173`
 - **JWT**: Access Token + Refresh Token
 - **context-path**: `/api/v1` (set in server)
 
-> ⚠️ **Lưu ý**: Backend chưa có endpoint Forgot Password và Google OAuth. FE đã xây dựng UI sẵn với mock, kết nối khi BE hoàn thành.
+> ✅ **Lưu ý**: FE đã tích hợp thật với backend cho Login, Register, Google Login, Forgot Password, Logout.
 
 ## 🗂️ Cấu trúc thư mục FE (Hiện tại)
 
@@ -85,16 +88,17 @@ client/
 
 ### Sprint 1 - Authentication (Current) ✅
 
-| Feature          | Status     | Notes                                        |
-| ---------------- | ---------- | -------------------------------------------- |
-| Login            | ✅ Done    | Email + Password, form validation, RTK Query |
-| Register         | ✅ Done    | Email + Password + confirm, navigates to OTP |
-| OTP Verification | ✅ Done    | 6-digit input, auto-submit, resend timer     |
-| Forgot Password  | ✅ Done    | UI complete (BE endpoint chưa có, dùng mock) |
-| Google OAuth     | ✅ UI Done | Button hiển thị, toast "coming soon"         |
-| Auth Layout      | ✅ Done    | Split layout, responsive, branding left      |
-| Routing          | ✅ Done    | React Router v6, auth guard                  |
-| State Management | ✅ Done    | Redux Toolkit + RTK Query                    |
+| Feature          | Status  | Notes                                        |
+| ---------------- | ------- | -------------------------------------------- |
+| Login            | ✅ Done | Email + Password, form validation, RTK Query |
+| Register         | ✅ Done | Email + Password + confirm, navigates to OTP |
+| OTP Verification | ✅ Done | 6-digit input, auto-submit, resend timer     |
+| Forgot Password  | ✅ Done | Đã gọi API thật `/auth/forgot-password`      |
+| Google OAuth     | ✅ Done | Đã login thật qua `code` + backend exchange  |
+| Logout           | ✅ Done | Gọi API `/auth/logout` + clear local session |
+| Auth Layout      | ✅ Done | Split layout, responsive, branding left      |
+| Routing          | ✅ Done | React Router v6, auth guard                  |
+| State Management | ✅ Done | Redux Toolkit + RTK Query                    |
 
 ### Pending / Next Sprint
 
@@ -102,8 +106,6 @@ client/
 - [ ] User profile
 - [ ] Task management CRUD
 - [ ] Performance analytics
-- [ ] Google OAuth integration (khi BE sẵn sàng)
-- [ ] Forgot Password API integration (khi BE sẵn sàng)
 - [ ] Refresh token interceptor
 
 ## 📝 Quyết định thiết kế
@@ -117,6 +119,8 @@ client/
 7. **Password rules**: Min 8 chars, 1 uppercase, 1 lowercase, 1 number
 8. **OTP**: 6 digits, auto-submit khi nhập đủ, resend cooldown 60s
 9. **Token storage**: localStorage (accessToken, refreshToken)
+10. **Google OAuth**: dùng `@react-oauth/google` (`auth-code flow`) và gửi `code` về backend
+11. **Logout**: gọi backend revoke refresh token trước khi clear local auth state
 
 ## 🔧 Environment Variables
 
@@ -142,5 +146,5 @@ npm run preview  # Preview production build
 - RTK Query handles caching và loading states - không cần tự quản lý
 - Tất cả API calls đi qua RTK Query, không dùng fetch/axios trực tiếp
 - `PasswordInput` đã hỗ trợ `forwardRef` cho react-hook-form
-- Auth flow: Register → OTP Verify → Dashboard; Login → Dashboard
-- ForgotPassword hiện đang mock (setTimeout), cần kết nối BE khi sẵn sàng
+- Auth flow: Register → OTP Verify → Dashboard; Login → Dashboard; Google Login → Dashboard
+- ForgotPassword đã kết nối backend thật; success message lấy từ response server

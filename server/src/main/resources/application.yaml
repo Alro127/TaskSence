@@ -12,7 +12,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate   # Hibernate chỉ check schema
+      ddl-auto: validate # Hibernate chỉ check schema
     show-sql: true
     properties:
       hibernate:
@@ -61,7 +61,7 @@ security:
   google:
     client-id: ${GOOGLE_CLIENT_ID:}
     client-secret: ${GOOGLE_CLIENT_SECRET:}
-    redirect-uri: ${GOOGLE_REDIRECT_URL:http://localhost:8080/auth/google/callback}
+    redirect-uri: ${GOOGLE_REDIRECT_URL:http://localhost:5173}
 
 logging:
   level:
@@ -81,4 +81,3 @@ springdoc:
     tags-sorter: alpha
     filter: true
     path: /swagger-ui
-
