@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,22 +11,23 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { updateCurrentUser } from "@/features/user/userSlice";
+import { useUpdateUserProfileMutation } from "@/features/user/api/userApi";
 
 const profileEditSchema = z.object({
   fullName: z
     .string()
     .min(2, "Name must be at least 2 characters")
-    .max(100, "Name must be at most 100 characters"),
+    .max(255, "Name must be at most 255 characters"),
   phone: z
     .string()
     .optional()
     .refine(
-      (val) => !val || /^[0-9+\-\s()]+$/.test(val),
-      "Invalid phone number format"
+      (val) => !val || /^(\+84|0)[0-9]{9}$/.test(val),
+      "Phone must be a valid Vietnamese number (e.g., 0123456789 or +84123456789)"
     ),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]).optional(),
   dob: z.string().optional(),
-  bio: z.string().max(500, "Bio must be at most 500 characters").optional(),
+  bio: z.string().max(1000, "Bio must be at most 1000 characters").optional(),
 });
 
 type ProfileEditFormData = z.infer<typeof profileEditSchema>;
@@ -36,7 +36,8 @@ export function EditProfilePage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.user.currentUser);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [updateUserProfile, { isLoading: isUpdating }] =
+    useUpdateUserProfileMutation();
 
   const {
     register,
@@ -54,30 +55,32 @@ export function EditProfilePage() {
   });
 
   const onSubmit = async (data: ProfileEditFormData) => {
-    setIsSubmitting(true);
     try {
       const payload = {
-        fullName: data.fullName,
-        phone: data.phone || null,
-        gender: data.gender || null,
-        dob: data.dob || null,
-        bio: data.bio || null,
+        fullName: data.fullName || undefined,
+        phone: data.phone || undefined,
+        gender: data.gender || undefined,
+        dob: data.dob || undefined,
+        bio: data.bio || undefined,
       };
 
-      console.log("Update profile with:", payload);
-      dispatch(updateCurrentUser(payload));
+      const response = await updateUserProfile(payload).unwrap();
+
+      // Update Redux store with response data
+      dispatch(updateCurrentUser(response.data));
 
       toast.success("Profile updated successfully!", {
-        description: "Your changes have been saved.",
+        description: response.message || "Your changes have been saved.",
       });
 
       navigate("/dashboard", { replace: true });
-    } catch (error) {
+    } catch (error: unknown) {
+      const apiError = error as { data?: { message?: string } };
       toast.error("Failed to update profile", {
-        description: "Something went wrong. Please try again.",
+        description:
+          apiError?.data?.message ||
+          "Something went wrong. Please try again.",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -116,11 +119,11 @@ export function EditProfilePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
+              <Label htmlFor="fullName">Full Name *</Label>
               <Input
                 id="fullName"
                 placeholder="e.g., John Doe"
-                disabled={isSubmitting}
+                disabled={isUpdating}
                 {...register("fullName")}
               />
               {errors.fullName && (
@@ -133,20 +136,23 @@ export function EditProfilePage() {
               <Input
                 id="phone"
                 type="tel"
-                placeholder="e.g., +1 (234) 567-8900"
-                disabled={isSubmitting}
+                placeholder="e.g., 0123456789 or +84123456789"
+                disabled={isUpdating}
                 {...register("phone")}
               />
               {errors.phone && (
                 <p className="text-sm text-destructive">{errors.phone.message}</p>
               )}
+              <p className="text-xs text-muted-foreground">
+                Vietnamese numbers only (0xxx or +84xxx format)
+              </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
               <select
                 id="gender"
-                disabled={isSubmitting}
+                disabled={isUpdating}
                 {...register("gender")}
                 className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -165,7 +171,7 @@ export function EditProfilePage() {
               <Input
                 id="dob"
                 type="date"
-                disabled={isSubmitting}
+                disabled={isUpdating}
                 {...register("dob")}
               />
               {errors.dob && (
@@ -178,7 +184,7 @@ export function EditProfilePage() {
               <textarea
                 id="bio"
                 placeholder="Tell us about yourself..."
-                disabled={isSubmitting}
+                disabled={isUpdating}
                 rows={4}
                 {...register("bio")}
                 className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background disabled:opacity-50 disabled:cursor-not-allowed"
@@ -187,7 +193,7 @@ export function EditProfilePage() {
                 <p className="text-sm text-destructive">{errors.bio.message}</p>
               )}
               <p className="text-xs text-muted-foreground">
-                Maximum 500 characters
+                Maximum 1000 characters
               </p>
             </div>
 
@@ -196,12 +202,12 @@ export function EditProfilePage() {
                 type="button"
                 variant="outline"
                 onClick={() => navigate("/dashboard")}
-                disabled={isSubmitting}
+                disabled={isUpdating}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && (
+              <Button type="submit" disabled={isUpdating}>
+                {isUpdating && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 Save Changes

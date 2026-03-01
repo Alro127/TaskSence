@@ -50,4 +50,16 @@ export interface User {
   gender: string | null;
   dob: string | null;
   bio: string | null;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UpdateUserRequest {
+  fullName?: string;
+  phone?: string;
+  gender?: string;
+  dob?: string;
+  bio?: string;
+  avatarUrl?: string;
 }
