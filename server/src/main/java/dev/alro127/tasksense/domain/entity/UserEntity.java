@@ -1,5 +1,6 @@
 package dev.alro127.tasksense.domain.entity;
 
+import dev.alro127.tasksense.domain.enums.Gender;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -39,7 +40,8 @@ public class UserEntity implements Serializable {
     private String phone;
 
     @Column(length = 20)
-    private String gender;
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
 
     private LocalDate dob;
 

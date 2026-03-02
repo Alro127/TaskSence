@@ -106,7 +106,7 @@ public class UserServiceImpl implements UserService {
                 .isActive(user.getIsActive())
                 .avatarUrl(user.getAvatarUrl())
                 .phone(user.getPhone())
-                .gender(user.getGender())
+                .gender(user.getGender() != null ? user.getGender().toString() : null)
                 .dob(user.getDob())
                 .bio(user.getBio())
                 .createdAt(user.getCreatedAt())
