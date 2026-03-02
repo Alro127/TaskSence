@@ -70,6 +70,7 @@ public class UserServiceImpl implements UserService {
         return mapToResponse(user);
     }
 
+
     @Override
     public void deleteUser(Long id) {
 
@@ -85,6 +86,21 @@ public class UserServiceImpl implements UserService {
         user.setDeletedAt(OffsetDateTime.now());
         user.setIsActive(false);
 
+        userRepository.save(user);
+    }
+
+    @Override
+    public void updateAvatar(String url) {
+        String email = getCurrentUserEmail();
+
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (user.getDeletedAt() != null) {
+            throw new BadRequestException("User already deleted");
+        }
+
+        user.setAvatarUrl(url);
         userRepository.save(user);
     }
 

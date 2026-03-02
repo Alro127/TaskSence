@@ -5,9 +5,11 @@ import dev.alro127.tasksense.dto.request.UpdateUserRequest;
 import dev.alro127.tasksense.dto.response.UserResponse;
 import dev.alro127.tasksense.service.UserService;
 import jakarta.validation.Valid;
+import jakarta.websocket.server.PathParam;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -51,6 +53,20 @@ public class UserController {
         ApiResponse<Void> response = new ApiResponse<>(
                 "200",
                 "Delete user successfully",
+                null,
+                null
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/upload-avatar")
+    public ResponseEntity<ApiResponse<Void>> uploadAvatar(@PathParam("url") String url) {
+        userService.updateAvatar(url);
+
+        ApiResponse<Void> response = new ApiResponse<>(
+                "200",
+                "Update avatar successfully",
                 null,
                 null
         );

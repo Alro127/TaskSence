@@ -12,4 +12,6 @@ public interface UserService {
     UserResponse updateCurrentUser(UpdateUserRequest request);
 
     void deleteUser(Long id);
+
+    void updateAvatar(String url);
 }
