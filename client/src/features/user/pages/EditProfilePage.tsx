@@ -12,6 +12,8 @@ import { Card } from "@/components/ui/card";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { updateCurrentUser } from "@/features/user/userSlice";
 import { useUpdateUserProfileMutation } from "@/features/user/api/userApi";
+import { AvatarUpload } from "@/features/user/components";
+import { useAvatarUpload } from "@/features/user/hooks/useAvatarUpload";
 
 const profileEditSchema = z.object({
   fullName: z
@@ -38,6 +40,8 @@ export function EditProfilePage() {
   const user = useAppSelector((state) => state.user.currentUser);
   const [updateUserProfile, { isLoading: isUpdating }] =
     useUpdateUserProfileMutation();
+  
+  const { selectedFile, uploadAvatarToS3, isUploading: isUploadingAvatar, clearPreview, previewUrl, validateAndPreview } = useAvatarUpload();
 
   const {
     register,
@@ -56,7 +60,7 @@ export function EditProfilePage() {
 
   const onSubmit = async (data: ProfileEditFormData) => {
     try {
-      const payload = {
+      const payload: any = {
         fullName: data.fullName || undefined,
         phone: data.phone || undefined,
         gender: data.gender || undefined,
@@ -64,10 +68,29 @@ export function EditProfilePage() {
         bio: data.bio || undefined,
       };
 
+      console.log(selectedFile)
+      // If user selected a new avatar, upload it to S3 first
+      if (selectedFile) {
+        try {
+          const fileUrl = await uploadAvatarToS3();
+          if (fileUrl) {
+            payload.avatarUrl = fileUrl;
+          }
+        } catch (error) {
+          toast.error("Avatar upload failed", {
+            description: "Failed to upload avatar. Please try again.",
+          });
+          return;
+        }
+      }
+
       const response = await updateUserProfile(payload).unwrap();
 
       // Update Redux store with response data
       dispatch(updateCurrentUser(response.data));
+
+      // Clear avatar preview after successful save
+      clearPreview();
 
       toast.success("Profile updated successfully!", {
         description: response.message || "Your changes have been saved.",
@@ -83,6 +106,8 @@ export function EditProfilePage() {
       });
     }
   };
+
+  const isLoading = isUpdating || isUploadingAvatar;
 
   return (
     <div className="min-h-screen bg-background px-4 py-8">
@@ -104,6 +129,18 @@ export function EditProfilePage() {
 
         <Card className="p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Avatar Upload Section */}
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-semibold mb-4">Profile Picture</h3>
+              <AvatarUpload
+                currentAvatarUrl={user?.avatarUrl}
+                userName={user?.fullName || "User"}
+                previewUrl={previewUrl}
+                validateAndPreview={validateAndPreview}
+                clearPreview={clearPreview}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">Email (read-only)</Label>
               <Input
@@ -123,7 +160,7 @@ export function EditProfilePage() {
               <Input
                 id="fullName"
                 placeholder="e.g., John Doe"
-                disabled={isUpdating}
+                disabled={isLoading}
                 {...register("fullName")}
               />
               {errors.fullName && (
@@ -137,7 +174,7 @@ export function EditProfilePage() {
                 id="phone"
                 type="tel"
                 placeholder="e.g., 0123456789 or +84123456789"
-                disabled={isUpdating}
+                disabled={isLoading}
                 {...register("phone")}
               />
               {errors.phone && (
@@ -152,7 +189,7 @@ export function EditProfilePage() {
               <Label htmlFor="gender">Gender</Label>
               <select
                 id="gender"
-                disabled={isUpdating}
+                disabled={isLoading}
                 {...register("gender")}
                 className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -171,7 +208,7 @@ export function EditProfilePage() {
               <Input
                 id="dob"
                 type="date"
-                disabled={isUpdating}
+                disabled={isLoading}
                 {...register("dob")}
               />
               {errors.dob && (
@@ -184,7 +221,7 @@ export function EditProfilePage() {
               <textarea
                 id="bio"
                 placeholder="Tell us about yourself..."
-                disabled={isUpdating}
+                disabled={isLoading}
                 rows={4}
                 {...register("bio")}
                 className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background disabled:opacity-50 disabled:cursor-not-allowed"
@@ -202,12 +239,12 @@ export function EditProfilePage() {
                 type="button"
                 variant="outline"
                 onClick={() => navigate("/dashboard")}
-                disabled={isUpdating}
+                disabled={isLoading}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isUpdating}>
-                {isUpdating && (
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 Save Changes

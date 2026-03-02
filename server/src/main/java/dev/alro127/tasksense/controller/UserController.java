@@ -5,9 +5,11 @@ import dev.alro127.tasksense.dto.request.UpdateUserRequest;
 import dev.alro127.tasksense.dto.response.UserResponse;
 import dev.alro127.tasksense.service.UserService;
 import jakarta.validation.Valid;
+import jakarta.websocket.server.PathParam;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -24,22 +26,19 @@ public class UserController {
                 "200",
                 "Get profile successfully",
                 userService.getCurrentUser(),
-                null
-        );
+                null);
 
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
-            @Valid @RequestBody UpdateUserRequest request
-    ) {
+            @Valid @RequestBody UpdateUserRequest request) {
         ApiResponse<UserResponse> response = new ApiResponse<>(
                 "200",
                 "Update profile successfully",
                 userService.updateCurrentUser(request),
-                null
-        );
+                null);
 
         return ResponseEntity.ok(response);
     }
@@ -52,8 +51,7 @@ public class UserController {
                 "200",
                 "Delete user successfully",
                 null,
-                null
-        );
+                null);
 
         return ResponseEntity.ok(response);
     }
