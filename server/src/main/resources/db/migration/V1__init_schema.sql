@@ -6,7 +6,7 @@ CREATE TABLE users (
     is_active BOOLEAN DEFAULT TRUE,
     avatar_url TEXT,
     phone VARCHAR(50),
-    gender VARCHAR(20) CHECK (gender IN ('male', 'female', 'other')),
+    gender VARCHAR(20) CHECK (gender IN ('MALE', 'FEMALE', 'OTHER')),
     dob DATE,
     bio TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
