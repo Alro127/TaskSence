@@ -18,12 +18,25 @@ import org.springframework.web.bind.annotation.RestController;
 public class MediaController {
 
     private final MediaService mediaService;
-    @PostMapping("/presign/image")
+
+    @PostMapping("/presign/avatar")
     public ResponseEntity<ApiResponse<MediaResponse>> getAvatarPresignUrl(@RequestBody MediaRequest request) {
         MediaResponse mediaResponse = mediaService.getAvatarUploadUrl(request);
         ApiResponse<MediaResponse> response = new ApiResponse<>(
                 "200",
-                "Url to upload image",
+                "Presigned URL for avatar upload",
+                mediaResponse,
+                null
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/presign/document")
+    public ResponseEntity<ApiResponse<MediaResponse>> getDocumentPresignUrl(@RequestBody MediaRequest request) {
+        MediaResponse mediaResponse = mediaService.getDocumentUploadUrl(request);
+        ApiResponse<MediaResponse> response = new ApiResponse<>(
+                "200",
+                "Presigned URL for document upload",
                 mediaResponse,
                 null
         );

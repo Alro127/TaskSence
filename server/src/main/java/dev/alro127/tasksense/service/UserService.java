@@ -13,5 +13,4 @@ public interface UserService {
 
     void deleteUser(Long id);
 
-    void updateAvatar(String url);
 }

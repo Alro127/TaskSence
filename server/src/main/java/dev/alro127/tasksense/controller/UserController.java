@@ -26,22 +26,19 @@ public class UserController {
                 "200",
                 "Get profile successfully",
                 userService.getCurrentUser(),
-                null
-        );
+                null);
 
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
-            @Valid @RequestBody UpdateUserRequest request
-    ) {
+            @Valid @RequestBody UpdateUserRequest request) {
         ApiResponse<UserResponse> response = new ApiResponse<>(
                 "200",
                 "Update profile successfully",
                 userService.updateCurrentUser(request),
-                null
-        );
+                null);
 
         return ResponseEntity.ok(response);
     }
@@ -54,22 +51,7 @@ public class UserController {
                 "200",
                 "Delete user successfully",
                 null,
-                null
-        );
-
-        return ResponseEntity.ok(response);
-    }
-
-    @PutMapping("/upload-avatar")
-    public ResponseEntity<ApiResponse<Void>> uploadAvatar(@PathParam("url") String url) {
-        userService.updateAvatar(url);
-
-        ApiResponse<Void> response = new ApiResponse<>(
-                "200",
-                "Update avatar successfully",
-                null,
-                null
-        );
+                null);
 
         return ResponseEntity.ok(response);
     }

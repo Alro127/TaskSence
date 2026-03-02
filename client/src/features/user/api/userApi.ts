@@ -2,6 +2,17 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import type { ApiResponse, User, UpdateUserRequest } from "@/types/api";
 
+interface MediaRequest {
+  fileName: string;
+  extension: string;
+}
+
+interface MediaResponse {
+  uploadUrl: string;
+  objectKey: string;
+  fileUrl: string;
+}
+
 const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
 
 export const userApi = createApi({
@@ -36,7 +47,20 @@ export const userApi = createApi({
       }),
       invalidatesTags: ["User"],
     }),
+
+    // Get presigned URL for avatar upload
+    getAvatarPresignUrl: builder.mutation<ApiResponse<MediaResponse>, MediaRequest>({
+      query: (body) => ({
+        url: "/media/presign/avatar",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
-export const { useGetCurrentUserQuery, useUpdateUserProfileMutation } = userApi;
+export const { 
+  useGetCurrentUserQuery, 
+  useUpdateUserProfileMutation,
+  useGetAvatarPresignUrlMutation,
+} = userApi;

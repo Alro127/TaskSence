@@ -89,21 +89,6 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
-    @Override
-    public void updateAvatar(String url) {
-        String email = getCurrentUserEmail();
-
-        UserEntity user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        if (user.getDeletedAt() != null) {
-            throw new BadRequestException("User already deleted");
-        }
-
-        user.setAvatarUrl(url);
-        userRepository.save(user);
-    }
-
     // Helper
     private String getCurrentUserEmail() {
         Authentication authentication = SecurityContextHolder

@@ -23,9 +23,12 @@
   - `POST /auth/forgot-password?email=...` → gửi email reset password
   - `POST /auth/reset-password` → body: `{token, newPassword}` → reset password
   - `POST /auth/logout` → body: `{token}` (refresh token)
-- **User Endpoints (planned/waiting backend)**:
-  - `GET /user/me`
-  - `PUT /user/profile`
+- **Media Endpoints**:
+  - `POST /media/presign/avatar` → body: `{fileName, extension}` → `{uploadUrl, objectKey, fileUrl}` - lấy presigned URL để upload avatar lên S3
+  - `POST /media/presign/document` → body: `{fileName, extension}` → `{uploadUrl, objectKey, fileUrl}` - lấy presigned URL để upload document lên S3
+- **User Endpoints**:
+  - `GET /users/me` → lấy thông tin user hiện tại
+  - `PUT /users/me` → body: `{fullName?, phone?, gender?, dob?, bio?, avatarUrl?}` → update full profile (support avatar)
 - **API Response format**: `{code: string, message: string, data: T}`
 - **CORS allowed**: `http://localhost:5173`
 - **JWT**: Access Token + Refresh Token
@@ -51,7 +54,11 @@ client/
 │   │   │   └── pages/DashboardPage.tsx
 │   │   └── user/
 │   │       ├── api/userApi.ts
-│   │       ├── components/UserProfileCard.tsx
+│   │       ├── components/
+│   │       │   ├── AvatarUpload.tsx (NEW)
+│   │       │   └── UserProfileCard.tsx
+│   │       ├── hooks/
+│   │       │   └── useAvatarUpload.ts (NEW)
 │   │       ├── pages/EditProfilePage.tsx
 │   │       └── userSlice.ts
 │   ├── layouts/
@@ -85,6 +92,13 @@ client/
 - ✅ Profile drawer mở từ avatar button ở header (bên phải)
 - ✅ Trang `Edit Profile` riêng (`/dashboard/edit-profile`)
 - ✅ Mock pages cho quick access: `tasks`, `calendar`, `analytics`, `settings`
+- ✅ **Avatar Upload** - FE integration (NEW)
+  - ✅ Created `useAvatarUpload` hook for S3 upload logic
+  - ✅ Created `AvatarUpload` component (square 1:1 preview + upload)
+  - ✅ Integrated avatar upload into EditProfilePage
+  - ✅ File validation (5MB max, JPG/PNG/WebP only)
+  - ✅ Preview display before confirming upload
+  - ✅ Loading spinner during S3 upload
 - ⏳ Chờ backend user endpoints để bỏ mock data
 
 ## 📝 Quyết định thiết kế hiện tại
@@ -95,7 +109,23 @@ client/
 4. **Profile fields**:
    - Read-only: `email`
    - Editable: `fullName`, `phone`, `gender`, `dob`, `bio`
-   - `avatar` tạm thời chỉ hiển thị (upload để sau)
+   - **Avatar upload** (UPDATED):
+     - Vị trí: EditProfilePage (phía trên các field khác)
+     - Preview: square 1:1 aspect ratio (centered, rounded-lg)
+     - Max file size: 5MB
+     - Allowed formats: JPG, PNG, WebP
+     - UX Flow:
+       1. User nhấn "Choose Image" → select file
+       2. Validate file (size, type) + create preview
+       3. Preview hiển thị, có nút "Choose Different" để đổi ảnh hoặc "X" để cancel
+       4. User nhấn "Save Changes" (form button) → check nếu có avatar selected
+       5. Nếu có avatar: gọi `POST /media/presign/avatar` để lấy presigned URL
+       6. Upload file trực tiếp lên S3 sử dụng presigned URL
+       7. Lấy `fileUrl` từ response
+       8. Gắn `avatarUrl: fileUrl` vào request payload update profile
+       9. Gọi `PUT /users/me` với full profile data (có avatarUrl)
+       10. Redux invalidates "User" tag + UI update reflect changes
+       11. Preview cleared, toast success
 5. **Profile data hiện tại**: dùng mock data trong `userSlice` đến khi backend sẵn sàng.
 
 ## 🔧 Environment Variables
@@ -119,6 +149,22 @@ npm run preview
 - Đọc `DESIGN_SYSTEM.md` trước khi tạo component mới.
 - Ưu tiên dùng shadcn/ui + Tailwind token, tránh hardcode style.
 - API call đi qua RTK Query.
+- **Avatar Upload Architecture (UPDATED)**:
+  - `useAvatarUpload()` hook xử lý:
+    - `validateAndPreview(file)` - validate file và create preview (async)
+    - `uploadAvatarToS3()` - upload file lên S3, return `fileUrl` (không update profile)
+    - `clearPreview()` - xóa preview và reset state
+  - `AvatarUpload` component là UI chỉ cho preview + choose/cancel
+    - Không có upload button riêng
+    - Dựa vào form's "Save Changes" button
+  - Workflow ở `EditProfilePage`:
+    - Form submit → check `selectedFile` từ hook
+    - Nếu có: gọi `uploadAvatarToS3()` → lấy `fileUrl`
+    - Thêm `avatarUrl: fileUrl` vào payload
+    - Gọi `updateUserProfile(payload)` một lần duy nhất
+  - S3 upload là direct PUT request với presigned URL
+  - Atomic update: PUT /users/me gồm full profile + avatar URL
+  - State: `selectedFile` lưu File object, `previewUrl` lưu object URL để display
 - Khi backend user API sẵn sàng:
   - thay mock data bằng `GET /user/me`
   - submit `EditProfilePage` qua `PUT /user/profile`
