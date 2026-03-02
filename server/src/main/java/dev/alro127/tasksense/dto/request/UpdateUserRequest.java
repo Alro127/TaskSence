@@ -1,5 +1,6 @@
 package dev.alro127.tasksense.dto.request;
 
+import dev.alro127.tasksense.domain.enums.Gender;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -19,11 +20,7 @@ public class UpdateUserRequest {
     )
     private String phone;
 
-    @Pattern(
-            regexp = "male|female|other",
-            message = "Gender must be MALE, FEMALE or OTHER"
-    )
-    private String gender;
+    private Gender gender;
 
     @Past(message = "Date of birth must be in the past")
     private LocalDate dob;
