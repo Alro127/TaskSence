@@ -27,7 +27,7 @@ const navItems = [
   { label: "My Tasks", to: "/tasks", icon: CheckSquare },
   { label: "Calendar", to: "/calendar", icon: Calendar },
   { label: "Analytics", to: "/analytics", icon: BarChart3 },
-  { label: "Profile", to: "/dashboard/edit-profile", icon: User },
+  { label: "Profile", to: "/profile", icon: User },
   { label: "Settings", to: "/settings", icon: Settings },
 ];
 

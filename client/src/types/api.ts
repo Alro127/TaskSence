@@ -79,6 +79,18 @@ export interface CreateWorkspaceRequest {
   description?: string;
 }
 
+// User Skills
+export interface UserSkill {
+  id: number;
+  skillName: string;
+  level: number; // 1-5
+}
+
+export interface UserSkillRequest {
+  skillName: string;
+  level: number; // 1-5
+}
+
 export interface UpdateWorkspaceRequest {
   name?: string;
   description?: string;

@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { authApi } from "@/features/auth/api/authApi";
 import authReducer from "@/features/auth/authSlice";
 import { userApi } from "@/features/user/api/userApi";
+import { userSkillApi } from "@/features/user/api/userSkillApi";
 import userReducer from "@/features/user/userSlice";
 import { workspaceApi } from "@/features/workspace/api/workspaceApi";
 import workspaceReducer from "@/features/workspace/workspaceSlice";
@@ -13,12 +14,14 @@ export const store = configureStore({
     workspace: workspaceReducer,
     [authApi.reducerPath]: authApi.reducer,
     [userApi.reducerPath]: userApi.reducer,
+    [userSkillApi.reducerPath]: userSkillApi.reducer,
     [workspaceApi.reducerPath]: workspaceApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(authApi.middleware)
       .concat(userApi.middleware)
+      .concat(userSkillApi.middleware)
       .concat(workspaceApi.middleware),
 });
 

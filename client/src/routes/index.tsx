@@ -14,7 +14,7 @@ import {
   ResetPasswordPage,
 } from "@/features/auth/pages";
 import { DashboardPage } from "@/features/dashboard/pages";
-import { EditProfilePage } from "@/features/user/pages";
+import { ProfilePage } from "@/features/user/pages";
 import { WorkspacesPage, WorkspaceDetailPage } from "@/features/workspace/pages";
 
 function PlaceholderPage({ title }: { title: string }) {
@@ -73,7 +73,11 @@ const routes: RouteObject[] = [
       },
       {
         path: "dashboard/edit-profile",
-        element: <EditProfilePage />,
+        element: <Navigate to="/profile" replace />,
+      },
+      {
+        path: "profile",
+        element: <ProfilePage />,
       },
       {
         path: "workspaces",
