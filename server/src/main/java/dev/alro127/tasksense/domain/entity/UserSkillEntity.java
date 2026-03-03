@@ -5,10 +5,8 @@ import jakarta.persistence.Table;
 import lombok.*;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.SQLRestriction;
 
 @Entity
-@SQLRestriction("deleted_at IS NULL")
 @Table(name = "user_skills")
 @Getter
 @Setter
