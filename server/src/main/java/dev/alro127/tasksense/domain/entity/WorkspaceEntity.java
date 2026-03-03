@@ -33,6 +33,10 @@ public class WorkspaceEntity implements Serializable {
     @JoinColumn(name = "owner_id", nullable = false)
     private UserEntity owner;
 
+    @Column(name = "is_public", nullable = false)
+    @Builder.Default
+    private Boolean isPublic = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;

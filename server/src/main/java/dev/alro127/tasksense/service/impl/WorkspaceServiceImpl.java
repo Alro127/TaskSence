@@ -33,6 +33,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 .name(request.getName().trim())
                 .description(request.getDescription() != null ? request.getDescription().trim() : null)
                 .owner(currentUser)
+                .isPublic(request.getIsPublic())
                 .build();
 
         workspaceRepository.save(workspace);
@@ -77,6 +78,10 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         if (request.getDescription() != null) {
             workspace.setDescription(request.getDescription().trim());
+        }
+
+        if (request.getIsPublic() != null) {
+            workspace.setIsPublic(request.getIsPublic());
         }
 
         workspaceRepository.save(workspace);
@@ -126,6 +131,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 .name(workspace.getName())
                 .description(workspace.getDescription())
                 .ownerId(workspace.getOwner().getId())
+                .isPublic(workspace.getIsPublic())
                 .createdAt(workspace.getCreatedAt())
                 .updatedAt(workspace.getUpdatedAt())
                 .build();

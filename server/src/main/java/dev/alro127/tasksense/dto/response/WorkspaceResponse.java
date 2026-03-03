@@ -17,6 +17,8 @@ public class WorkspaceResponse {
 
     private Long ownerId;
 
+    private Boolean isPublic;
+
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;

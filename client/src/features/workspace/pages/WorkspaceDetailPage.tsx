@@ -148,6 +148,7 @@ const settingsSchema = z.object({
     .string()
     .max(2000, "Description must not exceed 2000 characters")
     .optional(),
+  isPublic: z.boolean().optional(),
 });
 type SettingsFormData = z.infer<typeof settingsSchema>;
 
@@ -185,7 +186,7 @@ export function WorkspaceDetailPage() {
   // Pre-fill settings form
   useEffect(() => {
     if (workspace) {
-      reset({ name: workspace.name, description: workspace.description ?? "" });
+      reset({ name: workspace.name, description: workspace.description ?? "", isPublic: workspace.isPublic ?? false });
     }
   }, [workspace, reset]);
 
@@ -196,6 +197,7 @@ export function WorkspaceDetailPage() {
         id: workspace.id,
         name: data.name,
         description: data.description || undefined,
+        isPublic: data.isPublic,
       }).unwrap();
       toast.success("Workspace updated!");
     } catch {
@@ -351,6 +353,20 @@ export function WorkspaceDetailPage() {
                   </p>
                 )}
               </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="settings-public"
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  {...register("isPublic")}
+                />
+                <Label htmlFor="settings-public" className="cursor-pointer font-normal">
+                  Make this workspace public
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    (Anyone can view it)
+                  </span>
+                </Label>
+              </div>
               <div className="flex items-center gap-3">
                 <Button type="submit" disabled={!isDirty || isUpdating}>
                   {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -364,6 +380,7 @@ export function WorkspaceDetailPage() {
                       reset({
                         name: workspace.name,
                         description: workspace.description ?? "",
+                        isPublic: workspace.isPublic ?? false,
                       })
                     }
                   >

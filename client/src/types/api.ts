@@ -70,6 +70,7 @@ export interface Workspace {
   name: string;
   description: string | null;
   ownerId: number;
+  isPublic?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -77,6 +78,7 @@ export interface Workspace {
 export interface CreateWorkspaceRequest {
   name: string;
   description?: string;
+  isPublic?: boolean;
 }
 
 // User Skills
@@ -94,6 +96,7 @@ export interface UserSkillRequest {
 export interface UpdateWorkspaceRequest {
   name?: string;
   description?: string;
+  isPublic?: boolean;
 }
 
 // Mock project (until Project API is implemented)

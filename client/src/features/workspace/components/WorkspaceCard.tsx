@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { FolderKanban, MoreVertical, Pin, PinOff } from "lucide-react";
+import { FolderKanban, MoreVertical, Pin, PinOff, Globe, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -110,6 +110,20 @@ export function WorkspaceCard({
           </span>
           <span>·</span>
           <span>Created {format(new Date(workspace.createdAt), "MMM d, yyyy")}</span>
+          <span>·</span>
+          <span className="flex items-center gap-1">
+            {workspace.isPublic ? (
+              <>
+                <Globe className="h-3 w-3" />
+                Public
+              </>
+            ) : (
+              <>
+                <Lock className="h-3 w-3" />
+                Private
+              </>
+            )}
+          </span>
         </div>
       </div>
     </Card>

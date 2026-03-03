@@ -28,6 +28,7 @@ const schema = z.object({
     .string()
     .max(2000, "Description must not exceed 2000 characters")
     .optional(),
+  isPublic: z.boolean().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -60,6 +61,7 @@ export function EditWorkspaceModal({
       reset({
         name: workspace.name,
         description: workspace.description ?? "",
+        isPublic: workspace.isPublic ?? false,
       });
     }
   }, [workspace, reset]);
@@ -71,6 +73,7 @@ export function EditWorkspaceModal({
         id: workspace.id,
         name: data.name,
         description: data.description || undefined,
+        isPublic: data.isPublic,
       }).unwrap();
       toast.success("Workspace updated!", {
         description: `"${data.name}" has been updated.`,
@@ -88,7 +91,7 @@ export function EditWorkspaceModal({
       open={open}
       onOpenChange={(v) => {
         if (!v && workspace) {
-          reset({ name: workspace.name, description: workspace.description ?? "" });
+          reset({ name: workspace.name, description: workspace.description ?? "", isPublic: workspace.isPublic ?? false });
         }
         onOpenChange(v);
       }}
@@ -133,6 +136,21 @@ export function EditWorkspaceModal({
                 {errors.description.message}
               </p>
             )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="edit-ws-public"
+              className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              {...register("isPublic")}
+            />
+            <Label htmlFor="edit-ws-public" className="cursor-pointer font-normal">
+              Make this workspace public
+              <span className="ml-1 text-xs text-muted-foreground">
+                (Anyone can view it)
+              </span>
+            </Label>
           </div>
 
           <DialogFooter>

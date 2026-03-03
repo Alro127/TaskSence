@@ -26,6 +26,7 @@ const schema = z.object({
     .string()
     .max(2000, "Description must not exceed 2000 characters")
     .optional(),
+  isPublic: z.boolean().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -55,6 +56,7 @@ export function CreateWorkspaceModal({
       await createWorkspace({
         name: data.name,
         description: data.description || undefined,
+        isPublic: data.isPublic,
       }).unwrap();
       toast.success("Workspace created!", {
         description: `"${data.name}" is ready to use.`,
@@ -117,6 +119,21 @@ export function CreateWorkspaceModal({
                 {errors.description.message}
               </p>
             )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="ws-public"
+              className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              {...register("isPublic")}
+            />
+            <Label htmlFor="ws-public" className="cursor-pointer font-normal">
+              Make this workspace public
+              <span className="ml-1 text-xs text-muted-foreground">
+                (Anyone can view it)
+              </span>
+            </Label>
           </div>
 
           <DialogFooter>
