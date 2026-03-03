@@ -3,6 +3,8 @@ package dev.alro127.tasksense.domain.entity;
 import dev.alro127.tasksense.domain.enums.Gender;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -48,23 +50,15 @@ public class UserEntity implements Serializable {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
-    @Column(name = "created_at", columnDefinition = "TIMESTAMPTZ")
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
 
-    @Column(name = "updated_at", columnDefinition = "TIMESTAMPTZ")
+    @UpdateTimestamp
+    @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
-    @Column(name = "deleted_at", columnDefinition = "TIMESTAMPTZ")
+    @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
-    @PrePersist
-    public void prePersist() {
-        this.createdAt = OffsetDateTime.now();
-        this.updatedAt = OffsetDateTime.now();
-    }
-
-    @PreUpdate
-    public void preUpdate() {
-        this.updatedAt = OffsetDateTime.now();
-    }
 }

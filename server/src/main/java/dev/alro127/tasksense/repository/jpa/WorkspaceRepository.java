@@ -1,6 +1,7 @@
 package dev.alro127.tasksense.repository.jpa;
 
 import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
+import org.jspecify.annotations.NullMarked;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -10,11 +11,11 @@ import java.util.Optional;
 @Repository
 public interface WorkspaceRepository extends JpaRepository<WorkspaceEntity, Long> {
 
-    Optional<WorkspaceEntity> findByIdAndDeletedAtIsNull(Long id);
+    @NullMarked
+    Optional<WorkspaceEntity> findById(Long id);
 
-    List<WorkspaceEntity> findAllByOwnerIdAndDeletedAtIsNull(Long ownerId);
+    List<WorkspaceEntity> findAllByOwnerId(Long ownerId);
 
-    boolean existsByIdAndDeletedAtIsNull(Long id);
+    boolean existsById(Long id);
 
-    List<WorkspaceEntity> findAllByDeletedAtIsNull();
 }

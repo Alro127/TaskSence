@@ -6,6 +6,7 @@ import dev.alro127.tasksense.dto.response.UserResponse;
 import dev.alro127.tasksense.exception.BadRequestException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
+import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -19,14 +20,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
+    private final SecurityService securityService;
 
     @Override
     public UserResponse getCurrentUser() {
 
-        String email = getCurrentUserEmail();
-
-        UserEntity user = userRepository.findByEmailAndDeletedAtIsNull(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        UserEntity user = securityService.getCurrentUser();
 
         return mapToResponse(user);
     }
@@ -34,10 +33,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse updateCurrentUser(UpdateUserRequest request) {
 
-        String email = getCurrentUserEmail();
-
-        UserEntity user = userRepository.findByEmailAndDeletedAtIsNull(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        UserEntity user = securityService.getCurrentUser();
 
         // ===== Partial Update =====
 
@@ -74,10 +70,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteUser(Long id) {
 
-        String email = getCurrentUserEmail();
-
-        UserEntity user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        UserEntity user = securityService.getCurrentUser();
 
         if (user.getDeletedAt() != null) {
             throw new BadRequestException("User already deleted");
@@ -87,16 +80,6 @@ public class UserServiceImpl implements UserService {
         user.setIsActive(false);
 
         userRepository.save(user);
-    }
-
-    // Helper
-    private String getCurrentUserEmail() {
-        Authentication authentication = SecurityContextHolder
-                .getContext()
-                .getAuthentication();
-
-        assert authentication != null;
-        return authentication.getName(); // email từ JWT
     }
 
     private UserResponse mapToResponse(UserEntity user) {

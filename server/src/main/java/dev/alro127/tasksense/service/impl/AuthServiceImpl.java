@@ -94,7 +94,7 @@ public class AuthServiceImpl implements AuthService {
 
             String accessToken = jwtTokenProvider.generateAccessToken(authentication.getName());
 
-            UserEntity user = userRepository.findByEmailAndDeletedAtIsNull(request.getEmail())
+            UserEntity user = userRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
             String refreshToken = generateAndStoreRefreshToken(user);
@@ -132,7 +132,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void sendOtp(String email) {
 
-        UserEntity user = userRepository.findByEmailAndDeletedAtIsNull(email)
+        UserEntity user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         String otp = String.valueOf(100000 + new Random().nextInt(900000));
@@ -171,7 +171,7 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("Invalid OTP");
         }
 
-        UserEntity user = userRepository.findByEmailAndDeletedAtIsNull(email)
+        UserEntity user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         user.setIsActive(true);
@@ -189,7 +189,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void forgotPassword(String email) {
 
-        UserEntity user = userRepository.findByEmailAndDeletedAtIsNull(email)
+        UserEntity user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         String rawToken = tokenProvider.generate();
@@ -284,7 +284,7 @@ public class AuthServiceImpl implements AuthService {
         AtomicReference<AuthResponse> authResponse = new AtomicReference<>();
 
         GoogleIdToken.Payload finalPayload = payload;
-        userRepository.findByEmailAndDeletedAtIsNull(email).ifPresentOrElse(account -> {
+        userRepository.findByEmail(email).ifPresentOrElse(account -> {
             String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail());
             String refreshToken = generateAndStoreRefreshToken(account);
 
