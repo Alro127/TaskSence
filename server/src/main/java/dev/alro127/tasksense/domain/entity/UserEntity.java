@@ -5,12 +5,14 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 @Entity
+@SQLRestriction("deleted_at IS NULL")
 @Table(name = "users")
 @Getter
 @Setter
