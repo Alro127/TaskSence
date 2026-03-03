@@ -15,10 +15,11 @@ CREATE TABLE users (
 );
 
 CREATE TABLE user_skills (
+    id BIGSERIAL NOT NULL,
     user_id BIGINT NOT NULL,
     skill_name VARCHAR(255) NOT NULL,
     level INT CHECK (level BETWEEN 1 AND 5),
-    PRIMARY KEY (user_id, skill_name),
+    PRIMARY KEY (id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
