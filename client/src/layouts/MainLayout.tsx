@@ -8,6 +8,7 @@ import {
   LogOut,
   Settings,
   User,
+  Users,
   X,
   CheckSquare,
 } from "lucide-react";
@@ -24,6 +25,7 @@ import { updateCurrentUser } from "@/features/user/userSlice";
 const navItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "Workspaces", to: "/workspaces", icon: FolderKanban },
+  { label: "Team Templates", to: "/team-templates", icon: Users },
   { label: "My Tasks", to: "/tasks", icon: CheckSquare },
   { label: "Calendar", to: "/calendar", icon: Calendar },
   { label: "Analytics", to: "/analytics", icon: BarChart3 },

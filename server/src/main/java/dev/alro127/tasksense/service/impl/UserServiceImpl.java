@@ -9,8 +9,8 @@ import dev.alro127.tasksense.repository.jpa.UserRepository;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -27,6 +27,12 @@ public class UserServiceImpl implements UserService {
 
         UserEntity user = securityService.getCurrentUser();
 
+        return mapToResponse(user);
+    }
+
+    @Override
+    public UserResponse getUser(Long userId) {
+        UserEntity user = userRepository.findById(userId).orElseThrow( () -> new ResourceNotFoundException("User not found"));
         return mapToResponse(user);
     }
 
@@ -80,6 +86,21 @@ public class UserServiceImpl implements UserService {
         user.setIsActive(false);
 
         userRepository.save(user);
+    }
+
+    @Override
+    public List<UserResponse> searchUsersWithCursor(String keyword,
+                                                    Long cursor,
+                                                    int limit) {
+
+        Pageable pageable = PageRequest.of(0, limit);
+
+        List<UserEntity> users =
+                userRepository.searchUsers(keyword, cursor, pageable);
+
+        return users.stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     private UserResponse mapToResponse(UserEntity user) {

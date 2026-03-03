@@ -6,6 +6,8 @@ import { userSkillApi } from "@/features/user/api/userSkillApi";
 import userReducer from "@/features/user/userSlice";
 import { workspaceApi } from "@/features/workspace/api/workspaceApi";
 import workspaceReducer from "@/features/workspace/workspaceSlice";
+import { teamTemplateApi } from "@/features/team-template/api/teamTemplateApi";
+import { teamMemberTemplateApi } from "@/features/team-template/api/teamMemberTemplateApi";
 
 export const store = configureStore({
   reducer: {
@@ -16,13 +18,17 @@ export const store = configureStore({
     [userApi.reducerPath]: userApi.reducer,
     [userSkillApi.reducerPath]: userSkillApi.reducer,
     [workspaceApi.reducerPath]: workspaceApi.reducer,
+    [teamTemplateApi.reducerPath]: teamTemplateApi.reducer,
+    [teamMemberTemplateApi.reducerPath]: teamMemberTemplateApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(authApi.middleware)
       .concat(userApi.middleware)
       .concat(userSkillApi.middleware)
-      .concat(workspaceApi.middleware),
+      .concat(workspaceApi.middleware)
+      .concat(teamTemplateApi.middleware)
+      .concat(teamMemberTemplateApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

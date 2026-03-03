@@ -93,12 +93,28 @@ client/
 │   │           ├── WorkspacesPage.tsx    ← /workspaces
 │   │           ├── WorkspaceDetailPage.tsx ← /workspaces/:id
 │   │           └── index.ts
+│   │   └── team-template/                ← Sprint 5
+│   │       ├── api/
+│   │       │   ├── teamTemplateApi.ts    ← RTK Query CRUD
+│   │       │   └── teamMemberTemplateApi.ts ← RTK Query members
+│   │       ├── components/
+│   │       │   ├── TeamTemplateCard.tsx
+│   │       │   ├── TeamTemplateCardGhost.tsx
+│   │       │   ├── CreateTeamTemplateModal.tsx
+│   │       │   ├── EditTeamTemplateModal.tsx
+│   │       │   ├── DeleteTeamTemplateDialog.tsx ← Type-to-confirm
+│   │       │   ├── AddMembersModal.tsx   ← Search + batch add
+│   │       │   └── index.ts
+│   │       └── pages/
+│   │           ├── TeamTemplatesPage.tsx  ← /team-templates
+│   │           ├── TeamTemplateDetailPage.tsx ← /team-templates/:id
+│   │           └── index.ts
 │   ├── layouts/
 │   │   ├── AuthLayout.tsx
-│   │   └── MainLayout.tsx    ← Sidebar "Profile" trỏ sang /profile
-│   ├── routes/index.tsx      ← /profile (ProfilePage), /dashboard/edit-profile → redirect
-│   ├── types/api.ts          ← Đã thêm Workspace, CreateWorkspaceRequest,
-│   │                            UpdateWorkspaceRequest, MockProject,
+│   │   └── MainLayout.tsx    ← Sidebar "Profile" trỏ sang /profile; "Team Templates" → /team-templates
+│   ├── routes/index.tsx      ← /profile (ProfilePage), /team-templates, /team-templates/:id
+│   ├── types/api.ts          ← Đã thêm Workspace, TeamTemplate, TeamMemberTemplate,
+│   │                            AddTeamMemberResultItem, MemberAddStatus, UserSearchResult,
 │   │                            UserSkill, UserSkillRequest
 │   ├── App.tsx
 │   ├── main.tsx
@@ -173,6 +189,25 @@ client/
 - ✅ Cập nhật **routes** thêm `/workspaces` và `/workspaces/:id`
 - ✅ Cập nhật **types/api.ts** thêm `Workspace`, `CreateWorkspaceRequest`, `UpdateWorkspaceRequest`, `MockProject`
 - ✅ Cài thêm **shadcn/ui components**: `dialog`, `dropdown-menu`, `tabs`, `badge`
+
+### Sprint 5 - Team Template ✅ COMPLETED
+
+- ✅ **Types** — thêm `TeamTemplate`, `TeamMemberTemplate`, `AddTeamMemberTemplateRequest`, `AddTeamMemberResultItem`, `MemberAddStatus`, `UserSearchResult` vào `types/api.ts`
+- ✅ **teamTemplateApi** — RTK Query với 5 endpoints: `getMyTemplates`, `getTemplateById`, `createTemplate`, `updateTemplate`, `deleteTemplate`
+- ✅ **teamMemberTemplateApi** — RTK Query với 3 endpoints: `getMembers`, `addMembers` (batch), `removeMember`
+- ✅ **User Search** — thêm `searchUsers` + `useLazySearchUsersQuery` vào `userApi` (`GET /users/search?keyword=...`)
+- ✅ **TeamTemplatesPage** (`/team-templates`):
+  - Grid card layout giống WorkspacesPage
+  - Empty state + ghost card "New Template"
+  - Create / Edit / Delete modal integration
+- ✅ **TeamTemplateDetailPage** (`/team-templates/:id`) gồm 2 tabs:
+  - **Members tab**: danh sách member (userId + createdAt), Add Members button, Remove per-row
+  - **Settings tab**: inline edit form (name, description) + Danger Zone (delete + navigate back)
+- ✅ **AddMembersModal** — search user by name/email (debounced 400ms), multi-select chips, batch add, hiển thị kết quả ADDED / ALREADY_EXISTS / NOT_FOUND per user
+- ✅ **DeleteTeamTemplateDialog** — type-to-confirm, có `navigateAfterDelete` prop cho detail page
+- ✅ Cập nhật **store.ts** thêm `teamTemplateApi` + `teamMemberTemplateApi`
+- ✅ Cập nhật **routes** thêm `/team-templates` và `/team-templates/:id`
+- ✅ Cập nhật **Sidebar** thêm mục "Team Templates" (`Users` icon)
 
 ## 📝 Quyết định thiết kế hiện tại
 

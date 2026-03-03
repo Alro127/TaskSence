@@ -16,6 +16,7 @@ import {
 import { DashboardPage } from "@/features/dashboard/pages";
 import { ProfilePage } from "@/features/user/pages";
 import { WorkspacesPage, WorkspaceDetailPage } from "@/features/workspace/pages";
+import { TeamTemplatesPage, TeamTemplateDetailPage } from "@/features/team-template/pages";
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -86,6 +87,14 @@ const routes: RouteObject[] = [
       {
         path: "workspaces/:id",
         element: <WorkspaceDetailPage />,
+      },
+      {
+        path: "team-templates",
+        element: <TeamTemplatesPage />,
+      },
+      {
+        path: "team-templates/:id",
+        element: <TeamTemplateDetailPage />,
       },
       {
         path: "tasks",

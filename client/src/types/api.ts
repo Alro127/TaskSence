@@ -99,6 +99,54 @@ export interface UpdateWorkspaceRequest {
   isPublic?: boolean;
 }
 
+// Team Template
+export interface TeamTemplate {
+  id: number;
+  ownerId: number;
+  name: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTeamTemplateRequest {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateTeamTemplateRequest {
+  name?: string;
+  description?: string;
+}
+
+// Team Member Template
+export interface TeamMemberTemplate {
+  id: number;
+  teamTemplateId: number;
+  userId: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AddTeamMemberTemplateRequest {
+  userIds: number[];
+}
+
+export type MemberAddStatus = "ADDED" | "ALREADY_EXISTS" | "NOT_FOUND";
+
+export interface AddTeamMemberResultItem {
+  userId: number;
+  status: MemberAddStatus;
+}
+
+// User search
+export interface UserSearchResult {
+  id: number;
+  email: string;
+  fullName: string | null;
+  avatarUrl: string | null;
+}
+
 // Mock project (until Project API is implemented)
 export interface MockProject {
   id: number;

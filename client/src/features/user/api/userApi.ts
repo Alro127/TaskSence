@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
-import type { ApiResponse, User, UpdateUserRequest } from "@/types/api";
+import type { ApiResponse, User, UpdateUserRequest, UserSearchResult } from "@/types/api";
 
 interface MediaRequest {
   fileName: string;
@@ -56,11 +56,27 @@ export const userApi = createApi({
         body,
       }),
     }),
+
+    // Search users by keyword — GET /users/search?keyword=...
+    searchUsers: builder.query<ApiResponse<UserSearchResult[]>, string>({
+      query: (keyword) => ({
+        url: "/users/search",
+        params: { keyword },
+      }),
+    }),
+
+    // Get user by ID — GET /users/:id
+    getUserById: builder.query<ApiResponse<UserSearchResult>, number>({
+      query: (id) => `/users/${id}`,
+    }),
   }),
 });
 
-export const { 
-  useGetCurrentUserQuery, 
+export const {
+  useGetCurrentUserQuery,
   useUpdateUserProfileMutation,
   useGetAvatarPresignUrlMutation,
+  useSearchUsersQuery,
+  useLazySearchUsersQuery,
+  useGetUserByIdQuery,
 } = userApi;
