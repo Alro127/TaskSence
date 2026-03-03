@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -48,6 +48,7 @@ export function RegisterPage() {
   const [registerUser, { isLoading }] = useRegisterMutation();
   const [loginWithGoogle] = useLoginWithGoogleMutation();
   const [googleLoading, setGoogleLoading] = useState(false);
+  const googleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     register,
@@ -90,6 +91,10 @@ export function RegisterPage() {
     flow: "auth-code",
     onSuccess: async (codeResponse) => {
       try {
+        if (googleTimeoutRef.current) {
+          clearTimeout(googleTimeoutRef.current);
+          googleTimeoutRef.current = null;
+        }
         const result = await loginWithGoogle({ code: codeResponse.code }).unwrap();
         dispatch(
           setCredentials({
@@ -113,6 +118,10 @@ export function RegisterPage() {
       }
     },
     onError: () => {
+      if (googleTimeoutRef.current) {
+        clearTimeout(googleTimeoutRef.current);
+        googleTimeoutRef.current = null;
+      }
       setGoogleLoading(false);
       toast.error("Google sign up cancelled", {
         description: "Please try again to continue with Google.",
@@ -130,8 +139,24 @@ export function RegisterPage() {
     }
 
     setGoogleLoading(true);
+    
+    // Set timeout to reset loading state if Google OAuth dialog is closed without response
+    googleTimeoutRef.current = setTimeout(() => {
+      setGoogleLoading(false);
+      googleTimeoutRef.current = null;
+    }, 5000); 
+    
     googleLogin();
   };
+
+  // Cleanup timeout on component unmount
+  useEffect(() => {
+    return () => {
+      if (googleTimeoutRef.current) {
+        clearTimeout(googleTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const isSubmitting = isLoading || googleLoading;
 
