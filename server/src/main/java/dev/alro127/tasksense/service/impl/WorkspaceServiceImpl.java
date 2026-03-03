@@ -44,7 +44,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     public WorkspaceResponse getWorkspaceById(Long id) {
         UserEntity currentUser = getCurrentUser();
 
-        WorkspaceEntity workspace = workspaceRepository.findByIdAndDeletedAtIsNull(id)
+        WorkspaceEntity workspace = workspaceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
         validateWorkspaceOwnership(workspace, currentUser.getId());
@@ -56,7 +56,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     public List<WorkspaceResponse> getMyWorkspaces() {
         UserEntity currentUser = getCurrentUser();
 
-        return workspaceRepository.findAllByOwnerIdAndDeletedAtIsNull(currentUser.getId())
+        return workspaceRepository.findAllByOwnerId(currentUser.getId())
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -66,7 +66,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     public WorkspaceResponse updateWorkspace(Long id, UpdateWorkspaceRequest request) {
         UserEntity currentUser = getCurrentUser();
 
-        WorkspaceEntity workspace = workspaceRepository.findByIdAndDeletedAtIsNull(id)
+        WorkspaceEntity workspace = workspaceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
         validateWorkspaceOwnership(workspace, currentUser.getId());
@@ -88,7 +88,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     public void deleteWorkspace(Long id) {
         UserEntity currentUser = getCurrentUser();
 
-        WorkspaceEntity workspace = workspaceRepository.findByIdAndDeletedAtIsNull(id)
+        WorkspaceEntity workspace = workspaceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
         validateWorkspaceOwnership(workspace, currentUser.getId());
@@ -101,7 +101,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private UserEntity getCurrentUser() {
         String email = getCurrentUserEmail();
 
-        return userRepository.findByEmailAndDeletedAtIsNull(email)
+        return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
