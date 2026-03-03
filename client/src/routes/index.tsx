@@ -15,6 +15,7 @@ import {
 } from "@/features/auth/pages";
 import { DashboardPage } from "@/features/dashboard/pages";
 import { EditProfilePage } from "@/features/user/pages";
+import { WorkspacesPage, WorkspaceDetailPage } from "@/features/workspace/pages";
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -73,6 +74,14 @@ const routes: RouteObject[] = [
       {
         path: "dashboard/edit-profile",
         element: <EditProfilePage />,
+      },
+      {
+        path: "workspaces",
+        element: <WorkspacesPage />,
+      },
+      {
+        path: "workspaces/:id",
+        element: <WorkspaceDetailPage />,
       },
       {
         path: "tasks",

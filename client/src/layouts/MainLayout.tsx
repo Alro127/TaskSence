@@ -3,6 +3,7 @@ import { NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
 import {
   BarChart3,
   Calendar,
+  FolderKanban,
   LayoutDashboard,
   LogOut,
   Settings,
@@ -22,6 +23,7 @@ import { updateCurrentUser } from "@/features/user/userSlice";
 
 const navItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
+  { label: "Workspaces", to: "/workspaces", icon: FolderKanban },
   { label: "My Tasks", to: "/tasks", icon: CheckSquare },
   { label: "Calendar", to: "/calendar", icon: Calendar },
   { label: "Analytics", to: "/analytics", icon: BarChart3 },

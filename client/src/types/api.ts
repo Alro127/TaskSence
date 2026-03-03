@@ -63,3 +63,34 @@ export interface UpdateUserRequest {
   bio?: string;
   avatarUrl?: string;
 }
+
+// Workspace
+export interface Workspace {
+  id: number;
+  name: string;
+  description: string | null;
+  ownerId: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateWorkspaceRequest {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateWorkspaceRequest {
+  name?: string;
+  description?: string;
+}
+
+// Mock project (until Project API is implemented)
+export interface MockProject {
+  id: number;
+  name: string;
+  description: string;
+  taskCount: number;
+  completedTaskCount: number;
+  status: "active" | "archived" | "completed";
+  updatedAt: string;
+}
