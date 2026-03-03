@@ -139,24 +139,38 @@ export function RegisterPage() {
     }
 
     setGoogleLoading(true);
-    
-    // Set timeout to reset loading state if Google OAuth dialog is closed without response
-    googleTimeoutRef.current = setTimeout(() => {
-      setGoogleLoading(false);
-      googleTimeoutRef.current = null;
-    }, 5000); 
-    
     googleLogin();
   };
 
-  // Cleanup timeout on component unmount
+  // Handle Google OAuth dialog closure detection
   useEffect(() => {
+    if (!googleLoading) return;
+
+    const handleWindowFocus = () => {
+      // When window regains focus after Google dialog closes,
+      // wait a bit to see if onSuccess/onError gets called
+      googleTimeoutRef.current = setTimeout(() => {
+        setGoogleLoading((prevState) => {
+          // Only reset if still loading (callback wasn't called)
+          if (prevState) {
+            return false;
+          }
+          return prevState;
+        });
+        googleTimeoutRef.current = null;
+      }, 500);
+    };
+
+    window.addEventListener("focus", handleWindowFocus);
+
     return () => {
+      window.removeEventListener("focus", handleWindowFocus);
       if (googleTimeoutRef.current) {
         clearTimeout(googleTimeoutRef.current);
+        googleTimeoutRef.current = null;
       }
     };
-  }, []);
+  }, [googleLoading]);
 
   const isSubmitting = isLoading || googleLoading;
 
