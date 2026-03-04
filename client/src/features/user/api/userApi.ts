@@ -66,7 +66,7 @@ export const userApi = createApi({
     }),
 
     // Get user by ID — GET /users/:id
-    getUserById: builder.query<ApiResponse<UserSearchResult>, number>({
+    getUserById: builder.query<ApiResponse<User>, number>({
       query: (id) => `/users/${id}`,
     }),
   }),

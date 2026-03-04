@@ -55,7 +55,7 @@ client/
 │   │   ├── store.ts          ← Đã thêm workspaceApi + workspaceReducer + userSkillApi
 │   │   └── hooks.ts
 │   ├── components/
-│   │   ├── ui/               ← Đã thêm: dialog, dropdown-menu, tabs, badge
+│   │   ├── ui/               ← Đã thêm: dialog, dropdown-menu, tabs, badge, sheet
 │   │   └── common/
 │   ├── features/
 │   │   ├── auth/
@@ -66,13 +66,14 @@ client/
 │   │   │   └── pages/DashboardPage.tsx   ← Đã thêm WorkspaceSection
 │   │   ├── user/
 │   │   │   ├── api/
-│   │   │   │   ├── userApi.ts
+│   │   │   │   ├── userApi.ts             ← getUserById trả về ApiResponse<User> (đầy đủ fields)
 │   │   │   │   └── userSkillApi.ts       ← RTK Query CRUD cho skills
 │   │   │   ├── components/
 │   │   │   │   ├── AvatarUpload.tsx
 │   │   │   │   ├── SkillStars.tsx        ← ★ Star rating (display + interactive)
 │   │   │   │   ├── SkillsSection.tsx     ← Skills tab: list + inline add/edit
-│   │   │   │   └── UserProfileCard.tsx
+│   │   │   │   ├── UserProfileCard.tsx
+│   │   │   │   └── UserProfileDrawer.tsx ← Sheet xem profile người khác (view-only)
 │   │   │   ├── hooks/
 │   │   │   │   └── useAvatarUpload.ts
 │   │   │   ├── pages/
@@ -208,24 +209,41 @@ client/
 - ✅ **TeamTemplateDetailPage** (`/team-templates/:id`) gồm 2 tabs:
   - **Members tab**: hiển thị `fullName` làm title, `email` làm subtitle — đọc trực tiếp từ `member.userSummaryResponse` (backend embed), không gọi thêm API. Add Members button, Remove per-row
   - **Settings tab**: inline edit form (name, description) + Danger Zone (delete + navigate back)
-- ✅ **AddMembersModal** — search user by name/email (debounced 400ms, `GET /users/search?keyword=`), multi-select chips, batch add (`POST /team-templates/:id/members/batch`), hiển thị kết quả ADDED / ALREADY_EXISTS / NOT_FOUND per user
+- ✅ **AddMembersModal** — search user by name/email (debounced 400ms, `GET /users/search?keyword=`), multi-select chips, batch add (`POST /team-templates/:id/members/batch`), hiển thị kết quả ADDED / ALREADY_EXISTS / NOT_FOUND per user. Mỗi row trong search results tách thành 2 vùng click: click tên/avatar → xem profile; click nút `+` → thêm vào selection
 - ✅ **DeleteTeamTemplateDialog** — type-to-confirm, có `navigateAfterDelete` prop cho detail page
+- ✅ **UserProfileDrawer** — Sheet xem profile người khác (read-only), mở từ:
+  - Click avatar/tên trong **MembersTab** (danh sách thành viên đã thêm)
+  - Click avatar/tên trong **AddMembersModal** (search results khi đang tìm kiếm)
+  - Nội dung: 2 tabs — **Info** (bio, email, phone, gender, dob) + **Skills** (view-only `SkillsSection`)
+- ✅ Cài thêm **shadcn/ui components**: `sheet`
 - ✅ Cập nhật **store.ts** thêm `teamTemplateApi` + `teamMemberTemplateApi`
 - ✅ Cập nhật **routes** thêm `/team-templates` và `/team-templates/:id`
 - ✅ Cập nhật **Sidebar** thêm mục "Team Templates" (`Users` icon)
 
+### Sprint 5.1 - View Member Profile ✅ COMPLETED
+
+- ✅ **UserProfileDrawer** (`features/user/components/UserProfileDrawer.tsx`) — Sheet read-only xem thông tin người dùng khác:
+  - Props: `userId: number | null`, `open: boolean`, `onClose: () => void`
+  - Fetch `GET /users/:id` (RTK Query `useGetUserByIdQuery` với skip khi `userId` null)
+  - 2 tabs: **Info** (bio, email, phone, gender, dob) + **Skills** (reuse `<SkillsSection userId={...} />`)
+  - Loading/error states
+- ✅ **getUserById** type fix: từ `ApiResponse<UserSearchResult>` → `ApiResponse<User>` (đầy đủ fields: bio, phone, gender, dob)
+- ✅ **MembersTab** — click avatar hoặc tên → mở `UserProfileDrawer`; hiển thị `avatarUrl` thực nếu có
+- ✅ **AddMembersModal** — tách mỗi row search results thành 2 zone: click tên/avatar → mở `UserProfileDrawer`; click nút `+` → thêm vào selection chips
+- ✅ Cài thêm **shadcn/ui**: `sheet`
+
 #### Backend API — Team Template
 
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| `GET` | `/team-templates` | Danh sách template của current user |
-| `GET` | `/team-templates/:id` | Chi tiết template |
-| `POST` | `/team-templates` | Tạo template mới |
-| `PUT` | `/team-templates/:id` | Cập nhật template |
-| `DELETE` | `/team-templates/:id` | Xóa template |
-| `GET` | `/team-templates/:id/members` | Danh sách member (embed `UserSummaryResponse`) |
-| `POST` | `/team-templates/:id/members/batch` | Thêm nhiều member cùng lúc |
-| `DELETE` | `/team-templates/:id/members/:userId` | Xóa member khỏi template |
+| Method   | Endpoint                              | Mô tả                                          |
+| -------- | ------------------------------------- | ---------------------------------------------- |
+| `GET`    | `/team-templates`                     | Danh sách template của current user            |
+| `GET`    | `/team-templates/:id`                 | Chi tiết template                              |
+| `POST`   | `/team-templates`                     | Tạo template mới                               |
+| `PUT`    | `/team-templates/:id`                 | Cập nhật template                              |
+| `DELETE` | `/team-templates/:id`                 | Xóa template                                   |
+| `GET`    | `/team-templates/:id/members`         | Danh sách member (embed `UserSummaryResponse`) |
+| `POST`   | `/team-templates/:id/members/batch`   | Thêm nhiều member cùng lúc                     |
+| `DELETE` | `/team-templates/:id/members/:userId` | Xóa member khỏi template                       |
 
 ## 📝 Quyết định thiết kế hiện tại
 
@@ -332,7 +350,21 @@ npm run preview
   - Tab "Skills" là `SkillsSection` component
   - **`EditProfilePage`** vẫn giữ trong codebase nhưng không còn dùng trực tiếp; `/dashboard/edit-profile` redirect về `/profile`
 - **Level label mapping**: `{ 1: 'Beginner', 2: 'Elementary', 3: 'Intermediate', 4: 'Advanced', 5: 'Expert' }` — constant `LEVEL_LABELS` export từ `SkillStars.tsx`
-- **Việc cần làm khi muốn hiển thị skill của user khác**: truyền `userId` prop vào `<SkillsSection userId={someUserId} />` — API đã sẵn sàng.
+- ~~**Việc cần làm khi muốn hiển thị skill của user khác**~~ ✅ **Đã hoàn thành**: xem `UserProfileDrawer` bên dưới.
+
+### UserProfileDrawer Architecture
+
+- **`UserProfileDrawer`** (`features/user/components/UserProfileDrawer.tsx`):
+  - Props: `userId: number | null | undefined`, `open: boolean`, `onClose: () => void`
+  - Gọi `useGetUserByIdQuery(userId, { skip: !userId })` — lazy, chỉ fetch khi drawer mở
+  - `getUserById` trả `ApiResponse<User>` (đầy đủ: fullName, email, phone, gender, dob, bio, avatarUrl)
+  - 2 tabs: **Info** (bio + InfoRow grid) + **Skills** (`<SkillsSection userId={userId} />` — view-only)
+  - Loading state trong avatar circle; error state toàn body
+- **Trigger pattern** (nhất quán ở cả 2 nơi):
+  - `MembersTab` (TeamTemplateDetailPage): click vào `<button>` bao quanh avatar + tên → `openProfile(userId)`
+  - `AddMembersModal`: mỗi row tìm kiếm có 2 zone — left `<button>` (tên/avatar → xem profile) + right nút `+` (thêm vào selection)
+- **Portal stacking**: `SheetContent` render qua React Portal, hiển thị đúng khi Sheet mở từ bên trong Dialog
+- **Visual cues**: hover tên → `hover:text-primary hover:underline`; hover avatar → `hover:ring-2 hover:ring-primary/40`
 
 ### Workspace Architecture
 

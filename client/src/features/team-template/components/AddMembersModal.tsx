@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, X, Loader2, CheckCircle2, AlertCircle, UserPlus } from "lucide-react";
+import { Search, X, Loader2, CheckCircle2, AlertCircle, UserPlus, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import type { UserSearchResult, AddTeamMemberResultItem } from "@/types/api";
 import { useLazySearchUsersQuery } from "@/features/user/api/userApi";
 import { useAddMembersMutation } from "../api/teamMemberTemplateApi";
+import { UserProfileDrawer } from "@/features/user/components";
 
 interface AddMembersModalProps {
   open: boolean;
@@ -50,6 +50,13 @@ export function AddMembersModal({
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<UserSearchResult[]>([]);
   const [results, setResults] = useState<AddTeamMemberResultItem[] | null>(null);
+  const [profileUserId, setProfileUserId] = useState<number | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  const openProfile = (userId: number) => {
+    setProfileUserId(userId);
+    setIsProfileOpen(true);
+  };
 
   const [searchUsers, { data: searchData, isFetching: isSearching }] =
     useLazySearchUsersQuery();
@@ -123,6 +130,7 @@ export function AddMembersModal({
   );
 
   return (
+  <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -224,28 +232,40 @@ export function AddMembersModal({
                   </p>
                 ) : (
                   filteredResults.map((user) => (
-                    <button
+                    <div
                       key={user.id}
-                      type="button"
-                      onClick={() => handleSelectUser(user)}
-                      className={cn(
-                        "flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-accent transition-colors",
-                      )}
+                      className="flex items-center gap-2 px-3 py-2 hover:bg-accent transition-colors"
                     >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase">
-                        {(user.fullName ?? user.email)?.[0] ?? "?"}
-                      </div>
-                      <div className="min-w-0">
-                        {user.fullName && (
-                          <p className="truncate text-sm font-medium">
-                            {user.fullName}
+                      {/* Left: click avatar / name to open profile drawer */}
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                        onClick={() => openProfile(user.id)}
+                      >
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase transition-all hover:ring-2 hover:ring-primary/40">
+                          {(user.fullName ?? user.email)?.[0] ?? "?"}
+                        </div>
+                        <div className="min-w-0">
+                          {user.fullName && (
+                            <p className="truncate text-sm font-medium transition-colors hover:text-primary hover:underline">
+                              {user.fullName}
+                            </p>
+                          )}
+                          <p className="truncate text-xs text-muted-foreground">
+                            {user.email}
                           </p>
-                        )}
-                        <p className="truncate text-xs text-muted-foreground">
-                          {user.email}
-                        </p>
-                      </div>
-                    </button>
+                        </div>
+                      </button>
+                      {/* Right: click to add to selection */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectUser(user)}
+                        title="Add to selection"
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-colors hover:bg-primary/20"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   ))
                 )}
               </div>
@@ -280,5 +300,12 @@ export function AddMembersModal({
         )}
       </DialogContent>
     </Dialog>
+
+    <UserProfileDrawer
+      userId={profileUserId}
+      open={isProfileOpen}
+      onClose={() => setIsProfileOpen(false)}
+    />
+  </>
   );
 }
