@@ -2,12 +2,15 @@ package dev.alro127.tasksense.service.impl;
 
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
+import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
+import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 import dev.alro127.tasksense.dto.request.CreateWorkspaceRequest;
 import dev.alro127.tasksense.dto.request.UpdateWorkspaceRequest;
 import dev.alro127.tasksense.dto.response.WorkspaceResponse;
 import dev.alro127.tasksense.exception.BadRequestException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
+import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
 import dev.alro127.tasksense.service.WorkspaceService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,7 @@ import java.util.List;
 public class WorkspaceServiceImpl implements WorkspaceService {
 
     private final WorkspaceRepository workspaceRepository;
+    private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
 
     @Override
@@ -36,7 +40,16 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 .isPublic(request.getIsPublic())
                 .build();
 
-        workspaceRepository.save(workspace);
+        WorkspaceEntity saved = workspaceRepository.save(workspace);
+
+        WorkspaceMemberEntity member = WorkspaceMemberEntity.builder()
+                .workspace(saved)
+                .user(currentUser)
+                .role(WorkspaceRole.OWNER)
+                .joinedAt(OffsetDateTime.now())
+                .build();
+
+        workspaceMemberRepository.save(member);
 
         return WorkspaceResponse.mapToResponse(workspace);
     }
@@ -48,7 +61,9 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         WorkspaceEntity workspace = workspaceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
-        validateWorkspaceOwnership(workspace, currentUser.getId());
+        if (!workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspace.getId(), currentUser.getId())) {
+            throw new BadRequestException("You are not allowed to access this workspace");
+        }
 
         return WorkspaceResponse.mapToResponse(workspace);
     }
@@ -57,7 +72,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     public List<WorkspaceResponse> getMyWorkspaces() {
         UserEntity currentUser = getCurrentUser();
 
-        return workspaceRepository.findAllByOwnerId(currentUser.getId())
+        return workspaceRepository.findAllByMemberUserId(currentUser.getId())
                 .stream()
                 .map(WorkspaceResponse::mapToResponse)
                 .toList();

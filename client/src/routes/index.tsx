@@ -15,7 +15,7 @@ import {
 } from "@/features/auth/pages";
 import { DashboardPage } from "@/features/dashboard/pages";
 import { ProfilePage } from "@/features/user/pages";
-import { WorkspacesPage, WorkspaceDetailPage } from "@/features/workspace/pages";
+import { WorkspacesPage, WorkspaceDetailPage, WorkspaceInvitationPage } from "@/features/workspace/pages";
 import { TeamTemplatesPage, TeamTemplateDetailPage } from "@/features/team-template/pages";
 
 function PlaceholderPage({ title }: { title: string }) {
@@ -83,6 +83,10 @@ const routes: RouteObject[] = [
       {
         path: "workspaces",
         element: <WorkspacesPage />,
+      },
+      {
+        path: "workspaces/invitation",
+        element: <WorkspaceInvitationPage />,
       },
       {
         path: "workspaces/:id",
