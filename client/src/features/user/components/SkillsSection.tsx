@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, Trash2, Plus, Check, X, Loader2 } from "lucide-react";
+import { Pencil, Trash2, Plus, Check, X, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import type { UserSkill } from "@/types/api";
-import { SkillStars } from "./SkillStars";
+import { SkillStars, LEVEL_LABELS } from "./SkillStars";
 import {
   useGetMySkillsQuery,
   useGetUserSkillsQuery,
@@ -18,7 +18,26 @@ import {
 } from "../api/userSkillApi";
 
 // ---------------------------------------------------------------------------
-// Inline edit row
+// Level badge + progress bar styling maps
+// ---------------------------------------------------------------------------
+const LEVEL_BADGE_STYLES: Record<number, string> = {
+  1: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+  2: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
+  3: "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
+  4: "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300",
+  5: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300",
+};
+
+const LEVEL_PROGRESS_COLORS: Record<number, string> = {
+  1: "bg-slate-400",
+  2: "bg-blue-500",
+  3: "bg-green-500",
+  4: "bg-purple-500",
+  5: "bg-amber-500",
+};
+
+// ---------------------------------------------------------------------------
+// Inline edit / add row
 // ---------------------------------------------------------------------------
 interface SkillEditRowProps {
   name: string;
@@ -29,6 +48,7 @@ interface SkillEditRowProps {
   onCancel: () => void;
   isSaving: boolean;
   nameError?: string;
+  label?: string;
 }
 
 function SkillEditRow({
@@ -40,15 +60,20 @@ function SkillEditRow({
   onCancel,
   isSaving,
   nameError,
+  label = "Save",
 }: SkillEditRowProps) {
   return (
-    <div className="space-y-2 rounded-md border border-primary/30 bg-muted/40 p-3">
+    <div className="rounded-lg border border-primary/40 bg-muted/30 p-4 space-y-3 shadow-sm">
+      <p className="text-xs font-semibold text-primary uppercase tracking-wider">
+        {label === "Save" ? "Edit Skill" : "New Skill"}
+      </p>
+
       <div className="flex items-center gap-3">
         <Input
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           placeholder="e.g. React, Python, Figma..."
-          className="h-8 flex-1 text-sm"
+          className="flex-1"
           disabled={isSaving}
           onKeyDown={(e) => {
             if (e.key === "Enter") onSave();
@@ -56,38 +81,155 @@ function SkillEditRow({
           }}
           autoFocus
         />
-        <SkillStars value={level} onChange={onLevelChange} />
       </div>
+
+      {/* Star picker with level preview */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <SkillStars value={level} onChange={onLevelChange} size="default" />
+          <span
+            className={cn(
+              "rounded-full px-2.5 py-0.5 text-xs font-medium",
+              LEVEL_BADGE_STYLES[level]
+            )}
+          >
+            {LEVEL_LABELS[level]}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="h-8 px-3 text-xs"
+          >
+            <X className="mr-1 h-3.5 w-3.5" />
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={onSave}
+            disabled={isSaving || !name.trim()}
+            className="h-8 px-3 text-xs"
+          >
+            {isSaving ? (
+              <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Check className="mr-1 h-3.5 w-3.5" />
+            )}
+            Save
+          </Button>
+        </div>
+      </div>
+
       {nameError && (
         <p className="text-xs text-destructive">{nameError}</p>
       )}
-      <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={onCancel}
-          disabled={isSaving}
-          className="h-7 px-2 text-xs"
-        >
-          <X className="mr-1 h-3.5 w-3.5" />
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          onClick={onSave}
-          disabled={isSaving || !name.trim()}
-          className="h-7 px-3 text-xs"
-        >
-          {isSaving ? (
-            <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Check className="mr-1 h-3.5 w-3.5" />
-          )}
-          Save
-        </Button>
+
+      {/* Progress bar preview */}
+      <div className="space-y-1">
+        <p className="text-[10px] text-muted-foreground">Level preview</p>
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-300",
+              LEVEL_PROGRESS_COLORS[level]
+            )}
+            style={{ width: `${(level / 5) * 100}%` }}
+          />
+        </div>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Single skill card row (display mode)
+// ---------------------------------------------------------------------------
+interface SkillCardRowProps {
+  skill: UserSkill;
+  index: number;
+  isOwnProfile: boolean;
+  onEdit: (skill: UserSkill) => void;
+  onDelete: (id: number) => void;
+  isDeleting: boolean;
+}
+
+function SkillCardRow({
+  skill,
+  index,
+  isOwnProfile,
+  onEdit,
+  onDelete,
+  isDeleting,
+}: SkillCardRowProps) {
+  return (
+    <div className="group flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:border-primary/30 hover:shadow-sm transition-all">
+      {/* Rank */}
+      <span className="w-5 shrink-0 text-xs text-muted-foreground text-right font-mono select-none">
+        {index + 1}
+      </span>
+
+      {/* Name + Progress bar */}
+      <div className="flex-1 min-w-0 space-y-1.5">
+        <p className="text-sm font-medium leading-none truncate">
+          {skill.skillName}
+        </p>
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all",
+              LEVEL_PROGRESS_COLORS[skill.level]
+            )}
+            style={{ width: `${(skill.level / 5) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Level badge */}
+      <span
+        className={cn(
+          "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium",
+          LEVEL_BADGE_STYLES[skill.level]
+        )}
+      >
+        {LEVEL_LABELS[skill.level]}
+      </span>
+
+      {/* Action buttons — own profile only, revealed on hover */}
+      {isOwnProfile && (
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={() => onEdit(skill)}
+            aria-label="Edit skill"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            onClick={() => onDelete(skill.id)}
+            disabled={isDeleting}
+            aria-label="Delete skill"
+          >
+            {isDeleting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -103,7 +245,6 @@ interface SkillsSectionProps {
 export function SkillsSection({ userId }: SkillsSectionProps) {
   const isOwnProfile = !userId;
 
-  // Both hooks called unconditionally; RTK Query `skip` controls which runs
   const { data: ownData, isLoading: isLoadingOwn } = useGetMySkillsQuery(
     undefined,
     { skip: !isOwnProfile }
@@ -129,7 +270,7 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState<number | null>(null);
 
-  // Add form state
+  // Add state
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newLevel, setNewLevel] = useState(3);
@@ -151,17 +292,13 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
         data: { skillName: editName.trim(), level: editLevel },
       }).unwrap();
       setEditingId(null);
-      toast.success("Skill updated successfully");
+      toast.success("Skill updated");
     } catch {
-      toast.error("Failed to update skill", {
-        description: "Please try again.",
-      });
+      toast.error("Failed to update skill", { description: "Please try again." });
     } finally {
       setIsSavingEdit(false);
     }
   };
-
-  const handleEditCancel = () => setEditingId(null);
 
   const handleDelete = async (skillId: number) => {
     setIsDeletingId(skillId);
@@ -182,11 +319,9 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
       setNewName("");
       setNewLevel(3);
       setShowAddForm(false);
-      toast.success("Skill added successfully");
+      toast.success("Skill added");
     } catch {
-      toast.error("Failed to add skill", {
-        description: "Please try again.",
-      });
+      toast.error("Failed to add skill", { description: "Please try again." });
     }
   };
 
@@ -201,12 +336,17 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
   // Loading skeleton
   if (isLoading) {
     return (
-      <Card className="p-6 space-y-4">
-        <div className="h-5 w-32 rounded bg-muted animate-pulse" />
+      <Card className="p-6 space-y-3">
+        <div className="h-5 w-36 rounded bg-muted animate-pulse" />
+        <div className="h-1 w-full rounded bg-muted animate-pulse" />
         {[1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center gap-3">
-            <div className="h-4 flex-1 rounded bg-muted animate-pulse" />
-            <div className="h-4 w-24 rounded bg-muted animate-pulse" />
+          <div key={i} className="rounded-lg border border-border p-4 space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="h-4 w-4 rounded bg-muted animate-pulse" />
+              <div className="h-4 flex-1 rounded bg-muted animate-pulse" />
+              <div className="h-5 w-20 rounded-full bg-muted animate-pulse" />
+            </div>
+            <div className="h-1.5 rounded-full bg-muted animate-pulse" />
           </div>
         ))}
       </Card>
@@ -230,7 +370,6 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
           <Button
             type="button"
             size="sm"
-            variant="outline"
             onClick={handleShowAddForm}
             disabled={showAddForm}
           >
@@ -244,89 +383,31 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
 
       {/* Empty state */}
       {skills.length === 0 && !showAddForm && (
-        <div className="py-8 text-center text-sm text-muted-foreground">
-          {isOwnProfile
-            ? "No skills yet. Click \"Add Skill\" to get started."
-            : "This user hasn't added any skills yet."}
+        <div className="flex flex-col items-center gap-3 py-10 text-center">
+          <div className="rounded-full bg-muted p-4">
+            <Sparkles className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold">
+              {isOwnProfile ? "No skills added yet" : "No skills listed"}
+            </p>
+            <p className="text-xs text-muted-foreground max-w-xs">
+              {isOwnProfile
+                ? "Showcase your expertise — add your technical, design, or soft skills."
+                : "This user hasn't added any skills to their profile yet."}
+            </p>
+          </div>
+          {isOwnProfile && (
+            <Button size="sm" onClick={handleShowAddForm}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add Your First Skill
+            </Button>
+          )}
         </div>
       )}
 
-      {/* Skill list */}
-      {skills.length > 0 && (
-        <ul className="space-y-1.5">
-          {skills.map((skill, idx) => (
-            <li key={skill.id}>
-              {/* Edit mode */}
-              {editingId === skill.id ? (
-                <SkillEditRow
-                  name={editName}
-                  level={editLevel}
-                  onNameChange={setEditName}
-                  onLevelChange={setEditLevel}
-                  onSave={handleEditSave}
-                  onCancel={handleEditCancel}
-                  isSaving={isSavingEdit}
-                />
-              ) : (
-                /* Display mode */
-                <div
-                  className={cn(
-                    "group flex items-center gap-3 rounded-md px-2 py-2 transition-colors",
-                    "hover:bg-muted/60"
-                  )}
-                >
-                  {/* Rank number */}
-                  <span className="w-5 text-right text-xs text-muted-foreground select-none">
-                    {idx + 1}.
-                  </span>
-
-                  {/* Skill name */}
-                  <span className="flex-1 text-sm font-medium">
-                    {skill.skillName}
-                  </span>
-
-                  {/* Stars */}
-                  <SkillStars value={skill.level} size="sm" showLabel />
-
-                  {/* Actions — only on own profile */}
-                  {isOwnProfile && (
-                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        onClick={() => handleEditStart(skill)}
-                        aria-label="Edit skill"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => handleDelete(skill.id)}
-                        disabled={isDeletingId === skill.id}
-                        aria-label="Delete skill"
-                      >
-                        {isDeletingId === skill.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* Inline add form */}
-      {isOwnProfile && showAddForm && (
+      {/* Inline add form — shown at top when no skills yet, or below the list */}
+      {isOwnProfile && showAddForm && skills.length === 0 && (
         <SkillEditRow
           name={newName}
           level={newLevel}
@@ -335,7 +416,53 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
           onSave={handleAddSave}
           onCancel={() => setShowAddForm(false)}
           isSaving={isAdding}
+          label="Add"
         />
+      )}
+
+      {/* Skill card list */}
+      {skills.length > 0 && (
+        <div className="space-y-2">
+          {skills.map((skill, idx) =>
+            editingId === skill.id ? (
+              <SkillEditRow
+                key={skill.id}
+                name={editName}
+                level={editLevel}
+                onNameChange={setEditName}
+                onLevelChange={setEditLevel}
+                onSave={handleEditSave}
+                onCancel={() => setEditingId(null)}
+                isSaving={isSavingEdit}
+                label="Save"
+              />
+            ) : (
+              <SkillCardRow
+                key={skill.id}
+                skill={skill}
+                index={idx}
+                isOwnProfile={isOwnProfile}
+                onEdit={handleEditStart}
+                onDelete={handleDelete}
+                isDeleting={isDeletingId === skill.id}
+              />
+            )
+          )}
+
+          {/* Add form at the bottom (when list already has skills) */}
+          {isOwnProfile && showAddForm && (
+            <SkillEditRow
+              name={newName}
+              level={newLevel}
+              onNameChange={setNewName}
+              onLevelChange={setNewLevel}
+              onSave={handleAddSave}
+              onCancel={() => setShowAddForm(false)}
+              isSaving={isAdding}
+              label="Add"
+            />
+          )}
+        </div>
       )}
     </Card>
   );
