@@ -169,6 +169,15 @@ Sử dụng shadcn/ui Button component:
   - Edit Profile (navigate `/dashboard/edit-profile`)
   - Logout
 
+### Viewing Another User's Profile (Sprint 5+)
+
+- **Trigger**: Click vào avatar hoặc tên user trong danh sách thành viên / kết quả tìm kiếm
+- **Component**: `UserProfileDrawer` — Sheet trượt từ phải (`sm:max-w-md`)
+- **Content**: 2 tabs — **Info** (bio, email, phone, gender, dob) + **Skills** (view-only `SkillsSection`)
+- **Data**: Gọi `GET /users/:id` khi `open=true`, skip khi `userId` null
+- **Pattern reuse**: Dùng lại `SkillsSection` với prop `userId` (view-only mode)
+- **Visual cue**: Hover tên user → `hover:text-primary hover:underline`; hover avatar → `hover:ring-2 hover:ring-primary/40`
+
 ## 🔔 Toast/Notification
 
 Dùng `sonner` (tích hợp shadcn):
@@ -211,21 +220,21 @@ Dùng Tailwind default breakpoints:
 
 ### Reusable Components Location: `src/components/`
 
-| Component       | Location                    | Purpose                                                 |
-| --------------- | --------------------------- | ------------------------------------------------------- |
-| UI Components   | `components/ui/`            | shadcn/ui primitives (Button, Input, Label, Card, etc.) |
-| LoadingSpinner  | `components/common/`        | Full-page or inline loading state                       |
-| PasswordInput   | `components/common/`        | Password field with show/hide toggle                    |
-| GoogleButton    | `components/common/`        | OAuth button wrapper                                    |
-| UserProfileCard | `features/user/components/` | Profile display card (Avatar + Info)                    |
+| Component       | Location                    | Purpose                                                        |
+| --------------- | --------------------------- | -------------------------------------------------------------- |
+| UI Components   | `components/ui/`            | shadcn/ui primitives (Button, Input, Label, Card, Sheet, etc.) |
+| LoadingSpinner  | `components/common/`        | Full-page or inline loading state                              |
+| PasswordInput   | `components/common/`        | Password field with show/hide toggle                           |
+| GoogleButton    | `components/common/`        | OAuth button wrapper                                           |
+| UserProfileCard | `features/user/components/` | Profile display card (Avatar + Info)                           |
 
 ### Feature-specific Components Location: `src/features/[feature]/`
 
-| Feature   | Components                       | Purpose               |
-| --------- | -------------------------------- | --------------------- |
-| auth      | LoginPage, RegisterPage, etc.    | Auth flows            |
-| user      | UserProfileCard, EditProfilePage | Profile management    |
-| dashboard | DashboardPage                    | Home page after login |
+| Feature   | Components                                          | Purpose                                            |
+| --------- | --------------------------------------------------- | -------------------------------------------------- |
+| auth      | LoginPage, RegisterPage, etc.                       | Auth flows                                         |
+| user      | UserProfileCard, EditProfilePage, UserProfileDrawer | Profile management + read-only view of other users |
+| dashboard | DashboardPage                                       | Home page after login                              |
 
 ## ✅ Do's and Don'ts
 
