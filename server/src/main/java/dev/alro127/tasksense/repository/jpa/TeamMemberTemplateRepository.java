@@ -30,4 +30,19 @@ public interface TeamMemberTemplateRepository
             nativeQuery = true)
     List<TeamMemberTemplateEntity>
     findAllByTemplateIdAndUserIdsIgnoreRestriction(Long templateId, List<Long> userIds);
+
+    @Query("""
+        SELECT m.teamTemplate.id, COUNT(m.id)
+        FROM TeamMemberTemplateEntity m
+        WHERE m.teamTemplate.id IN :templateIds
+        GROUP BY m.teamTemplate.id
+    """)
+    List<Object[]> countMembersByTemplateIds(List<Long> templateIds);
+
+    @Query("""
+        SELECT COUNT(m.id)
+        FROM TeamMemberTemplateEntity m
+        WHERE m.teamTemplate.id = :teamTemplateId
+    """)
+    Long countByTeamTemplateId(Long teamTemplateId);
 }

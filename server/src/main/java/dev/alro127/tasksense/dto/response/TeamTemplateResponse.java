@@ -18,16 +18,19 @@ public class TeamTemplateResponse {
 
     private String description;
 
+    private Long memberCount;
+
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;
 
-    public static TeamTemplateResponse mapToResponse(TeamTemplateEntity entity) {
+    public static TeamTemplateResponse mapToResponse(TeamTemplateEntity entity, Long memberCount) {
         return TeamTemplateResponse.builder()
                 .id(entity.getId())
                 .ownerId(entity.getOwner().getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
+                .memberCount(memberCount)
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();

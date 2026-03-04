@@ -15,14 +15,12 @@ import type { TeamTemplate } from "@/types/api";
 
 interface TeamTemplateCardProps {
   template: TeamTemplate;
-  memberCount?: number;
   onEdit: (template: TeamTemplate) => void;
   onDelete: (template: TeamTemplate) => void;
 }
 
 export function TeamTemplateCard({
   template,
-  memberCount = 0,
   onEdit,
   onDelete,
 }: TeamTemplateCardProps) {
@@ -87,7 +85,7 @@ export function TeamTemplateCard({
       <div className="flex items-center justify-between border-t px-5 py-3">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Users className="h-3.5 w-3.5" />
-          {memberCount} {memberCount === 1 ? "member" : "members"}
+          {template.memberCount} {template.memberCount === 1 ? "member" : "members"}
         </span>
         <span className="text-xs text-muted-foreground">
           {format(new Date(template.createdAt), "MMM d, yyyy")}

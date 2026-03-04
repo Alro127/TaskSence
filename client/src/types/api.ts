@@ -105,6 +105,7 @@ export interface TeamTemplate {
   ownerId: number;
   name: string;
   description: string | null;
+  memberCount: number;
   createdAt: string;
   updatedAt: string;
 }

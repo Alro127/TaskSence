@@ -193,7 +193,7 @@ client/
 ### Sprint 5 - Team Template ✅ COMPLETED
 
 - ✅ **Types** — thêm vào `types/api.ts`:
-  - `TeamTemplate`, `CreateTeamTemplateRequest`, `UpdateTeamTemplateRequest`
+  - `TeamTemplate` — bao gồm `memberCount: number` (backend tính sẵn, dùng để hiển thị trên card)
   - `UserSummaryResponse` — embedded user info (id, email, fullName, avatarUrl)
   - `TeamMemberTemplate` — dùng `userSummaryResponse: UserSummaryResponse` (backend embed sẵn, **không** có `userId` riêng)
   - `AddTeamMemberTemplateRequest`, `AddTeamMemberResultItem`, `MemberAddStatus`
