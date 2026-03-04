@@ -25,6 +25,7 @@ import { useGetTemplateByIdQuery, useUpdateTemplateMutation } from "../api/teamT
 import { useGetMembersQuery, useRemoveMemberMutation } from "../api/teamMemberTemplateApi";
 import { AddMembersModal } from "../components/AddMembersModal";
 import { DeleteTeamTemplateDialog } from "../components/DeleteTeamTemplateDialog";
+import { UserProfileDrawer } from "@/features/user/components";
 
 // ─── Settings form schema ────────────────────────────────────────────────────
 const settingsSchema = z.object({
@@ -44,9 +45,16 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 // ─── Members Tab ─────────────────────────────────────────────────────────────
 function MembersTab({ templateId }: { templateId: number }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [profileUserId, setProfileUserId] = useState<number | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { data, isLoading } = useGetMembersQuery(templateId);
   const [removeMember, { isLoading: isRemoving }] = useRemoveMemberMutation();
   const [removingId, setRemovingId] = useState<number | null>(null);
+
+  const openProfile = (userId: number) => {
+    setProfileUserId(userId);
+    setIsProfileOpen(true);
+  };
 
   const members = data?.data ?? [];
 
@@ -75,23 +83,37 @@ function MembersTab({ templateId }: { templateId: number }) {
           key={member.id}
           className="flex items-center justify-between rounded-lg border px-4 py-3 transition-colors hover:bg-muted/30"
         >
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-              {avatarInitial}
+          {/* Clickable left section — opens profile drawer */}
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+            onClick={() => userId !== undefined && openProfile(userId)}
+            disabled={userId === undefined}
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary transition-all hover:ring-2 hover:ring-primary/40">
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={displayName ?? "Avatar"}
+                  className="h-9 w-9 rounded-full object-cover"
+                />
+              ) : (
+                avatarInitial
+              )}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium truncate">
+              <p className="truncate text-sm font-medium transition-colors hover:text-primary hover:underline">
                 {displayName ?? `User #${userId}`}
               </p>
               {displayEmail ? (
-                <p className="text-xs text-muted-foreground truncate">{displayEmail}</p>
+                <p className="truncate text-xs text-muted-foreground">{displayEmail}</p>
               ) : (
                 <p className="text-xs text-muted-foreground">
                   Added {format(new Date(member.createdAt), "MMM d, yyyy")}
                 </p>
               )}
             </div>
-          </div>
+          </button>
           <Button
             variant="ghost"
             size="icon"
@@ -142,6 +164,12 @@ function MembersTab({ templateId }: { templateId: number }) {
         open={isAddOpen}
         onOpenChange={setIsAddOpen}
         templateId={templateId}
+      />
+
+      <UserProfileDrawer
+        userId={profileUserId}
+        open={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
       />
     </div>
   );
