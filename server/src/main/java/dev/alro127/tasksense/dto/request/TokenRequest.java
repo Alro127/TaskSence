@@ -5,6 +5,6 @@ import lombok.Data;
 
 @Data
 public class TokenRequest {
-    @NotBlank
+    @NotBlank(message = "Token is required")
     private String token;
 }
