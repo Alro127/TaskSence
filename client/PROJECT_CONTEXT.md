@@ -192,7 +192,12 @@ client/
 
 ### Sprint 5 - Team Template ✅ COMPLETED
 
-- ✅ **Types** — thêm `TeamTemplate`, `TeamMemberTemplate`, `AddTeamMemberTemplateRequest`, `AddTeamMemberResultItem`, `MemberAddStatus`, `UserSearchResult` vào `types/api.ts`
+- ✅ **Types** — thêm vào `types/api.ts`:
+  - `TeamTemplate` — bao gồm `memberCount: number` (backend tính sẵn, dùng để hiển thị trên card)
+  - `UserSummaryResponse` — embedded user info (id, email, fullName, avatarUrl)
+  - `TeamMemberTemplate` — dùng `userSummaryResponse: UserSummaryResponse` (backend embed sẵn, **không** có `userId` riêng)
+  - `AddTeamMemberTemplateRequest`, `AddTeamMemberResultItem`, `MemberAddStatus`
+  - `UserSearchResult`
 - ✅ **teamTemplateApi** — RTK Query với 5 endpoints: `getMyTemplates`, `getTemplateById`, `createTemplate`, `updateTemplate`, `deleteTemplate`
 - ✅ **teamMemberTemplateApi** — RTK Query với 3 endpoints: `getMembers`, `addMembers` (batch), `removeMember`
 - ✅ **User Search** — thêm `searchUsers` + `useLazySearchUsersQuery` vào `userApi` (`GET /users/search?keyword=...`)
@@ -201,13 +206,26 @@ client/
   - Empty state + ghost card "New Template"
   - Create / Edit / Delete modal integration
 - ✅ **TeamTemplateDetailPage** (`/team-templates/:id`) gồm 2 tabs:
-  - **Members tab**: danh sách member (userId + createdAt), Add Members button, Remove per-row
+  - **Members tab**: hiển thị `fullName` làm title, `email` làm subtitle — đọc trực tiếp từ `member.userSummaryResponse` (backend embed), không gọi thêm API. Add Members button, Remove per-row
   - **Settings tab**: inline edit form (name, description) + Danger Zone (delete + navigate back)
-- ✅ **AddMembersModal** — search user by name/email (debounced 400ms), multi-select chips, batch add, hiển thị kết quả ADDED / ALREADY_EXISTS / NOT_FOUND per user
+- ✅ **AddMembersModal** — search user by name/email (debounced 400ms, `GET /users/search?keyword=`), multi-select chips, batch add (`POST /team-templates/:id/members/batch`), hiển thị kết quả ADDED / ALREADY_EXISTS / NOT_FOUND per user
 - ✅ **DeleteTeamTemplateDialog** — type-to-confirm, có `navigateAfterDelete` prop cho detail page
 - ✅ Cập nhật **store.ts** thêm `teamTemplateApi` + `teamMemberTemplateApi`
 - ✅ Cập nhật **routes** thêm `/team-templates` và `/team-templates/:id`
 - ✅ Cập nhật **Sidebar** thêm mục "Team Templates" (`Users` icon)
+
+#### Backend API — Team Template
+
+| Method | Endpoint | Mô tả |
+|--------|----------|-------|
+| `GET` | `/team-templates` | Danh sách template của current user |
+| `GET` | `/team-templates/:id` | Chi tiết template |
+| `POST` | `/team-templates` | Tạo template mới |
+| `PUT` | `/team-templates/:id` | Cập nhật template |
+| `DELETE` | `/team-templates/:id` | Xóa template |
+| `GET` | `/team-templates/:id/members` | Danh sách member (embed `UserSummaryResponse`) |
+| `POST` | `/team-templates/:id/members/batch` | Thêm nhiều member cùng lúc |
+| `DELETE` | `/team-templates/:id/members/:userId` | Xóa member khỏi template |
 
 ## 📝 Quyết định thiết kế hiện tại
 

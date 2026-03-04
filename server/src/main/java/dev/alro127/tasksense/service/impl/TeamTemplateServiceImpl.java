@@ -4,8 +4,10 @@ package dev.alro127.tasksense.service.impl;
 import dev.alro127.tasksense.domain.entity.TeamTemplateEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.dto.request.TeamTemplateRequest;
+import dev.alro127.tasksense.dto.response.TeamMemberTemplateResponse;
 import dev.alro127.tasksense.dto.response.TeamTemplateResponse;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
+import dev.alro127.tasksense.repository.jpa.TeamMemberTemplateRepository;
 import dev.alro127.tasksense.repository.jpa.TeamTemplateRepository;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.TeamTemplateService;
@@ -14,7 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,6 +26,7 @@ import java.util.stream.Collectors;
 public class TeamTemplateServiceImpl implements TeamTemplateService {
 
     private final TeamTemplateRepository teamTemplateRepository;
+    private final TeamMemberTemplateRepository teamMemberTemplateRepository;
     private final SecurityService securityService;
 
     @Override
@@ -36,7 +41,7 @@ public class TeamTemplateServiceImpl implements TeamTemplateService {
 
         teamTemplateRepository.save(entity);
 
-        return mapToResponse(entity);
+        return TeamTemplateResponse.mapToResponse(entity, null);
     }
 
     @Override
@@ -44,11 +49,32 @@ public class TeamTemplateServiceImpl implements TeamTemplateService {
 
         UserEntity currentUser = securityService.getCurrentUser();
 
-        return teamTemplateRepository
-                .findByOwnerId(currentUser.getId())
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        List<TeamTemplateEntity> templates =
+                teamTemplateRepository.findByOwnerId(currentUser.getId());
+
+        if (templates.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> templateIds = templates.stream()
+                .map(TeamTemplateEntity::getId)
+                .toList();
+
+        List<Object[]> countResults =
+                teamMemberTemplateRepository.countMembersByTemplateIds(templateIds);
+
+        Map<Long, Long> memberCountMap = countResults.stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Long) row[1]
+                ));
+
+        return templates.stream()
+                .map(template -> TeamTemplateResponse.mapToResponse(
+                        template,
+                        memberCountMap.getOrDefault(template.getId(), 0L)
+                ))
+                .toList();
     }
 
     @Override
@@ -60,11 +86,13 @@ public class TeamTemplateServiceImpl implements TeamTemplateService {
                 .findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Team template not found"));
 
+        Long memberCount = teamMemberTemplateRepository.countByTeamTemplateId(id);
+
         if (!entity.getOwner().getId().equals(currentUser.getId())) {
             throw new EntityNotFoundException("Team template not found");
         }
 
-        return mapToResponse(entity);
+        return TeamTemplateResponse.mapToResponse(entity, memberCount);
     }
 
     @Override
@@ -85,7 +113,9 @@ public class TeamTemplateServiceImpl implements TeamTemplateService {
 
         teamTemplateRepository.save(entity);
 
-        return mapToResponse(entity);
+        Long memberCount = teamMemberTemplateRepository.countByTeamTemplateId(id);
+
+        return TeamTemplateResponse.mapToResponse(entity, memberCount);
     }
 
     @Override
@@ -106,14 +136,5 @@ public class TeamTemplateServiceImpl implements TeamTemplateService {
         teamTemplateRepository.save(entity);
     }
 
-    private TeamTemplateResponse mapToResponse(TeamTemplateEntity entity) {
-        return TeamTemplateResponse.builder()
-                .id(entity.getId())
-                .ownerId(entity.getOwner().getId())
-                .name(entity.getName())
-                .description(entity.getDescription())
-                .createdAt(entity.getCreatedAt())
-                .updatedAt(entity.getUpdatedAt())
-                .build();
-    }
+
 }

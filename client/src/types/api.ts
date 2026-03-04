@@ -105,6 +105,7 @@ export interface TeamTemplate {
   ownerId: number;
   name: string;
   description: string | null;
+  memberCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -119,11 +120,19 @@ export interface UpdateTeamTemplateRequest {
   description?: string;
 }
 
+// User summary (embedded in responses)
+export interface UserSummaryResponse {
+  id: number;
+  email: string;
+  fullName: string | null;
+  avatarUrl: string | null;
+}
+
 // Team Member Template
 export interface TeamMemberTemplate {
   id: number;
   teamTemplateId: number;
-  userId: number;
+  userSummaryResponse: UserSummaryResponse;
   createdAt: string;
   updatedAt: string;
 }

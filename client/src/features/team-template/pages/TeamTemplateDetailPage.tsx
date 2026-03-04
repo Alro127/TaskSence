@@ -25,8 +25,6 @@ import { useGetTemplateByIdQuery, useUpdateTemplateMutation } from "../api/teamT
 import { useGetMembersQuery, useRemoveMemberMutation } from "../api/teamMemberTemplateApi";
 import { AddMembersModal } from "../components/AddMembersModal";
 import { DeleteTeamTemplateDialog } from "../components/DeleteTeamTemplateDialog";
-import { useGetUserByIdQuery } from "@/features/user/api/userApi";
-import type { TeamMemberTemplate } from "@/types/api";
 
 // ─── Settings form schema ────────────────────────────────────────────────────
 const settingsSchema = z.object({
@@ -43,58 +41,6 @@ const settingsSchema = z.object({
 type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 // ─── Member Row ──────────────────────────────────────────────────────────────
-function MemberRow({
-  member,
-  onRemove,
-  isRemoving,
-}: {
-  member: TeamMemberTemplate;
-  onRemove: (userId: number) => void;
-  isRemoving: boolean;
-}) {
-  const { data } = useGetUserByIdQuery(member.userId);
-  const user = data?.data;
-
-  const displayName = user?.fullName ?? user?.email ?? null;
-  const displayEmail = user?.fullName ? user.email : null;
-  const avatarInitial = (user?.fullName ?? user?.email ?? "?")[0].toUpperCase();
-
-  return (
-    <div className="flex items-center justify-between rounded-lg border px-4 py-3 transition-colors hover:bg-muted/30">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-          {avatarInitial}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-medium truncate">
-            {displayName ?? `User #${member.userId}`}
-          </p>
-          {displayEmail ? (
-            <p className="text-xs text-muted-foreground truncate">{displayEmail}</p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Added {format(new Date(member.createdAt), "MMM d, yyyy")}
-            </p>
-          )}
-        </div>
-      </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-        disabled={isRemoving}
-        onClick={() => onRemove(member.userId)}
-      >
-        {isRemoving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Trash2 className="h-4 w-4" />
-        )}
-      </Button>
-    </div>
-  );
-}
-
 // ─── Members Tab ─────────────────────────────────────────────────────────────
 function MembersTab({ templateId }: { templateId: number }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -115,6 +61,53 @@ function MembersTab({ templateId }: { templateId: number }) {
       setRemovingId(null);
     }
   };
+
+  const renderMemberList = () =>
+    members.map((member) => {
+      const user = member.userSummaryResponse;
+      const displayName = user?.fullName ?? user?.email ?? null;
+      const displayEmail = user?.fullName ? user.email : null;
+      const avatarInitial = (user?.fullName ?? user?.email ?? "?")[0].toUpperCase();
+      const userId = user?.id;
+
+      return (
+        <div
+          key={member.id}
+          className="flex items-center justify-between rounded-lg border px-4 py-3 transition-colors hover:bg-muted/30"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              {avatarInitial}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">
+                {displayName ?? `User #${userId}`}
+              </p>
+              {displayEmail ? (
+                <p className="text-xs text-muted-foreground truncate">{displayEmail}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Added {format(new Date(member.createdAt), "MMM d, yyyy")}
+                </p>
+              )}
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+            disabled={isRemoving && removingId === userId}
+            onClick={() => userId !== undefined && handleRemove(userId)}
+          >
+            {isRemoving && removingId === userId ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      );
+    });
 
   return (
     <div className="space-y-4">
@@ -142,16 +135,7 @@ function MembersTab({ templateId }: { templateId: number }) {
           </p>
         </div>
       ) : (
-          <div className="space-y-2">
-          {members.map((member) => (
-            <MemberRow
-              key={member.id}
-              member={member}
-              onRemove={handleRemove}
-              isRemoving={isRemoving && removingId === member.userId}
-            />
-          ))}
-          </div>
+        <div className="space-y-2">{renderMemberList()}</div>
       )}
 
       <AddMembersModal
