@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class CreateWorkspaceInviteRequest {
+public class BulkInviteItemRequest {
 
     @Email(message = "Email must be valid")
     @NotBlank(message = "Email is required")

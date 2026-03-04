@@ -188,6 +188,25 @@ export interface CreateWorkspaceInviteRequest {
   role: WorkspaceRole;
 }
 
+export interface BulkInviteItem {
+  email: string;
+  role: WorkspaceRole;
+}
+
+export interface CreateBulkWorkspaceInviteRequest {
+  invites: BulkInviteItem[];
+}
+
+export interface BulkInviteFailedItem {
+  email: string;
+  reason: string;
+}
+
+export interface BulkInviteResult {
+  success: WorkspaceInvite[];
+  failed: BulkInviteFailedItem[];
+}
+
 export interface UpdateWorkspaceRoleRequest {
   role: WorkspaceRole;
 }

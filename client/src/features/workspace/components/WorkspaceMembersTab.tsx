@@ -38,7 +38,7 @@ import { useAppSelector } from "@/app/hooks";
 import { UserProfileDrawer } from "@/features/user/components/UserProfileDrawer";
 import { useGetWorkspaceMembersQuery, useUpdateMemberRoleMutation, useRemoveMemberMutation } from "../api/workspaceMemberApi";
 import { useGetWorkspaceInvitesQuery, useRevokeInviteMutation } from "../api/workspaceInviteApi";
-import { InviteMemberModal } from "./InviteMemberModal";
+import { BulkInviteModal } from "./BulkInviteModal";
 import type { WorkspaceMember, WorkspaceRole } from "@/types/api";
 
 // ─── Role config ────────────────────────────────────────────────────────────────
@@ -434,8 +434,8 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
         </>
       )}
 
-      {/* ── Invite Modal ── */}
-      <InviteMemberModal
+      {/* ── Bulk Invite Modal ── */}
+      <BulkInviteModal
         workspaceId={workspaceId}
         open={isInviteOpen}
         onOpenChange={setIsInviteOpen}

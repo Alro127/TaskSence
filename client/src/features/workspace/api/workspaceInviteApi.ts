@@ -4,6 +4,8 @@ import type {
   ApiResponse,
   WorkspaceInvite,
   CreateWorkspaceInviteRequest,
+  CreateBulkWorkspaceInviteRequest,
+  BulkInviteResult,
 } from "@/types/api";
 
 const baseUrl =
@@ -67,6 +69,20 @@ export const workspaceInviteApi = createApi({
         { type: "WorkspaceInvite", id: workspaceId },
       ],
     }),
+
+    bulkInviteMembers: builder.mutation<
+      ApiResponse<BulkInviteResult>,
+      { workspaceId: number } & CreateBulkWorkspaceInviteRequest
+    >({
+      query: ({ workspaceId, invites }) => ({
+        url: `/workspaces/${workspaceId}/invites/bulk`,
+        method: "POST",
+        body: { invites },
+      }),
+      invalidatesTags: (_result, _error, { workspaceId }) => [
+        { type: "WorkspaceInvite", id: workspaceId },
+      ],
+    }),
   }),
 });
 
@@ -75,4 +91,5 @@ export const {
   useInviteMemberMutation,
   useAcceptInviteMutation,
   useRevokeInviteMutation,
+  useBulkInviteMembersMutation,
 } = workspaceInviteApi;
