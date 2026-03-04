@@ -1,4 +1,4 @@
-import { Crown, Eye, MoreVertical, Trash2, User, UserCog } from "lucide-react";
+import { Crown, CrownIcon, Eye, EyeIcon, MoreVertical, Trash2, User, User2Icon, UserCog } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -17,20 +17,20 @@ import { useRemoveMemberMutation, useUpdateMemberRoleMutation } from "../api/pro
 import { ROLE_LABEL } from "./ProjectCard";
 
 const ROLE_ICON: Record<ProjectMemberRole, React.ElementType> = {
-  PROJECT_MANAGER: Crown,
-  MEMBER: User,
-  VIEWER: Eye,
+  MANAGER: CrownIcon,
+  MEMBER: User2Icon,
+  VIEWER: EyeIcon,
 };
 
 const ROLE_BADGE: Record<ProjectMemberRole, string> = {
-  PROJECT_MANAGER: "bg-primary/10 text-primary border-primary/20",
+  MANAGER: "bg-primary/10 text-primary border-primary/20",
   MEMBER: "bg-muted text-muted-foreground border-border",
   VIEWER: "bg-muted/60 text-muted-foreground/80 border-border",
 };
 
 interface MemberCardProps {
   member: ProjectMember;
-  /** Whether the current user has PROJECT_MANAGER role (to show management actions). */
+  /** Whether the current user has MANAGER role (to show management actions). */
   canManage: boolean;
   /** The current user's own id, to prevent self-removal. */
   currentUserId: number;
@@ -127,7 +127,7 @@ export function MemberCard({ member, canManage, currentUserId }: MemberCardProps
               <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
                 Change role
               </DropdownMenuLabel>
-              {(["PROJECT_MANAGER", "MEMBER", "VIEWER"] as ProjectMemberRole[]).map(
+              {(["MANAGER", "MEMBER", "VIEWER"] as ProjectMemberRole[]).map(
                 (role) => (
                   <DropdownMenuItem
                     key={role}

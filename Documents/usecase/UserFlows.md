@@ -12,7 +12,7 @@ Tài liệu này mô tả user flows theo phiên bản đã thống nhất:
 | Actor                  | Mô tả             | Quyền chính                                        |
 | :--------------------- | :---------------- | :------------------------------------------------- |
 | Workspace Owner        | Chủ workspace     | Quản lý workspace/member/project cấp cao           |
-| Project Manager        | Quản lý dự án     | Quản lý task, member, dashboard                    |
+| Manager                | Quản lý dự án     | Quản lý task, member, dashboard                    |
 | Member                 | Thành viên        | Thực hiện task, comment, upload file               |
 | Viewer                 | Người xem         | Chỉ xem thông tin theo quyền                       |
 | System Scheduler       | Tác nhân hệ thống | Batch sync PostgreSQL -> Elasticsearch             |

@@ -183,7 +183,7 @@ export function ProjectDetailPage() {
     skip: isNaN(projectId),
   });
   const currentUserRole = roleData?.data ?? undefined;
-  const isManager = currentUserRole === "PROJECT_MANAGER";
+  const isManager = currentUserRole === "MANAGER";
 
   const { data: membersData, isLoading: isMembersLoading } =
     useGetMembersQuery(projectId, { skip: isNaN(projectId) });
@@ -282,7 +282,7 @@ export function ProjectDetailPage() {
           </div>
         </div>
 
-        {/* Header actions — PROJECT_MANAGER only */}
+        {/* Header actions — MANAGER only */}
         {isManager && (
           <div className="flex items-center gap-2 shrink-0">
             <Button
@@ -490,7 +490,7 @@ export function ProjectDetailPage() {
           )}
         </TabsContent>
 
-        {/* ── Join Requests Tab (PROJECT_MANAGER only) ── */}
+        {/* ── Join Requests Tab (MANAGER only) ── */}
         {isManager && (
           <TabsContent value="join-requests" className="mt-6 space-y-4">
             <div className="flex items-center justify-between">

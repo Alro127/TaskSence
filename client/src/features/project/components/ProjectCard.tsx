@@ -52,7 +52,7 @@ export const STATUS_CONFIG: Record<
 
 // ─── Role label helpers ─────────────────────────────────────────────────────────
 export const ROLE_LABEL: Record<ProjectMemberRole, string> = {
-  PROJECT_MANAGER: "Project Manager",
+  MANAGER: "Manager",
   MEMBER: "Member",
   VIEWER: "Viewer",
 };
@@ -78,7 +78,7 @@ export function ProjectCard({
   const navigate = useNavigate();
   const cfg = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.ACTIVE;
   const StatusIcon = cfg.icon;
-  const isManager = currentUserRole === "PROJECT_MANAGER";
+  const isManager = currentUserRole === "MANAGER";
 
   const handleCardClick = () => {
     navigate(`/workspaces/${workspaceId}/projects/${project.id}`);
@@ -109,7 +109,7 @@ export function ProjectCard({
               {cfg.label}
             </span>
 
-            {/* 3-dot menu — only for PROJECT_MANAGER */}
+            {/* 3-dot menu — only for MANAGER */}
             {isManager && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

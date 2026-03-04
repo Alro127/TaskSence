@@ -1,7 +1,7 @@
 package dev.alro127.tasksense.domain.enums;
 
 public enum ProjectMemberRole {
-    PROJECT_MANAGER,
+    MANAGER,
     MEMBER,
     VIEWER
 }

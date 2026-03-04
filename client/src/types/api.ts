@@ -224,7 +224,7 @@ export interface MockProject {
 
 // ─── Project ────────────────────────────────────────────────────────────────────
 export type ProjectStatus = "ACTIVE" | "COMPLETED" | "ARCHIVED" | "ON_HOLD";
-export type ProjectMemberRole = "PROJECT_MANAGER" | "MEMBER" | "VIEWER";
+export type ProjectMemberRole = "MANAGER" | "MEMBER" | "VIEWER";
 export type ProjectMemberAddStatus = "CREATED" | "RESTORED" | "ALREADY_EXISTS" | "NOT_FOUND";
 export type JoinRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 

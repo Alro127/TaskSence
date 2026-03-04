@@ -52,7 +52,7 @@ public class ProjectServiceImpl implements ProjectService {
         ProjectMemberEntity owner = ProjectMemberEntity.builder()
                 .project(project)
                 .user(currentUser)
-                .role(ProjectMemberRole.PROJECT_MANAGER) // temporary setting
+                .role(ProjectMemberRole.MANAGER) // temporary setting
                 .build();
 
         projectRepository.save(project);
@@ -173,7 +173,7 @@ public class ProjectServiceImpl implements ProjectService {
     private void validateProjectManagerAccess(WorkspaceEntity workspace, ProjectEntity project, Long userId) {
         boolean isWorkspaceOwner = workspace.getOwner().getId().equals(userId);
         boolean isProjectManager = projectMemberRepository.existsByProjectIdAndUserIdAndRole(
-                project.getId(), userId, ProjectMemberRole.PROJECT_MANAGER);
+                project.getId(), userId, ProjectMemberRole.MANAGER);
 
         if (!isWorkspaceOwner && !isProjectManager) {
             throw new UnauthorizedException("Access denied");

@@ -153,7 +153,7 @@ public class ProjectJoinRequestServiceImpl implements ProjectJoinRequestService 
 
     private void validateProjectManagerAccess(ProjectEntity project, Long userId) {
         boolean isProjectManager = projectMemberRepository.existsByProjectIdAndUserIdAndRole(
-                project.getId(), userId, ProjectMemberRole.PROJECT_MANAGER);
+                project.getId(), userId, ProjectMemberRole.MANAGER);
         if (!isProjectManager) {
             throw new UnauthorizedException("Access denied");
         }

@@ -27,7 +27,7 @@
 
 ### 3. Phân quyền (RBAC)
 
-- Vai trò: Workspace Owner, Project Manager, Member, Viewer
+- Vai trò: Workspace Owner, Manager, Member, Viewer
 - Phân quyền theo phạm vi workspace và project
 
 ---

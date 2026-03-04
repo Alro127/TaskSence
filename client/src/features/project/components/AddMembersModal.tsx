@@ -29,7 +29,7 @@ import { useLazySearchUsersQuery } from "@/features/user/api/userApi";
 import { useAddMembersMutation } from "../api/projectMemberApi";
 import { ROLE_LABEL } from "./ProjectCard";
 
-const ROLE_OPTIONS: ProjectMemberRole[] = ["PROJECT_MANAGER", "MEMBER", "VIEWER"];
+const ROLE_OPTIONS: ProjectMemberRole[] = ["MANAGER", "MEMBER", "VIEWER"];
 
 const ADD_STATUS_CONFIG: Record<
   AddProjectMemberResultItem["status"],

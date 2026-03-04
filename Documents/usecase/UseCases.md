@@ -78,7 +78,7 @@ Tài liệu này mô tả các use case đã được đồng bộ theo phạm v
 
 ### UC-PROJ-02: Cập nhật project settings
 
-- **Actor**: Project Manager
+- **Actor**: Manager
 - **Main Flow**:
 
 1. Sửa thông tin project.
