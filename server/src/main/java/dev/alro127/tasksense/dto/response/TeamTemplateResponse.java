@@ -1,5 +1,6 @@
 package dev.alro127.tasksense.dto.response;
 
+import dev.alro127.tasksense.domain.entity.TeamTemplateEntity;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -20,4 +21,15 @@ public class TeamTemplateResponse {
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;
+
+    public static TeamTemplateResponse mapToResponse(TeamTemplateEntity entity) {
+        return TeamTemplateResponse.builder()
+                .id(entity.getId())
+                .ownerId(entity.getOwner().getId())
+                .name(entity.getName())
+                .description(entity.getDescription())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
+                .build();
+    }
 }

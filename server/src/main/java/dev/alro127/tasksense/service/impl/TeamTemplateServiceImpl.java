@@ -4,6 +4,7 @@ package dev.alro127.tasksense.service.impl;
 import dev.alro127.tasksense.domain.entity.TeamTemplateEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.dto.request.TeamTemplateRequest;
+import dev.alro127.tasksense.dto.response.TeamMemberTemplateResponse;
 import dev.alro127.tasksense.dto.response.TeamTemplateResponse;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.TeamTemplateRepository;
@@ -36,7 +37,7 @@ public class TeamTemplateServiceImpl implements TeamTemplateService {
 
         teamTemplateRepository.save(entity);
 
-        return mapToResponse(entity);
+        return TeamTemplateResponse.mapToResponse(entity);
     }
 
     @Override
@@ -47,7 +48,7 @@ public class TeamTemplateServiceImpl implements TeamTemplateService {
         return teamTemplateRepository
                 .findByOwnerId(currentUser.getId())
                 .stream()
-                .map(this::mapToResponse)
+                .map(TeamTemplateResponse::mapToResponse)
                 .collect(Collectors.toList());
     }
 
@@ -64,7 +65,7 @@ public class TeamTemplateServiceImpl implements TeamTemplateService {
             throw new EntityNotFoundException("Team template not found");
         }
 
-        return mapToResponse(entity);
+        return TeamTemplateResponse.mapToResponse(entity);
     }
 
     @Override
@@ -85,7 +86,7 @@ public class TeamTemplateServiceImpl implements TeamTemplateService {
 
         teamTemplateRepository.save(entity);
 
-        return mapToResponse(entity);
+        return TeamTemplateResponse.mapToResponse(entity);
     }
 
     @Override
@@ -106,14 +107,5 @@ public class TeamTemplateServiceImpl implements TeamTemplateService {
         teamTemplateRepository.save(entity);
     }
 
-    private TeamTemplateResponse mapToResponse(TeamTemplateEntity entity) {
-        return TeamTemplateResponse.builder()
-                .id(entity.getId())
-                .ownerId(entity.getOwner().getId())
-                .name(entity.getName())
-                .description(entity.getDescription())
-                .createdAt(entity.getCreatedAt())
-                .updatedAt(entity.getUpdatedAt())
-                .build();
-    }
+
 }

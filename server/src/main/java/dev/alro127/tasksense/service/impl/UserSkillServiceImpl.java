@@ -30,7 +30,7 @@ public class UserSkillServiceImpl implements UserSkillService {
 
         return userSkillRepository.findByUserId(userId)
                 .stream()
-                .map(this::mapToResponse)
+                .map(UserSkillResponse::mapToResponse)
                 .collect(Collectors.toList());
     }
 
@@ -38,7 +38,7 @@ public class UserSkillServiceImpl implements UserSkillService {
     public List<UserSkillResponse> getSkillsByUserId(Long userId) {
         return userSkillRepository.findByUserId(userId)
                 .stream()
-                .map(this::mapToResponse)
+                .map(UserSkillResponse::mapToResponse)
                 .collect(Collectors.toList());
     }
 
@@ -56,7 +56,7 @@ public class UserSkillServiceImpl implements UserSkillService {
                 .level(request.getLevel())
                 .build();
 
-        return mapToResponse(userSkillRepository.save(skill));
+        return UserSkillResponse.mapToResponse(userSkillRepository.save(skill));
     }
 
     @Override
@@ -74,7 +74,7 @@ public class UserSkillServiceImpl implements UserSkillService {
         skill.setSkillName(request.getSkillName());
         skill.setLevel(request.getLevel());
 
-        return mapToResponse(userSkillRepository.save(skill));
+        return UserSkillResponse.mapToResponse(userSkillRepository.save(skill));
     }
 
     @Override
@@ -92,11 +92,5 @@ public class UserSkillServiceImpl implements UserSkillService {
         userSkillRepository.delete(skill);
     }
 
-    private UserSkillResponse mapToResponse(UserSkillEntity entity) {
-        return UserSkillResponse.builder()
-                .id(entity.getId())
-                .skillName(entity.getSkillName())
-                .level(entity.getLevel())
-                .build();
-    }
+
 }

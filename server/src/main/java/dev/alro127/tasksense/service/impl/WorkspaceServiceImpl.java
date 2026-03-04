@@ -38,7 +38,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         workspaceRepository.save(workspace);
 
-        return mapToResponse(workspace);
+        return WorkspaceResponse.mapToResponse(workspace);
     }
 
     @Override
@@ -50,7 +50,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         validateWorkspaceOwnership(workspace, currentUser.getId());
 
-        return mapToResponse(workspace);
+        return WorkspaceResponse.mapToResponse(workspace);
     }
 
     @Override
@@ -59,7 +59,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         return workspaceRepository.findAllByOwnerId(currentUser.getId())
                 .stream()
-                .map(this::mapToResponse)
+                .map(WorkspaceResponse::mapToResponse)
                 .toList();
     }
 
@@ -86,7 +86,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         workspaceRepository.save(workspace);
 
-        return mapToResponse(workspace);
+        return WorkspaceResponse.mapToResponse(workspace);
     }
 
     @Override
@@ -125,15 +125,4 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         }
     }
 
-    private WorkspaceResponse mapToResponse(WorkspaceEntity workspace) {
-        return WorkspaceResponse.builder()
-                .id(workspace.getId())
-                .name(workspace.getName())
-                .description(workspace.getDescription())
-                .ownerId(workspace.getOwner().getId())
-                .isPublic(workspace.getIsPublic())
-                .createdAt(workspace.getCreatedAt())
-                .updatedAt(workspace.getUpdatedAt())
-                .build();
-    }
 }

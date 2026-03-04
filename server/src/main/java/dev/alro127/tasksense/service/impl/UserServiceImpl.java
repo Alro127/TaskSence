@@ -27,13 +27,13 @@ public class UserServiceImpl implements UserService {
 
         UserEntity user = securityService.getCurrentUser();
 
-        return mapToResponse(user);
+        return UserResponse.mapToResponse(user);
     }
 
     @Override
     public UserResponse getUser(Long userId) {
         UserEntity user = userRepository.findById(userId).orElseThrow( () -> new ResourceNotFoundException("User not found"));
-        return mapToResponse(user);
+        return UserResponse.mapToResponse(user);
     }
 
     @Override
@@ -69,7 +69,7 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
 
-        return mapToResponse(user);
+        return UserResponse.mapToResponse(user);
     }
 
 
@@ -99,23 +99,9 @@ public class UserServiceImpl implements UserService {
                 userRepository.searchUsers(keyword, cursor, pageable);
 
         return users.stream()
-                .map(this::mapToResponse)
+                .map(UserResponse::mapToResponse)
                 .toList();
     }
 
-    private UserResponse mapToResponse(UserEntity user) {
-        return UserResponse.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .isActive(user.getIsActive())
-                .avatarUrl(user.getAvatarUrl())
-                .phone(user.getPhone())
-                .gender(user.getGender() != null ? user.getGender().toString() : null)
-                .dob(user.getDob())
-                .bio(user.getBio())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
-                .build();
-    }
+
 }

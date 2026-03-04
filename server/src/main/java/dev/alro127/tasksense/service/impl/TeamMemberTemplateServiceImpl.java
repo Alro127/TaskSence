@@ -7,6 +7,7 @@ import dev.alro127.tasksense.domain.enums.MemberAddStatus;
 import dev.alro127.tasksense.dto.request.AddTeamMemberTemplateRequest;
 import dev.alro127.tasksense.dto.response.AddTeamMemberResultItem;
 import dev.alro127.tasksense.dto.response.TeamMemberTemplateResponse;
+import dev.alro127.tasksense.dto.response.UserSummaryResponse;
 import dev.alro127.tasksense.exception.ConflictException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.TeamMemberTemplateRepository;
@@ -148,7 +149,7 @@ public class TeamMemberTemplateServiceImpl implements TeamMemberTemplateService 
         return teamMemberTemplateRepository
                 .findByTeamTemplateId(templateId)
                 .stream()
-                .map(this::mapToResponse)
+                .map(TeamMemberTemplateResponse::mapToResponse)
                 .collect(Collectors.toList());
     }
 
@@ -175,14 +176,4 @@ public class TeamMemberTemplateServiceImpl implements TeamMemberTemplateService 
         teamMemberTemplateRepository.save(entity);
     }
 
-    private TeamMemberTemplateResponse mapToResponse(TeamMemberTemplateEntity entity) {
-
-        return TeamMemberTemplateResponse.builder()
-                .id(entity.getId())
-                .teamTemplateId(entity.getTeamTemplate().getId())
-                .userId(entity.getUser().getId())
-                .createdAt(entity.getCreatedAt())
-                .updatedAt(entity.getUpdatedAt())
-                .build();
-    }
 }
