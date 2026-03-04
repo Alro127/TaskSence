@@ -8,135 +8,26 @@ import {
   ChevronRight,
   FolderKanban,
   Loader2,
-  Plus,
   Users,
   LayoutGrid,
   Settings,
-  CheckCircle2,
-  Clock,
-  Archive,
 } from "lucide-react";
 
 import { useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
-import type { MockProject } from "@/types/api";
 import { addRecent, removeFromPinnedAndRecent } from "../workspaceSlice";
 import {
   useGetWorkspaceByIdQuery,
   useUpdateWorkspaceMutation,
 } from "../api/workspaceApi";
 import { DeleteWorkspaceDialog } from "../components";
-
-// ─── Mock projects ─────────────────────────────────────────────────────────────
-const MOCK_PROJECTS: MockProject[] = [
-  {
-    id: 1,
-    name: "Website Redesign",
-    description: "Complete overhaul of the company website with new design system",
-    taskCount: 12,
-    completedTaskCount: 7,
-    status: "active",
-    updatedAt: "2026-03-01",
-  },
-  {
-    id: 2,
-    name: "Mobile App v2",
-    description: "Rebuild the mobile application with improved performance",
-    taskCount: 24,
-    completedTaskCount: 10,
-    status: "active",
-    updatedAt: "2026-03-02",
-  },
-  {
-    id: 3,
-    name: "API Integration",
-    description: "Integrate third-party services for analytics and payments",
-    taskCount: 8,
-    completedTaskCount: 8,
-    status: "completed",
-    updatedAt: "2026-02-20",
-  },
-  {
-    id: 4,
-    name: "Design System",
-    description: "Build a unified component library for all products",
-    taskCount: 15,
-    completedTaskCount: 3,
-    status: "active",
-    updatedAt: "2026-02-28",
-  },
-  {
-    id: 5,
-    name: "Legacy Migration",
-    description: "Migrate legacy codebase to modern stack",
-    taskCount: 30,
-    completedTaskCount: 0,
-    status: "archived",
-    updatedAt: "2026-01-15",
-  },
-];
-
-// ─── Project Card ───────────────────────────────────────────────────────────────
-const statusConfig = {
-  active: { label: "Active", icon: Clock, class: "text-blue-500 bg-blue-50 border-blue-200" },
-  completed: { label: "Completed", icon: CheckCircle2, class: "text-green-500 bg-green-50 border-green-200" },
-  archived: { label: "Archived", icon: Archive, class: "text-muted-foreground bg-muted border-border" },
-};
-
-function ProjectCard({ project }: { project: MockProject }) {
-  const progress =
-    project.taskCount > 0
-      ? Math.round((project.completedTaskCount / project.taskCount) * 100)
-      : 0;
-  const cfg = statusConfig[project.status];
-  const StatusIcon = cfg.icon;
-
-  return (
-    <Card className="cursor-pointer rounded-lg p-0 gap-0 transition-shadow hover:shadow-md">
-      <div className="p-5 flex flex-col gap-3">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold leading-tight">{project.name}</h3>
-          <span
-            className={cn(
-              "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
-              cfg.class,
-            )}
-          >
-            <StatusIcon className="h-3 w-3" />
-            {cfg.label}
-          </span>
-        </div>
-
-        <p className="text-xs text-muted-foreground line-clamp-2">
-          {project.description}
-        </p>
-
-        {/* Progress bar */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Progress</span>
-            <span>
-              {project.completedTaskCount}/{project.taskCount} tasks
-            </span>
-          </div>
-          <div className="h-1.5 w-full rounded-full bg-muted">
-            <div
-              className="h-1.5 rounded-full bg-primary transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-}
+import { useGetProjectsByWorkspaceQuery } from "@/features/project/api/projectApi";
+import { ProjectCard, ProjectCardGhost } from "@/features/project/components";
 
 // ─── Settings form schema ───────────────────────────────────────────────────────
 const settingsSchema = z.object({
@@ -163,6 +54,10 @@ export function WorkspaceDetailPage() {
     skip: isNaN(workspaceId),
   });
   const workspace = data?.data ?? null;
+
+  const { data: projectsData, isLoading: isProjectsLoading } =
+    useGetProjectsByWorkspaceQuery(workspaceId, { skip: isNaN(workspaceId) });
+  const projects = projectsData?.data ?? [];
 
   const [updateWorkspace, { isLoading: isUpdating }] = useUpdateWorkspaceMutation();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -259,7 +154,7 @@ export function WorkspaceDetailPage() {
             <LayoutGrid className="h-4 w-4" />
             Projects
             <Badge variant="secondary" className="text-xs">
-              {MOCK_PROJECTS.length}
+              {isProjectsLoading ? "…" : projects.length}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="members" className="gap-2">
@@ -274,30 +169,32 @@ export function WorkspaceDetailPage() {
 
         {/* ── Projects Tab ── */}
         <TabsContent value="projects" className="mt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {MOCK_PROJECTS.filter((p) => p.status === "active").length} active ·{" "}
-              {MOCK_PROJECTS.filter((p) => p.status === "completed").length} completed ·{" "}
-              {MOCK_PROJECTS.filter((p) => p.status === "archived").length} archived
-            </p>
-            <Button size="sm" variant="outline" disabled>
-              <Plus className="mr-2 h-4 w-4" />
-              New Project
-            </Button>
-          </div>
+          {isProjectsLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {projects.filter((p) => p.status === "ACTIVE").length} active ·{" "}
+                {projects.filter((p) => p.status === "COMPLETED").length} completed ·{" "}
+                {projects.filter((p) => p.status === "ARCHIVED").length} archived
+              </p>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {MOCK_PROJECTS.map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
-
-            {/* Ghost card */}
-            <button className="flex min-h-[160px] w-full cursor-not-allowed flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/30 text-muted-foreground opacity-60">
-              <Plus className="h-5 w-5" />
-              <span className="text-sm font-medium">New Project</span>
-              <span className="text-xs">(Coming soon)</span>
-            </button>
-          </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {projects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    workspaceId={workspaceId}
+                  />
+                ))}
+                <ProjectCardGhost
+                  onClick={() => navigate(`/workspaces/${workspaceId}/projects/new`)}
+                />
+              </div>
+            </>
+          )}
         </TabsContent>
 
         {/* ── Members Tab ── */}

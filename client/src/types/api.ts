@@ -166,3 +166,83 @@ export interface MockProject {
   status: "active" | "archived" | "completed";
   updatedAt: string;
 }
+
+// ─── Project ────────────────────────────────────────────────────────────────────
+export type ProjectStatus = "ACTIVE" | "COMPLETED" | "ARCHIVED" | "ON_HOLD";
+export type ProjectMemberRole = "PROJECT_MANAGER" | "MEMBER" | "VIEWER";
+export type ProjectMemberAddStatus = "CREATED" | "RESTORED" | "ALREADY_EXISTS" | "NOT_FOUND";
+export type JoinRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+
+export interface Project {
+  id: number;
+  workspaceId: number;
+  name: string;
+  description: string | null;
+  status: ProjectStatus;
+  startDate: string | null;
+  endDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProjectRequest {
+  name: string;
+  description?: string;
+  status?: ProjectStatus;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface UpdateProjectRequest {
+  name?: string;
+  description?: string;
+  status?: ProjectStatus;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface ProjectMember {
+  id: number;
+  projectId: number;
+  user: UserSummaryResponse;
+  role: ProjectMemberRole;
+  createdAt: string;
+}
+
+export interface ProjectMemberItem {
+  userId: number;
+  role: ProjectMemberRole;
+}
+
+export interface AddProjectMemberRequest {
+  members: ProjectMemberItem[];
+}
+
+export interface AddProjectMemberResultItem {
+  userId: number;
+  role: ProjectMemberRole;
+  status: ProjectMemberAddStatus;
+}
+
+export interface UpdateProjectMemberRoleRequest {
+  role: ProjectMemberRole;
+}
+
+export interface ProjectJoinRequest {
+  id: number;
+  projectId: number;
+  user: UserSummaryResponse;
+  status: JoinRequestStatus;
+  message: string | null;
+  reviewedBy: UserSummaryResponse | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+export interface SendProjectJoinRequestBody {
+  message?: string;
+}
+
+export interface ReviewProjectJoinRequestBody {
+  status: "APPROVED" | "REJECTED";
+}

@@ -1,6 +1,7 @@
 package dev.alro127.tasksense.service.impl;
 
 import dev.alro127.tasksense.domain.entity.ProjectEntity;
+import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
@@ -48,7 +49,14 @@ public class ProjectServiceImpl implements ProjectService {
                 .endDate(request.getEndDate())
                 .build();
 
+        ProjectMemberEntity owner = ProjectMemberEntity.builder()
+                .project(project)
+                .user(currentUser)
+                .role(ProjectMemberRole.PROJECT_MANAGER) // temporary setting
+                .build();
+
         projectRepository.save(project);
+        projectMemberRepository.save(owner);
 
         return ProjectResponse.mapToResponse(project);
     }

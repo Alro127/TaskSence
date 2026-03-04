@@ -62,6 +62,19 @@ public class ProjectMemberController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/me/role")
+    public ResponseEntity<ApiResponse<String>> getCurrentUserRole(
+            @PathVariable Long projectId) {
+
+        ApiResponse<String> response = new ApiResponse<>(
+                "200",
+                "Get current user role successfully",
+                projectMemberService.getCurrentUserRole(projectId),
+                null);
+
+        return ResponseEntity.ok(response);
+    }
+
     @DeleteMapping("/{userId}")
     public ResponseEntity<ApiResponse<Void>> removeMember(
             @PathVariable Long projectId,

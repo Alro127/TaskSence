@@ -16,4 +16,6 @@ public interface ProjectMemberService {
     ProjectMemberResponse updateMemberRole(Long projectId, Long userId, UpdateProjectMemberRoleRequest request);
 
     void removeMember(Long projectId, Long userId);
+
+    String getCurrentUserRole(Long projectId);
 }

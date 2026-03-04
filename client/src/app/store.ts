@@ -8,6 +8,9 @@ import { workspaceApi } from "@/features/workspace/api/workspaceApi";
 import workspaceReducer from "@/features/workspace/workspaceSlice";
 import { teamTemplateApi } from "@/features/team-template/api/teamTemplateApi";
 import { teamMemberTemplateApi } from "@/features/team-template/api/teamMemberTemplateApi";
+import { projectApi } from "@/features/project/api/projectApi";
+import { projectMemberApi } from "@/features/project/api/projectMemberApi";
+import { projectJoinRequestApi } from "@/features/project/api/projectJoinRequestApi";
 
 export const store = configureStore({
   reducer: {
@@ -20,6 +23,9 @@ export const store = configureStore({
     [workspaceApi.reducerPath]: workspaceApi.reducer,
     [teamTemplateApi.reducerPath]: teamTemplateApi.reducer,
     [teamMemberTemplateApi.reducerPath]: teamMemberTemplateApi.reducer,
+    [projectApi.reducerPath]: projectApi.reducer,
+    [projectMemberApi.reducerPath]: projectMemberApi.reducer,
+    [projectJoinRequestApi.reducerPath]: projectJoinRequestApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
@@ -28,7 +34,10 @@ export const store = configureStore({
       .concat(userSkillApi.middleware)
       .concat(workspaceApi.middleware)
       .concat(teamTemplateApi.middleware)
-      .concat(teamMemberTemplateApi.middleware),
+      .concat(teamMemberTemplateApi.middleware)
+      .concat(projectApi.middleware)
+      .concat(projectMemberApi.middleware)
+      .concat(projectJoinRequestApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

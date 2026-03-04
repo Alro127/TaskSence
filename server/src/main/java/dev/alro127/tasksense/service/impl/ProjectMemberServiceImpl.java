@@ -159,6 +159,20 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         projectMemberRepository.save(member);
     }
 
+    @Override
+    public String getCurrentUserRole(Long projectId) {
+        UserEntity currentUser = securityService.getCurrentUser();
+
+        projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        ProjectMemberEntity member = projectMemberRepository
+                .findByProjectIdAndUserId(projectId, currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("You are not a member of this project"));
+
+        return member.getRole().name();
+    }
+
     // ---- helpers ----
 
     private void validateProjectAccess(ProjectEntity project, Long userId) {
