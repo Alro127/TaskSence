@@ -74,6 +74,7 @@ export const userApi = createApi({
 
 export const {
   useGetCurrentUserQuery,
+  useLazyGetCurrentUserQuery,
   useUpdateUserProfileMutation,
   useGetAvatarPresignUrlMutation,
   useSearchUsersQuery,

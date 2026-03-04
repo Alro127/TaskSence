@@ -1,4 +1,4 @@
-import { configureStore } from "@reduxjs/toolkit";
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import { authApi } from "@/features/auth/api/authApi";
 import authReducer from "@/features/auth/authSlice";
 import { userApi } from "@/features/user/api/userApi";
@@ -14,23 +14,40 @@ import { projectApi } from "@/features/project/api/projectApi";
 import { projectMemberApi } from "@/features/project/api/projectMemberApi";
 import { projectJoinRequestApi } from "@/features/project/api/projectJoinRequestApi";
 
+const combinedReducer = combineReducers({
+  auth: authReducer,
+  user: userReducer,
+  workspace: workspaceReducer,
+  [authApi.reducerPath]: authApi.reducer,
+  [userApi.reducerPath]: userApi.reducer,
+  [userSkillApi.reducerPath]: userSkillApi.reducer,
+  [workspaceApi.reducerPath]: workspaceApi.reducer,
+  [workspaceMemberApi.reducerPath]: workspaceMemberApi.reducer,
+  [workspaceInviteApi.reducerPath]: workspaceInviteApi.reducer,
+  [teamTemplateApi.reducerPath]: teamTemplateApi.reducer,
+  [teamMemberTemplateApi.reducerPath]: teamMemberTemplateApi.reducer,
+  [projectApi.reducerPath]: projectApi.reducer,
+  [projectMemberApi.reducerPath]: projectMemberApi.reducer,
+  [projectJoinRequestApi.reducerPath]: projectJoinRequestApi.reducer,
+});
+
+type RootReducerState = ReturnType<typeof combinedReducer>;
+
+// When `auth/logout` is dispatched, reset ALL state except `auth`
+// (auth already clears itself via its own logout reducer).
+// This wipes every RTK Query cache and all feature slice data.
+const rootReducer = (
+  state: RootReducerState | undefined,
+  action: { type: string }
+): RootReducerState => {
+  if (action.type === "auth/logout" && state) {
+    return combinedReducer({ auth: state.auth } as RootReducerState, action);
+  }
+  return combinedReducer(state, action);
+};
+
 export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    user: userReducer,
-    workspace: workspaceReducer,
-    [authApi.reducerPath]: authApi.reducer,
-    [userApi.reducerPath]: userApi.reducer,
-    [userSkillApi.reducerPath]: userSkillApi.reducer,
-    [workspaceApi.reducerPath]: workspaceApi.reducer,
-    [workspaceMemberApi.reducerPath]: workspaceMemberApi.reducer,
-    [workspaceInviteApi.reducerPath]: workspaceInviteApi.reducer,
-    [teamTemplateApi.reducerPath]: teamTemplateApi.reducer,
-    [teamMemberTemplateApi.reducerPath]: teamMemberTemplateApi.reducer,
-    [projectApi.reducerPath]: projectApi.reducer,
-    [projectMemberApi.reducerPath]: projectMemberApi.reducer,
-    [projectJoinRequestApi.reducerPath]: projectJoinRequestApi.reducer,
-  },
+  reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(authApi.middleware)

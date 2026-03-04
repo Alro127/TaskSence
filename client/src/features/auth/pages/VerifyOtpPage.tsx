@@ -13,6 +13,8 @@ import {
 import { useVerifyOtpMutation } from "@/features/auth/api/authApi";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials, clearPendingEmail } from "@/features/auth/authSlice";
+import { useLazyGetCurrentUserQuery } from "@/features/user/api/userApi";
+import { setCurrentUser } from "@/features/user/userSlice";
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60; // seconds
@@ -22,6 +24,7 @@ export function VerifyOtpPage() {
   const dispatch = useAppDispatch();
   const pendingEmail = useAppSelector((state) => state.auth.pendingEmail);
   const [verifyOtp, { isLoading }] = useVerifyOtpMutation();
+  const [fetchCurrentUser] = useLazyGetCurrentUserQuery();
 
   const [otp, setOtp] = useState("");
   const [resendTimer, setResendTimer] = useState(RESEND_COOLDOWN);
@@ -60,6 +63,8 @@ export function VerifyOtpPage() {
         })
       );
       dispatch(clearPendingEmail());
+      const userResult = await fetchCurrentUser().unwrap();
+      dispatch(setCurrentUser(userResult.data));
 
       toast.success("Email verified!", {
         description: "Your account has been activated successfully.",

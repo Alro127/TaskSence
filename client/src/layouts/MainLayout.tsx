@@ -20,7 +20,8 @@ import { logout } from "@/features/auth/authSlice";
 import { useLogoutMutation } from "@/features/auth/api/authApi";
 import { UserProfileCard } from "@/features/user/components";
 import { useGetCurrentUserQuery } from "@/features/user/api/userApi";
-import { updateCurrentUser } from "@/features/user/userSlice";
+import { clearCurrentUser, updateCurrentUser } from "@/features/user/userSlice";
+import { clearWorkspace } from "@/features/workspace/workspaceSlice";
 
 const navItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -72,6 +73,8 @@ export function MainLayout() {
       });
     } finally {
       dispatch(logout());
+      dispatch(clearCurrentUser());
+      dispatch(clearWorkspace());
       setIsProfileDrawerOpen(false);
       toast.success("Logged out successfully");
     }

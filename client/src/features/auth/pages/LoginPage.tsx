@@ -18,6 +18,8 @@ import {
 } from "@/features/auth/api/authApi";
 import { useAppDispatch } from "@/app/hooks";
 import { setCredentials } from "@/features/auth/authSlice";
+import { useLazyGetCurrentUserQuery } from "@/features/user/api/userApi";
+import { setCurrentUser } from "@/features/user/userSlice";
 
 const loginSchema = z.object({
   email: z
@@ -37,6 +39,7 @@ export function LoginPage() {
   const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
   const [loginWithGoogle] = useLoginWithGoogleMutation();
+  const [fetchCurrentUser] = useLazyGetCurrentUserQuery();
   const [googleLoading, setGoogleLoading] = useState(false);
   const googleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -61,6 +64,8 @@ export function LoginPage() {
           refreshToken: result.data.refreshToken,
         })
       );
+      const userResult = await fetchCurrentUser().unwrap();
+      dispatch(setCurrentUser(userResult.data));
       toast.success("Welcome back!", {
         description: "You have successfully logged in.",
       });
@@ -88,6 +93,8 @@ export function LoginPage() {
             refreshToken: result.data.refreshToken,
           })
         );
+        const userResult = await fetchCurrentUser().unwrap();
+        dispatch(setCurrentUser(userResult.data));
         toast.success("Welcome!", {
           description: "You have successfully logged in with Google.",
         });
