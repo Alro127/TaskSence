@@ -9,6 +9,8 @@ import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import java.util.Arrays;
+
 @Configuration
 public class RedisConfig {
     @Bean
@@ -38,7 +40,11 @@ public class RedisConfig {
         container.setConnectionFactory(connectionFactory);
         container.addMessageListener(
                 subscriber,
-                new ChannelTopic("auth-email-channel")
+                Arrays.asList(
+                        new ChannelTopic("auth-email-channel"),
+                        new ChannelTopic("invitation-email-channel"),
+                        new ChannelTopic("notification-channel")
+                )
         );
 
         return container;

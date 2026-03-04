@@ -35,6 +35,15 @@
   - `GET /workspaces/:id` → chi tiết 1 workspace
   - `PUT /workspaces/:id` → body: `{name?, description?}` → `WorkspaceResponse`
   - `DELETE /workspaces/:id` → xóa workspace
+- **Workspace Member Endpoints**:
+  - `GET /workspaces/:id/members` → danh sách members (embed `UserSummaryResponse`)
+  - `PATCH /workspaces/:id/members/:memberId` → body: `{role}` → update role
+  - `DELETE /workspaces/:id/members/:memberId` → xóa member
+- **Workspace Invite Endpoints**:
+  - `POST /workspaces/:id/invites` → body: `{email, role}` → gửi email mời
+  - `GET /workspaces/:id/invites` → danh sách invites của workspace
+  - `POST /workspaces/invites/accept` → body: `{token}` → accept invite
+  - `PATCH /workspaces/invites/:inviteId/revoke` → revoke invite
 - **User Skill Endpoints**:
   - `GET /users/me/skills` → danh sách skill của current user
   - `GET /users/:userId/skills` → danh sách skill của user khác (view-only)
@@ -89,10 +98,13 @@ client/
 │   │       │   ├── CreateWorkspaceModal.tsx
 │   │       │   ├── EditWorkspaceModal.tsx
 │   │       │   ├── DeleteWorkspaceDialog.tsx ← Type-to-confirm
+│   │       │   ├── InviteMemberModal.tsx ← Invite by email + role select
+│   │       │   ├── WorkspaceMembersTab.tsx ← Members + Pending Invites
 │   │       │   └── index.ts
 │   │       └── pages/
 │   │           ├── WorkspacesPage.tsx    ← /workspaces
 │   │           ├── WorkspaceDetailPage.tsx ← /workspaces/:id
+│   │           ├── WorkspaceInvitationPage.tsx ← /workspaces/invitation?token=...
 │   │           └── index.ts
 │   │   └── team-template/                ← Sprint 5
 │   │       ├── api/
@@ -190,6 +202,36 @@ client/
 - ✅ Cập nhật **routes** thêm `/workspaces` và `/workspaces/:id`
 - ✅ Cập nhật **types/api.ts** thêm `Workspace`, `CreateWorkspaceRequest`, `UpdateWorkspaceRequest`, `MockProject`
 - ✅ Cài thêm **shadcn/ui components**: `dialog`, `dropdown-menu`, `tabs`, `badge`
+
+### Sprint 6 - Workspace Members & Invites ✅ COMPLETED
+
+- ✅ **Types** — thêm vào `types/api.ts`:
+  - `WorkspaceRole` type: `'OWNER' | 'MANAGER' | 'MEMBER' | 'VIEWER'`
+  - `InviteStatus` type: `'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED'`
+  - `WorkspaceMember` — embed `UserSummaryResponse`, có `role`, `joinedAt`
+  - `WorkspaceInvite` — `email`, `role`, `status`, `invitedAt`, `expiredAt`, `acceptedAt`
+  - `CreateWorkspaceInviteRequest`, `UpdateWorkspaceRoleRequest`
+- ✅ **workspaceMemberApi** — RTK Query với 3 endpoints: `getWorkspaceMembers`, `updateMemberRole`, `removeMember`
+- ✅ **workspaceInviteApi** — RTK Query với 4 endpoints: `getWorkspaceInvites`, `inviteMember`, `acceptInvite`, `revokeInvite`
+- ✅ **WorkspaceMembersTab** (`features/workspace/components/WorkspaceMembersTab.tsx`):
+  - Section **Members**: list tất cả members với avatar, tên, email, role badge
+  - Click avatar/tên → mở `UserProfileDrawer` (reuse pattern từ Team Template)
+  - 3-dot menu per row (chỉ hiện nếu current user có quyền manage member đó):
+    - **Change Role**: submenu với danh sách roles → gọi `PATCH` API ngay
+    - **Remove**: mở confirmation Dialog
+  - Section **Pending Invitations** (chỉ OWNER/MANAGER thấy): list pending invites với nút Revoke
+  - Nút **Invite Member** (chỉ OWNER/MANAGER): mở `InviteMemberModal`
+  - Permission logic: OWNER manage tất cả; MANAGER manage MEMBER/VIEWER; không được tự manage mình
+- ✅ **InviteMemberModal** — Dialog: email input + role select (MANAGER/MEMBER/VIEWER), gọi `POST /workspaces/:id/invites`
+- ✅ **WorkspaceInvitationPage** (`/workspaces/invitation?token=...`):
+  - Nếu chưa auth → redirect `/auth/login?redirect=...`
+  - Idle state: card với thông tin invite + nút Accept/Decline
+  - Loading state: spinner trên nút Accept
+  - Success state: green checkmark + nút điều hướng về workspace
+  - Error state: red X + thông báo lỗi
+- ✅ Cập nhật **WorkspaceDetailPage**: thay Members tab placeholder bằng `WorkspaceMembersTab`
+- ✅ Cập nhật **store.ts**: thêm `workspaceMemberApi` + `workspaceInviteApi`
+- ✅ Cập nhật **routes**: thêm `/workspaces/invitation` (trước `:id` để tránh conflict)
 
 ### Sprint 5 - Team Template ✅ COMPLETED
 
@@ -366,6 +408,16 @@ npm run preview
 - **Portal stacking**: `SheetContent` render qua React Portal, hiển thị đúng khi Sheet mở từ bên trong Dialog
 - **Visual cues**: hover tên → `hover:text-primary hover:underline`; hover avatar → `hover:ring-2 hover:ring-primary/40`
 
+### Workspace Member & Invite Architecture
+
+- **`workspaceMemberApi`** (RTK Query): tag `'WorkspaceMember'` keyed by `workspaceId`. Endpoints: `getWorkspaceMembers`, `updateMemberRole`, `removeMember`.
+- **`workspaceInviteApi`** (RTK Query): tag `'WorkspaceInvite'` keyed by `workspaceId`. Endpoints: `getWorkspaceInvites`, `inviteMember`, `acceptInvite`, `revokeInvite`.
+- **Permission detection**: `WorkspaceMembersTab` tìm member có `user.id === currentUserId` trong danh sách để xác định `myRole`. OWNER > MANAGER > MEMBER/VIEWER.
+- **Invite flow**: Backend gửi email với link `{frontendUrl}/workspaces/invitation?token=rawToken`. FE call `POST /workspaces/invites/accept` với raw token.
+- **`WorkspaceInvitationPage`**: Route `/workspaces/invitation` phải đứng TRƯỚC `/workspaces/:id` trong routes để tránh routing conflict.
+- **Role badge styling**: Mỗi role có màu riêng — OWNER: amber, MANAGER: blue, MEMBER/VIEWER: muted.
+- **UserProfileDrawer reuse**: Click avatar/tên member → `setProfileUserId(id)` → mở drawer (pattern nhất quán với TeamTemplate).
+
 ### Workspace Architecture
 
 - **`workspaceApi`** (RTK Query): tag `'Workspace'` — tất cả mutation đều invalidate tag này.
@@ -382,7 +434,7 @@ npm run preview
 - `WorkspacesPage`: hiện dùng real API qua `useGetMyWorkspacesQuery` — **đã hoạt động**, chỉ cần backend chạy.
 - `WorkspaceDetailPage`: cập nhật thông tin workspace từ `useGetWorkspaceByIdQuery` — **đã hoạt động**.
 - `WorkspaceDetailPage` Projects tab: thay `MOCK_PROJECTS` bằng RTK Query call thực.
-- `Members tab`: implement khi có API member management.
+- `Members tab`: ~~implement khi có API member management~~ ✅ **Đã hoàn thành** (Sprint 6)
 - Khi backend user API sẵn sàng:
   - thay mock data bằng `GET /users/me` (đã tích hợp sẵn trong `MainLayout`)
   - submit `ProfilePage` (tab Info) qua `PUT /users/me` — logic đã có sẵn

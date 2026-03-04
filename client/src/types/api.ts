@@ -156,6 +156,42 @@ export interface UserSearchResult {
   avatarUrl: string | null;
 }
 
+// Workspace Roles
+export type WorkspaceRole = "OWNER" | "MANAGER" | "MEMBER" | "VIEWER";
+
+// Invite Status
+export type InviteStatus = "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
+
+// Workspace Member
+export interface WorkspaceMember {
+  id: number;
+  role: WorkspaceRole;
+  joinedAt: string;
+  user: UserSummaryResponse;
+}
+
+// Workspace Invite
+export interface WorkspaceInvite {
+  id: number;
+  workspaceId: number;
+  email: string;
+  role: WorkspaceRole;
+  status: InviteStatus;
+  invitedAt: string;
+  expiredAt: string;
+  acceptedAt: string | null;
+  invitedById: number;
+}
+
+export interface CreateWorkspaceInviteRequest {
+  email: string;
+  role: WorkspaceRole;
+}
+
+export interface UpdateWorkspaceRoleRequest {
+  role: WorkspaceRole;
+}
+
 // Mock project (until Project API is implemented)
 export interface MockProject {
   id: number;

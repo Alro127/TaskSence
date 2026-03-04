@@ -25,7 +25,7 @@ import {
   useGetWorkspaceByIdQuery,
   useUpdateWorkspaceMutation,
 } from "../api/workspaceApi";
-import { DeleteWorkspaceDialog } from "../components";
+import { DeleteWorkspaceDialog, WorkspaceMembersTab } from "../components";
 import { useGetProjectsByWorkspaceQuery } from "@/features/project/api/projectApi";
 import { ProjectCard, ProjectCardGhost } from "@/features/project/components";
 
@@ -199,15 +199,7 @@ export function WorkspaceDetailPage() {
 
         {/* ── Members Tab ── */}
         <TabsContent value="members" className="mt-6">
-          <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/30 text-center">
-            <Users className="h-8 w-8 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">Member management</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Invite and manage workspace members. Coming in a future sprint.
-              </p>
-            </div>
-          </div>
+          <WorkspaceMembersTab workspaceId={workspaceId} />
         </TabsContent>
 
         {/* ── Settings Tab ── */}
