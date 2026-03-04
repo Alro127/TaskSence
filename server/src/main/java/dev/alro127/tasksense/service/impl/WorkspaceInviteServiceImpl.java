@@ -7,7 +7,9 @@ import dev.alro127.tasksense.domain.entity.WorkspaceInviteEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
 import dev.alro127.tasksense.domain.enums.InviteStatus;
 import dev.alro127.tasksense.dto.message.EmailMessage;
-import dev.alro127.tasksense.dto.request.CreateWorkspaceInviteRequest;
+import dev.alro127.tasksense.dto.request.CreateBulkWorkspaceInviteRequest;
+import dev.alro127.tasksense.dto.request.BulkInviteItemRequest;
+import dev.alro127.tasksense.dto.response.BulkInviteResult;
 import dev.alro127.tasksense.dto.response.WorkspaceInviteResponse;
 import dev.alro127.tasksense.exception.ConflictException;
 import dev.alro127.tasksense.exception.ForbiddenException;
@@ -27,11 +29,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
-import java.awt.*;
-import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -52,7 +52,7 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
     @Override
     @Transactional
     public WorkspaceInviteResponse inviteMember(Long workspaceId,
-                                                CreateWorkspaceInviteRequest request) {
+                                                BulkInviteItemRequest request) {
 
         UserEntity currentUser = securityService.getCurrentUser();
 
@@ -209,5 +209,35 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
         }
 
         invite.setStatus(InviteStatus.REVOKED);
+    }
+
+    @Override
+    public BulkInviteResult inviteMultipleMembers(Long workspaceId,
+                                                  CreateBulkWorkspaceInviteRequest request) {
+
+        List<WorkspaceInviteResponse> success = new ArrayList<>();
+        List<BulkInviteResult.FailedInvite> failed = new ArrayList<>();
+
+        for (BulkInviteItemRequest item : request.getInvites()) {
+
+            try {
+
+                WorkspaceInviteResponse response =
+                        inviteMember(workspaceId, item);
+
+                success.add(response);
+
+            } catch (Exception e) {
+                failed.add(BulkInviteResult.FailedInvite.builder()
+                        .email(item.getEmail())
+                        .reason(e.getMessage())
+                        .build());
+            }
+        }
+
+        return BulkInviteResult.builder()
+                .success(success)
+                .failed(failed)
+                .build();
     }
 }

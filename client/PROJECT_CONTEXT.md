@@ -40,7 +40,8 @@
   - `PATCH /workspaces/:id/members/:memberId` → body: `{role}` → update role
   - `DELETE /workspaces/:id/members/:memberId` → xóa member
 - **Workspace Invite Endpoints**:
-  - `POST /workspaces/:id/invites` → body: `{email, role}` → gửi email mời
+  - `POST /workspaces/:id/invites` → body: `{email, role}` → gửi email mời (single)
+  - `POST /workspaces/:id/invites/bulk` → body: `{invites: [{email, role}]}` → `BulkInviteResult` (batch)
   - `GET /workspaces/:id/invites` → danh sách invites của workspace
   - `POST /workspaces/invites/accept` → body: `{token}` → accept invite
   - `PATCH /workspaces/invites/:inviteId/revoke` → revoke invite
@@ -98,7 +99,8 @@ client/
 │   │       │   ├── CreateWorkspaceModal.tsx
 │   │       │   ├── EditWorkspaceModal.tsx
 │   │       │   ├── DeleteWorkspaceDialog.tsx ← Type-to-confirm
-│   │       │   ├── InviteMemberModal.tsx ← Invite by email + role select
+│   │       │   ├── InviteMemberModal.tsx ← Invite single (kept for reference)
+│   │       │   ├── BulkInviteModal.tsx   ← Bulk invite: search + email + template import
 │   │       │   ├── WorkspaceMembersTab.tsx ← Members + Pending Invites
 │   │       │   └── index.ts
 │   │       └── pages/
@@ -212,7 +214,7 @@ client/
   - `WorkspaceInvite` — `email`, `role`, `status`, `invitedAt`, `expiredAt`, `acceptedAt`
   - `CreateWorkspaceInviteRequest`, `UpdateWorkspaceRoleRequest`
 - ✅ **workspaceMemberApi** — RTK Query với 3 endpoints: `getWorkspaceMembers`, `updateMemberRole`, `removeMember`
-- ✅ **workspaceInviteApi** — RTK Query với 4 endpoints: `getWorkspaceInvites`, `inviteMember`, `acceptInvite`, `revokeInvite`
+- ✅ **workspaceInviteApi** — RTK Query với 5 endpoints: `getWorkspaceInvites`, `inviteMember`, `acceptInvite`, `revokeInvite`, `bulkInviteMembers`
 - ✅ **WorkspaceMembersTab** (`features/workspace/components/WorkspaceMembersTab.tsx`):
   - Section **Members**: list tất cả members với avatar, tên, email, role badge
   - Click avatar/tên → mở `UserProfileDrawer` (reuse pattern từ Team Template)
@@ -220,9 +222,36 @@ client/
     - **Change Role**: submenu với danh sách roles → gọi `PATCH` API ngay
     - **Remove**: mở confirmation Dialog
   - Section **Pending Invitations** (chỉ OWNER/MANAGER thấy): list pending invites với nút Revoke
-  - Nút **Invite Member** (chỉ OWNER/MANAGER): mở `InviteMemberModal`
+  - Nút **Invite Member** (chỉ OWNER/MANAGER): mở `BulkInviteModal`
   - Permission logic: OWNER manage tất cả; MANAGER manage MEMBER/VIEWER; không được tự manage mình
-- ✅ **InviteMemberModal** — Dialog: email input + role select (MANAGER/MEMBER/VIEWER), gọi `POST /workspaces/:id/invites`
+- ✅ **InviteMemberModal** — giữ lại trong codebase (không xóa), hiện được thay bằng `BulkInviteModal`
+
+### Sprint 6.1 - Bulk Invite ✅ COMPLETED
+
+- ✅ **Types mới** — thêm vào `types/api.ts`:
+  - `BulkInviteItem` — `{email, role}`
+  - `CreateBulkWorkspaceInviteRequest` — `{invites: BulkInviteItem[]}`
+  - `BulkInviteFailedItem` — `{email, reason}` (backend trả về khi invite lỗi)
+  - `BulkInviteResult` — `{success: WorkspaceInvite[], failed: BulkInviteFailedItem[]}`
+- ✅ **`bulkInviteMembers`** endpoint thêm vào `workspaceInviteApi` — `POST /workspaces/:id/invites/bulk`
+- ✅ **BulkInviteModal** (`features/workspace/components/BulkInviteModal.tsx`) — Dialog 2-cột (`max-w-2xl`):
+  - **Cột trái “Add People”**:
+    - Search user theo tên/email (debounce 350ms, `GET /users/search`) → click `+` thêm vào list
+    - Click tên/avatar → mở `UserProfileDrawer`
+    - Direct email add: nhập email hợp lệ (kể cả chưa đăng ký) → Enter hoặc click “Invite [email]”
+    - Collapsible **Import from Team Template**:
+      - Dropdown chọn template (lấy từ `useGetMyTemplatesQuery`)
+      - Checkbox list các member của template (`useGetMembersQuery`)
+      - Toggle Select all / Deselect all
+      - Nút “Add Selected (N)” thêm vào invite list
+      - Member đã có trong list → disabled + “Added” label (deduplication theo email)
+  - **Cột phải “Invite List”**:
+    - Header: **Default role** (Select, dashed border) — apply cho người mới thêm; thay đổi default → tự động update những người đang có role cũ
+    - Mỗi row: avatar │ tên + email │ `RoleSelect` inline (h-7, w-28) │ nút `×` xóa
+    - Empty state khi list trống
+  - **Footer**: Cancel + “Send N Invitations” (disabled khi list trống)
+  - **Result view** sau khi submit: hiển success list (green) + failed list (red) với lý do từ backend
+- ✅ `WorkspaceMembersTab` — cập nhật dùng `BulkInviteModal` thay `InviteMemberModal`
 - ✅ **WorkspaceInvitationPage** (`/workspaces/invitation?token=...`):
   - Nếu chưa auth → redirect `/auth/login?redirect=...`
   - Idle state: card với thông tin invite + nút Accept/Decline
@@ -411,12 +440,16 @@ npm run preview
 ### Workspace Member & Invite Architecture
 
 - **`workspaceMemberApi`** (RTK Query): tag `'WorkspaceMember'` keyed by `workspaceId`. Endpoints: `getWorkspaceMembers`, `updateMemberRole`, `removeMember`.
-- **`workspaceInviteApi`** (RTK Query): tag `'WorkspaceInvite'` keyed by `workspaceId`. Endpoints: `getWorkspaceInvites`, `inviteMember`, `acceptInvite`, `revokeInvite`.
+- **`workspaceInviteApi`** (RTK Query): tag `'WorkspaceInvite'` keyed by `workspaceId`. Endpoints: `getWorkspaceInvites`, `inviteMember`, `acceptInvite`, `revokeInvite`, `bulkInviteMembers`.
 - **Permission detection**: `WorkspaceMembersTab` tìm member có `user.id === currentUserId` trong danh sách để xác định `myRole`. OWNER > MANAGER > MEMBER/VIEWER.
 - **Invite flow**: Backend gửi email với link `{frontendUrl}/workspaces/invitation?token=rawToken`. FE call `POST /workspaces/invites/accept` với raw token.
 - **`WorkspaceInvitationPage`**: Route `/workspaces/invitation` phải đứng TRƯỚC `/workspaces/:id` trong routes để tránh routing conflict.
 - **Role badge styling**: Mỗi role có màu riêng — OWNER: amber, MANAGER: blue, MEMBER/VIEWER: muted.
 - **UserProfileDrawer reuse**: Click avatar/tên member → `setProfileUserId(id)` → mở drawer (pattern nhất quán với TeamTemplate).
+- **`BulkInviteModal`**: 2-cột dialog. Cột trái add people (search registered + direct email + team template picker); cột phải invite list (role per-person + default role). Dedup theo email (case-insensitive). Submit gọi `POST /workspaces/:id/invites/bulk`.
+- **Default role behavior**: Thay đổi default role → chỉ update rows đang có role bằng giá trị default cũ (không overwrite những row đã được chỉnh thủ công).
+- **Template deduplication**: Member đã có trong invite list → hiện `Added` label + disabled checkbox trong template picker; kiểm tra theo email case-insensitive.
+- **`BulkInviteResult` handling**: Backend trả `{success[], failed[]}` — FE hiển result view sau submit, list success (green) và failed (red + reason).
 
 ### Workspace Architecture
 

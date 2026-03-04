@@ -1,8 +1,10 @@
 package dev.alro127.tasksense.controller;
 
 import dev.alro127.tasksense.dto.common.ApiResponse;
+import dev.alro127.tasksense.dto.request.CreateBulkWorkspaceInviteRequest;
 import dev.alro127.tasksense.dto.request.TokenRequest;
-import dev.alro127.tasksense.dto.request.CreateWorkspaceInviteRequest;
+import dev.alro127.tasksense.dto.request.BulkInviteItemRequest;
+import dev.alro127.tasksense.dto.response.BulkInviteResult;
 import dev.alro127.tasksense.dto.response.WorkspaceInviteResponse;
 import dev.alro127.tasksense.service.WorkspaceInviteService;
 import jakarta.validation.Valid;
@@ -22,12 +24,27 @@ public class WorkspaceInviteController {
     @PostMapping("/{workspaceId}/invites")
     public ResponseEntity<ApiResponse<WorkspaceInviteResponse>> inviteMember(
             @PathVariable Long workspaceId,
-            @Valid @RequestBody CreateWorkspaceInviteRequest request) {
+            @Valid @RequestBody BulkInviteItemRequest request) {
 
         ApiResponse<WorkspaceInviteResponse> response = new ApiResponse<>(
                 "201",
                 "Invite member successfully",
                 workspaceInviteService.inviteMember(workspaceId, request),
+                null
+        );
+
+        return ResponseEntity.status(201).body(response);
+    }
+
+    @PostMapping("/{workspaceId}/invites/bulk")
+    public ResponseEntity<ApiResponse<BulkInviteResult>> inviteMultipleMembers(
+            @PathVariable Long workspaceId,
+            @Valid @RequestBody CreateBulkWorkspaceInviteRequest request) {
+
+        ApiResponse<BulkInviteResult> response = new ApiResponse<>(
+                "201",
+                "Invite multiple members successfully",
+                workspaceInviteService.inviteMultipleMembers(workspaceId, request),
                 null
         );
 
