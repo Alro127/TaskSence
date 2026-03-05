@@ -36,6 +36,7 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMemberEnti
 
     void deleteByProjectIdAndUserId(Long projectId, Long userId);
 
+    @Modifying
     @Query("""
                 DELETE FROM ProjectMemberEntity pm
                 WHERE pm.user.id = :userId
