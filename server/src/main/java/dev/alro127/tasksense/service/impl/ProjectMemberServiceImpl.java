@@ -3,6 +3,7 @@ package dev.alro127.tasksense.service.impl;
 import dev.alro127.tasksense.domain.entity.ProjectEntity;
 import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
+import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
 import dev.alro127.tasksense.domain.enums.MemberAddStatus;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
 import dev.alro127.tasksense.dto.request.AddProjectMemberRequest;
@@ -16,6 +17,7 @@ import dev.alro127.tasksense.exception.UnauthorizedException;
 import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
+import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.service.ProjectMemberService;
 import dev.alro127.tasksense.service.SecurityService;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProjectMemberServiceImpl implements ProjectMemberService {
 
+        private final WorkspaceMemberRepository workspaceMemberRepository;
         private final ProjectMemberRepository projectMemberRepository;
         private final ProjectRepository projectRepository;
         private final UserRepository userRepository;
@@ -47,6 +50,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
                 validateProjectManagerAccess(project, currentUser.getId());
+                validateWorkspaceMemberAccess(project, currentUser.getId());
 
                 List<ProjectMemberItem> items = request.getMembers();
                 List<Long> userIds = items.stream().map(ProjectMemberItem::getUserId).toList();
@@ -63,6 +67,14 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 Map<Long, ProjectMemberEntity> existingMap = existingMembers.stream()
                                 .collect(Collectors.toMap(m -> m.getUser().getId(), m -> m));
 
+                Long workspaceId = project.getWorkspace().getId();
+
+                List<WorkspaceMemberEntity> workspaceMembers = workspaceMemberRepository.findByWorkspaceId(workspaceId);
+
+                Set<Long> workspaceUserIds = workspaceMembers.stream()
+                                .map(m -> m.getUser().getId())
+                                .collect(Collectors.toSet());
+
                 List<ProjectMemberEntity> toSave = new ArrayList<>();
                 List<AddProjectMemberResultItem> results = new ArrayList<>();
 
@@ -75,6 +87,14 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                                                 .userId(userId)
                                                 .role(role)
                                                 .status(MemberAddStatus.NOT_FOUND)
+                                                .build());
+                                continue;
+                        }
+                        if (!workspaceUserIds.contains(userId)) {
+                                results.add(AddProjectMemberResultItem.builder()
+                                                .userId(userId)
+                                                .role(role)
+                                                .status(MemberAddStatus.NOT_IN_WORKSPACE)
                                                 .build());
                                 continue;
                         }
@@ -116,6 +136,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 ProjectEntity project = projectRepository.findById(projectId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
+                validateWorkspaceMemberAccess(project, currentUser.getId());
                 validateProjectAccess(project, currentUser.getId());
 
                 return projectMemberRepository.findAllByProjectId(projectId)
@@ -132,6 +153,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 ProjectEntity project = projectRepository.findById(projectId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
+                validateWorkspaceMemberAccess(project, currentUser.getId());
                 validateProjectManagerAccess(project, currentUser.getId());
 
                 ProjectMemberEntity member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
@@ -151,7 +173,9 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 ProjectEntity project = projectRepository.findById(projectId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
+                validateWorkspaceMemberAccess(project, currentUser.getId());
                 validateProjectManagerAccess(project, currentUser.getId());
+                validateWorkspaceMemberAccess(project, userId);
 
                 ProjectMemberEntity member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project member not found"));
@@ -164,8 +188,10 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         public String getCurrentUserRole(Long projectId) {
                 UserEntity currentUser = securityService.getCurrentUser();
 
-                projectRepository.findById(projectId)
+                ProjectEntity project = projectRepository.findById(projectId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+                validateWorkspaceMemberAccess(project, currentUser.getId());
 
                 ProjectMemberEntity member = projectMemberRepository
                                 .findByProjectIdAndUserId(projectId, currentUser.getId())
@@ -189,6 +215,16 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                                 project.getId(), userId, ProjectMemberRole.MANAGER);
                 if (!isProjectManager) {
                         throw new UnauthorizedException("Access denied");
+                }
+        }
+
+        private void validateWorkspaceMemberAccess(ProjectEntity project, Long userId) {
+                Long workspaceId = project.getWorkspace().getId();
+
+                boolean isWorkspaceMember = workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userId);
+
+                if (!isWorkspaceMember) {
+                        throw new UnauthorizedException("You are not a member of this workspace");
                 }
         }
 }
