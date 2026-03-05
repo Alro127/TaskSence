@@ -3,6 +3,7 @@ package dev.alro127.tasksense.repository.jpa;
 import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -34,4 +35,6 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMemberEnti
     Long countByProjectId(Long projectId);
 
     void deleteByProjectIdAndUserId(Long projectId, Long userId);
+
+    void deleteByWorkspaceIdAndUserId(Long workspaceId, Long userId);
 }

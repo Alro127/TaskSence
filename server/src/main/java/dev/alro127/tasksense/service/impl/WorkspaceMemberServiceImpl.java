@@ -23,6 +23,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
     @Override
     public List<WorkspaceMemberResponse> getWorkspaceMembers(Long workspaceId) {
@@ -75,6 +76,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
             }
         }
 
+        projectMemberRepository.deleteByWorkspaceIdAndUserId(workspaceId, memberId);
         workspaceMemberRepository.delete(member);
     }
 }
