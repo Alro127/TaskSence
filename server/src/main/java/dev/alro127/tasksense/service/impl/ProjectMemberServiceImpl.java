@@ -180,8 +180,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 ProjectMemberEntity member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project member not found"));
 
-                member.setDeletedAt(OffsetDateTime.now());
-                projectMemberRepository.save(member);
+                projectMemberRepository.delete(member);
         }
 
         @Override
