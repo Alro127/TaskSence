@@ -68,7 +68,7 @@ const ROLE_CONFIG: Record<
   },
 };
 
-const ROLES_FOR_CHANGE: WorkspaceRole[] = ["OWNER", "MANAGER", "MEMBER", "VIEWER"];
+const ROLES_FOR_CHANGE: WorkspaceRole[] = ["MANAGER", "MEMBER", "VIEWER"];
 
 // ─── Helper: avatar fallback ─────────────────────────────────────────────────
 function AvatarFallback({ name }: { name: string | null }) {
