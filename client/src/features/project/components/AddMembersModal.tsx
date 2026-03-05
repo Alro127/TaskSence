@@ -1,14 +1,23 @@
-import { useEffect, useState } from "react";
-import { Loader2, Search, UserPlus, X, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  RefreshCw,
+  Search,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,10 +32,10 @@ import { cn } from "@/lib/utils";
 import type {
   AddProjectMemberResultItem,
   ProjectMemberRole,
-  UserSearchResult,
+  WorkspaceMember,
 } from "@/types/api";
-import { useLazySearchUsersQuery } from "@/features/user/api/userApi";
-import { useAddMembersMutation } from "../api/projectMemberApi";
+import { useGetWorkspaceMembersQuery } from "@/features/workspace/api/workspaceMemberApi";
+import { useAddMembersMutation, useGetMembersQuery } from "../api/projectMemberApi";
 import { ROLE_LABEL } from "./ProjectCard";
 
 const ROLE_OPTIONS: ProjectMemberRole[] = ["MANAGER", "MEMBER", "VIEWER"];
@@ -57,7 +66,11 @@ const ADD_STATUS_CONFIG: Record<
   },
 };
 
-interface SelectedUser extends UserSearchResult {
+interface SelectedUser {
+  id: number;
+  email: string;
+  fullName: string | null;
+  avatarUrl: string | null;
   role: ProjectMemberRole;
 }
 
@@ -65,6 +78,7 @@ interface AddMembersModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: number;
+  workspaceId: number;
   onMembersAdded?: () => void;
 }
 
@@ -72,37 +86,55 @@ export function AddMembersModal({
   open,
   onOpenChange,
   projectId,
+  workspaceId,
   onMembersAdded,
 }: AddMembersModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<SelectedUser[]>([]);
   const [results, setResults] = useState<AddProjectMemberResultItem[] | null>(null);
 
-  const [searchUsers, { data: searchData, isFetching: isSearching }] =
-    useLazySearchUsersQuery();
+  // Fetch workspace members (source of truth) and existing project members
+  const { data: workspaceMembersData, isLoading: isLoadingMembers } =
+    useGetWorkspaceMembersQuery(workspaceId, { skip: !open });
+  const { data: projectMembersData } = useGetMembersQuery(projectId, { skip: !open });
   const [addMembers, { isLoading: isAdding }] = useAddMembersMutation();
 
-  const searchResults = searchData?.data ?? [];
+  const workspaceMembers = workspaceMembersData?.data ?? [];
+  const projectMemberIds = useMemo(
+    () => new Set((projectMembersData?.data ?? []).map((m) => m.user.id)),
+    [projectMembersData],
+  );
 
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  // Client-side filter by name or email
+  const filteredMembers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return workspaceMembers;
+    return workspaceMembers.filter((wm) => {
+      const name = (wm.user.fullName ?? "").toLowerCase();
+      const email = wm.user.email.toLowerCase();
+      return name.includes(q) || email.includes(q);
+    });
+  }, [workspaceMembers, searchQuery]);
 
-  useEffect(() => {
-    if (debouncedQuery.trim().length >= 2) {
-      searchUsers(debouncedQuery.trim());
+  const isAlreadySelected = (userId: number) =>
+    selectedUsers.some((u) => u.id === userId);
+
+  const isAlreadyInProject = (userId: number) => projectMemberIds.has(userId);
+
+  const handleSelectUser = (wm: WorkspaceMember) => {
+    const { user } = wm;
+    if (!isAlreadySelected(user.id) && !isAlreadyInProject(user.id)) {
+      setSelectedUsers((prev) => [
+        ...prev,
+        {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          avatarUrl: user.avatarUrl,
+          role: "MEMBER",
+        },
+      ]);
     }
-  }, [debouncedQuery, searchUsers]);
-
-  const handleSelectUser = (user: UserSearchResult) => {
-    if (!selectedUsers.find((u) => u.id === user.id)) {
-      setSelectedUsers((prev) => [...prev, { ...user, role: "MEMBER" }]);
-    }
-    setSearchQuery("");
-    setDebouncedQuery("");
   };
 
   const handleRemoveSelected = (userId: number) => {
@@ -138,14 +170,10 @@ export function AddMembersModal({
 
   const handleClose = () => {
     setSearchQuery("");
-    setDebouncedQuery("");
     setSelectedUsers([]);
     setResults(null);
     onOpenChange(false);
   };
-
-  const isAlreadySelected = (userId: number) =>
-    selectedUsers.some((u) => u.id === userId);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -219,29 +247,37 @@ export function AddMembersModal({
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               <Input
                 className="pl-9"
-                placeholder="Search by name or email..."
+                placeholder="Search workspace members..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              {isSearching && (
+              {isLoadingMembers && (
                 <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
               )}
             </div>
 
-            {/* Search results dropdown */}
-            {debouncedQuery.trim().length >= 2 && searchResults.length > 0 && (
-              <div className="rounded-md border bg-popover shadow-md">
-                {searchResults.map((user) => {
-                  const already = isAlreadySelected(user.id);
+            {/* Workspace members list */}
+            {isLoadingMembers ? (
+              <div className="flex items-center justify-center py-8 text-muted-foreground gap-2">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span className="text-sm">Loading workspace members...</span>
+              </div>
+            ) : filteredMembers.length > 0 ? (
+              <div className="max-h-[220px] overflow-y-auto rounded-md border bg-popover">
+                {filteredMembers.map((wm) => {
+                  const { user } = wm;
+                  const alreadySelected = isAlreadySelected(user.id);
+                  const alreadyInProject = isAlreadyInProject(user.id);
+                  const disabled = alreadySelected || alreadyInProject;
                   return (
                     <button
-                      key={user.id}
+                      key={wm.id}
                       type="button"
-                      disabled={already}
-                      onClick={() => handleSelectUser(user)}
+                      disabled={disabled}
+                      onClick={() => handleSelectUser(wm)}
                       className={cn(
                         "flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition-colors first:rounded-t-md last:rounded-b-md",
-                        already
+                        disabled
                           ? "opacity-50 cursor-default"
                           : "hover:bg-accent cursor-pointer",
                       )}
@@ -257,15 +293,18 @@ export function AddMembersModal({
                           {(user.fullName ?? user.email).charAt(0).toUpperCase()}
                         </div>
                       )}
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">
-                          {user.fullName ?? "—"}
-                        </p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">{user.fullName ?? "—"}</p>
                         <p className="text-xs text-muted-foreground truncate">
                           {user.email}
                         </p>
                       </div>
-                      {already && (
+                      {alreadyInProject && (
+                        <Badge variant="secondary" className="ml-auto shrink-0 text-xs">
+                          In project
+                        </Badge>
+                      )}
+                      {alreadySelected && !alreadyInProject && (
                         <Badge variant="secondary" className="ml-auto shrink-0 text-xs">
                           Selected
                         </Badge>
@@ -274,15 +313,16 @@ export function AddMembersModal({
                   );
                 })}
               </div>
+            ) : workspaceMembers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-2">
+                <Users className="h-8 w-8 opacity-30" />
+                <p className="text-sm">This workspace has no members yet</p>
+              </div>
+            ) : (
+              <p className="text-center text-sm text-muted-foreground py-4">
+                No members match &ldquo;{searchQuery}&rdquo;
+              </p>
             )}
-
-            {debouncedQuery.trim().length >= 2 &&
-              !isSearching &&
-              searchResults.length === 0 && (
-                <p className="text-center text-sm text-muted-foreground py-3">
-                  No users found for &ldquo;{debouncedQuery}&rdquo;
-                </p>
-              )}
 
             {/* Selected users with role picker */}
             {selectedUsers.length > 0 && (
@@ -295,7 +335,6 @@ export function AddMembersModal({
                     key={user.id}
                     className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2"
                   >
-                    {/* Avatar */}
                     {user.avatarUrl ? (
                       <img
                         src={user.avatarUrl}
@@ -308,14 +347,12 @@ export function AddMembersModal({
                       </div>
                     )}
 
-                    {/* Name */}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">
                         {user.fullName ?? user.email}
                       </p>
                     </div>
 
-                    {/* Role selector */}
                     <Select
                       value={user.role}
                       onValueChange={(val) =>
@@ -334,7 +371,6 @@ export function AddMembersModal({
                       </SelectContent>
                     </Select>
 
-                    {/* Remove chip */}
                     <button
                       type="button"
                       onClick={() => handleRemoveSelected(user.id)}

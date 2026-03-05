@@ -555,6 +555,7 @@ export function ProjectDetailPage() {
         open={isAddMembersOpen}
         onOpenChange={setIsAddMembersOpen}
         projectId={projectId}
+        workspaceId={workspaceId}
         onMembersAdded={() => setIsAddMembersOpen(false)}
       />
     </div>
