@@ -187,6 +187,7 @@ export function WorkspaceDetailPage() {
                     key={project.id}
                     project={project}
                     workspaceId={workspaceId}
+                    workspaceName={workspace.name}
                   />
                 ))}
                 <ProjectCardGhost

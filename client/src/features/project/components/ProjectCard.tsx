@@ -60,6 +60,7 @@ export const ROLE_LABEL: Record<ProjectMemberRole, string> = {
 interface ProjectCardProps {
   project: Project;
   workspaceId: number;
+  workspaceName?: string;
   /** Current user's role in this project. If undefined, treat as read-only. */
   currentUserRole?: ProjectMemberRole;
   memberCount?: number;
@@ -70,6 +71,7 @@ interface ProjectCardProps {
 export function ProjectCard({
   project,
   workspaceId,
+  workspaceName,
   currentUserRole,
   memberCount,
   onEdit,
@@ -81,7 +83,9 @@ export function ProjectCard({
   const isManager = currentUserRole === "MANAGER";
 
   const handleCardClick = () => {
-    navigate(`/workspaces/${workspaceId}/projects/${project.id}`);
+    navigate(`/workspaces/${workspaceId}/projects/${project.id}`, {
+      state: { workspaceName },
+    });
   };
 
   return (

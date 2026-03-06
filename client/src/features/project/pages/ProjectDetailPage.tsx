@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import {
   ChevronRight,
@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import type { JoinRequestStatus, ProjectJoinRequest } from "@/types/api";
 
 import { useGetProjectByIdQuery, useGetCurrentUserRoleQuery } from "../api/projectApi";
+import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
 import { useGetMembersQuery } from "../api/projectMemberApi";
 import { useGetJoinRequestsQuery, useReviewJoinRequestMutation } from "../api/projectJoinRequestApi";
 import {
@@ -165,6 +166,8 @@ export function ProjectDetailPage() {
   const workspaceId = Number(workspaceIdStr);
   const projectId = Number(projectIdStr);
   const navigate = useNavigate();
+  const location = useLocation();
+  const workspaceNameFromState = (location.state as { workspaceName?: string } | null)?.workspaceName;
 
   const currentUserId = useAppSelector((s) => s.user.currentUser?.id ?? 0);
 
@@ -184,6 +187,11 @@ export function ProjectDetailPage() {
   });
   const currentUserRole = roleData?.data ?? undefined;
   const isManager = currentUserRole === "MANAGER";
+
+  const { data: workspaceData } = useGetWorkspaceByIdQuery(workspaceId, {
+    skip: isNaN(workspaceId) || !!workspaceNameFromState,
+  });
+  const workspaceName = workspaceNameFromState ?? workspaceData?.data?.name ?? "Workspace";
 
   const { data: membersData, isLoading: isMembersLoading } =
     useGetMembersQuery(projectId, { skip: isNaN(projectId) });
@@ -241,7 +249,7 @@ export function ProjectDetailPage() {
           to={`/workspaces/${workspaceId}`}
           className="hover:text-foreground transition-colors"
         >
-          Workspace
+          {workspaceName}
         </Link>
         <ChevronRight className="h-3 w-3" />
         <span className="text-foreground font-medium">{project.name}</span>
