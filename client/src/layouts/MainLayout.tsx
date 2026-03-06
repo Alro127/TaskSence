@@ -22,6 +22,9 @@ import { UserProfileCard } from "@/features/user/components";
 import { useGetCurrentUserQuery } from "@/features/user/api/userApi";
 import { clearCurrentUser, updateCurrentUser } from "@/features/user/userSlice";
 import { clearWorkspace } from "@/features/workspace/workspaceSlice";
+import { NotificationDropdown } from "@/features/notification/components/NotificationDropdown";
+import { useNotificationSocket } from "@/features/notification/hooks/useNotificationSocket";
+import { clearNotifications } from "@/features/notification/notificationSlice";
 
 const navItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -43,6 +46,9 @@ export function MainLayout() {
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
   const [logoutApi, { isLoading: isLogoutLoading }] = useLogoutMutation();
   const { data: userData } = useGetCurrentUserQuery();
+
+  // Start persistent WebSocket connection for notifications
+  useNotificationSocket();
 
   // Fetch current user on component mount
   useEffect(() => {
@@ -75,6 +81,7 @@ export function MainLayout() {
       dispatch(logout());
       dispatch(clearCurrentUser());
       dispatch(clearWorkspace());
+      dispatch(clearNotifications());
       setIsProfileDrawerOpen(false);
       toast.success("Logged out successfully");
     }
@@ -122,14 +129,17 @@ export function MainLayout() {
               </h2>
             </div>
 
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => setIsProfileDrawerOpen(true)}
-            >
-              <User className="h-4 w-4" />
-              <span>{currentUser?.fullName || "Profile"}</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <NotificationDropdown />
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => setIsProfileDrawerOpen(true)}
+              >
+                <User className="h-4 w-4" />
+                <span>{currentUser?.fullName || "Profile"}</span>
+              </Button>
+            </div>
           </header>
 
           <main className="flex-1 overflow-auto p-6">

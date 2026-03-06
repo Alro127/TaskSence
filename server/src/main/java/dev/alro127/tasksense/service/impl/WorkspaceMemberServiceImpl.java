@@ -1,7 +1,10 @@
 package dev.alro127.tasksense.service.impl;
 
 import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
+import dev.alro127.tasksense.domain.enums.EntityType;
+import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.domain.enums.WorkspaceRole;
+import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.dto.request.UpdateWorkspaceRoleRequest;
 import dev.alro127.tasksense.dto.response.WorkspaceMemberResponse;
 import dev.alro127.tasksense.exception.ConflictException;
@@ -9,13 +12,17 @@ import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
+import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.WorkspaceMemberService;
+import dev.alro127.tasksense.service.publisher.NotificationPublisher;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +31,8 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final WorkspaceRepository workspaceRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final NotificationPublisher notificationPublisher;
+    private final SecurityService securityService;
 
     @Override
     public List<WorkspaceMemberResponse> getWorkspaceMembers(Long workspaceId) {
@@ -49,11 +58,20 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
         WorkspaceRole newRole = request.getRole();
 
-        if (member.getRole() == WorkspaceRole.OWNER) {
+        if (member.getRole() == WorkspaceRole.OWNER ) {
             throw new ConflictException("Workspace have only one owner");
         }
 
         member.setRole(newRole);
+
+        notificationPublisher.publish(NotificationMessage.builder()
+                .receiverId(member.getUser().getId())
+                .actorId(securityService.getCurrentUserId())
+                .type(NotificationType.WORKSPACE_ROLE_CHANGE)
+                .referenceType(EntityType.WORKSPACE)
+                .referenceId(member.getWorkspace().getId())
+                .payload(Map.of("referenceName", member.getWorkspace().getName()))
+                .build());
 
         return WorkspaceMemberResponse.mapToResponse(member);
     }
@@ -76,7 +94,18 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
             }
         }
 
-        projectMemberRepository.deleteByWorkspaceIdAndUserId(workspaceId, memberId);
-        workspaceMemberRepository.delete(member);
+        member.setDeletedAt(OffsetDateTime.now());
+
+        //projectMemberRepository.deleteByWorkspaceIdAndUserId(workspaceId, memberId);
+        workspaceMemberRepository.save(member);
+
+        notificationPublisher.publish(NotificationMessage.builder()
+                .receiverId(member.getUser().getId())
+                .actorId(securityService.getCurrentUserId())
+                .type(NotificationType.WORKSPACE_REMOVE_MEMBER)
+                .referenceType(EntityType.WORKSPACE)
+                .referenceId(member.getWorkspace().getId())
+                .payload(Map.of("referenceName", member.getWorkspace().getName()))
+                .build());
     }
 }

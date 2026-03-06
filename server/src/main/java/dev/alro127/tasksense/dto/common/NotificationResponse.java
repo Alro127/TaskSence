@@ -1,15 +1,20 @@
 package dev.alro127.tasksense.dto.common;
 
 import dev.alro127.tasksense.domain.entity.NotificationEntity;
+import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.NotificationType;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
 
 @Getter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class NotificationResponse {
 
     private Long id;
@@ -19,7 +24,7 @@ public class NotificationResponse {
     private Long actorId;
     private Long receiverId;
 
-    private String referenceType;
+    private EntityType referenceType;
     private Long referenceId;
 
     private Map<String, Object> payload;
