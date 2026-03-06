@@ -5,8 +5,11 @@ import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceInviteEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
+import dev.alro127.tasksense.domain.enums.EmailType;
 import dev.alro127.tasksense.domain.enums.InviteStatus;
+import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.dto.message.EmailMessage;
+import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.dto.request.CreateBulkWorkspaceInviteRequest;
 import dev.alro127.tasksense.dto.request.BulkInviteItemRequest;
 import dev.alro127.tasksense.dto.response.BulkInviteResult;
@@ -20,8 +23,10 @@ import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
 import dev.alro127.tasksense.security.hash.TokenHasher;
 import dev.alro127.tasksense.security.token.TokenProvider;
+import dev.alro127.tasksense.service.EmailService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.WorkspaceInviteService;
+import dev.alro127.tasksense.service.publisher.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -44,10 +49,9 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
     private final SecurityService securityService;
     private final TokenProvider tokenProvider;
     private final TokenHasher tokenHasher;
-    private final StringRedisTemplate stringRedisTemplate;
-    private final RedisTemplate<String, Object> redisTemplate;
-    private final AppConfig appConfig;
-    private final ObjectMapper objectMapper;
+    private final EmailService emailService;
+    private final NotificationPublisher notificationPublisher;
+
 
     @Override
     @Transactional
@@ -82,8 +86,6 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
         String rawToken = tokenProvider.generate();
         String hashedToken = tokenHasher.hash(rawToken);
 
-        System.out.println(rawToken);
-
         WorkspaceInviteEntity invite = WorkspaceInviteEntity.builder()
                 .workspace(workspace)
                 .email(request.getEmail())
@@ -97,47 +99,7 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
 
         workspaceInviteRepository.save(invite);
 
-        String invitationLink = appConfig.getFrontendUrl() + "/workspaces/invitation?token=" + rawToken;
-
-        String htmlContent = """
-                <div style="font-family: Arial, sans-serif;">
-                    <h2>Password Reset Request</h2>
-                    <p>We received a request to reset your password.</p>
-                    <p>Click the button below to reset it:</p>
-
-                    <div style="text-align:center; margin:20px 0;">
-                        <a href="%s"
-                           style="
-                             background-color:#4CAF50;
-                             color:white;
-                             padding:12px 24px;
-                             text-decoration:none;
-                             border-radius:6px;
-                             display:inline-block;
-                             font-weight:bold;">
-                           Join our workspace
-                        </a>
-                    </div>
-
-                    <p>If the button doesn’t work, copy this link:</p>
-                    <p>%s</p>
-
-                    <p>This link will expire in 15 minutes.</p>
-                </div>
-                """.formatted(invitationLink, invitationLink);
-
-        EmailMessage message = new EmailMessage(
-                request.getEmail(),
-                "Invitation to join in our workspace",
-                htmlContent);
-
-        try {
-            String json = objectMapper.writeValueAsString(message);
-            redisTemplate.convertAndSend("invitation-email-channel", json);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to publish email message", e);
-        }
+        emailService.sendWorkspaceInviteEmail(request.getEmail(), rawToken);
 
         return WorkspaceInviteResponse.mapToResponse(invite);
     }
@@ -193,6 +155,15 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
 
         invite.setStatus(InviteStatus.ACCEPTED);
         invite.setAcceptedAt(OffsetDateTime.now());
+
+        notificationPublisher.publish(NotificationMessage.builder()
+                .receiverId(invite.getInvitedBy().getId())
+                .actorId(null)
+                .type(NotificationType.WORKSPACE_INVITE)
+                .referenceType("INVITATION")
+                .referenceId(member.getId())
+                .payload(null)
+                .build());
 
         return WorkspaceInviteResponse.mapToResponse(invite);
     }

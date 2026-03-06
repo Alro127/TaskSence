@@ -1,6 +1,10 @@
 package dev.alro127.tasksense.config.database;
 
-import dev.alro127.tasksense.service.impl.EmailSubscriber;
+import dev.alro127.tasksense.service.subcriber.EmailSubscriber;
+import dev.alro127.tasksense.service.subcriber.NotificationDbSubscriber;
+import dev.alro127.tasksense.service.subcriber.SocketSubscriber;
+import dev.alro127.tasksense.util.redis.RedisKeys;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -9,42 +13,59 @@ import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import java.util.Arrays;
-
 @Configuration
+@RequiredArgsConstructor
 public class RedisConfig {
+
+    private final EmailSubscriber emailSubscriber;
+    private final NotificationDbSubscriber notificationDbSubscriber;
+    private final SocketSubscriber socketSubscriber;
+
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
+
         RedisTemplate<String, Object> template = new RedisTemplate<>();
+
         template.setConnectionFactory(factory);
 
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new StringRedisSerializer());
+        StringRedisSerializer serializer = new StringRedisSerializer();
 
-        template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(new StringRedisSerializer());
+        template.setKeySerializer(serializer);
+        template.setValueSerializer(serializer);
+
+        template.setHashKeySerializer(serializer);
+        template.setHashValueSerializer(serializer);
 
         template.afterPropertiesSet();
+
         return template;
     }
 
     @Bean
-    RedisMessageListenerContainer container(
-            RedisConnectionFactory connectionFactory,
-            EmailSubscriber subscriber
+    public RedisMessageListenerContainer container(
+            RedisConnectionFactory connectionFactory
     ) {
 
         RedisMessageListenerContainer container =
                 new RedisMessageListenerContainer();
 
         container.setConnectionFactory(connectionFactory);
+
+        // Email channels
         container.addMessageListener(
-                subscriber,
-                Arrays.asList(
-                        new ChannelTopic("auth-email-channel"),
-                        new ChannelTopic("invitation-email-channel"),
-                        new ChannelTopic("notification-channel")
-                )
+                emailSubscriber,
+                new ChannelTopic(RedisKeys.AUTH_EMAIL_CHANNEL)
+        );
+
+        // Notification channels
+        container.addMessageListener(
+                notificationDbSubscriber,
+                new ChannelTopic(RedisKeys.NOTIFICATION_CHANNEL)
+        );
+
+        container.addMessageListener(
+                socketSubscriber,
+                new ChannelTopic(RedisKeys.NOTIFICATION_CHANNEL)
         );
 
         return container;

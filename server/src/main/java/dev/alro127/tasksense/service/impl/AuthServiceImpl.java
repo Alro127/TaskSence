@@ -8,6 +8,7 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import dev.alro127.tasksense.config.common.AppConfig;
 import dev.alro127.tasksense.config.provider.GoogleConfig;
+import dev.alro127.tasksense.domain.enums.EmailType;
 import dev.alro127.tasksense.dto.message.EmailMessage;
 import dev.alro127.tasksense.dto.request.AuthRequest;
 import dev.alro127.tasksense.dto.request.TokenRequest;
@@ -21,6 +22,7 @@ import dev.alro127.tasksense.security.hash.TokenHasher;
 import dev.alro127.tasksense.security.jwt.JwtTokenProvider;
 import dev.alro127.tasksense.security.token.TokenProvider;
 import dev.alro127.tasksense.service.AuthService;
+import dev.alro127.tasksense.service.EmailService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -48,11 +50,10 @@ public class AuthServiceImpl implements AuthService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
-    private final ObjectMapper objectMapper;
     private final GoogleConfig googleConfig;
     private final TokenProvider tokenProvider;
     private final TokenHasher tokenHasher;
-    private final AppConfig appConfig;
+    private final EmailService emailService;
 
     private String generateAndStoreRefreshToken(UserEntity user) {
         String refreshToken = tokenProvider.generate();
@@ -130,6 +131,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
     public void sendOtp(String email) {
 
         UserEntity user = userRepository.findByEmail(email)
@@ -142,19 +144,7 @@ public class AuthServiceImpl implements AuthService {
                 otp,
                 Duration.ofMinutes(5));
 
-        EmailMessage message = new EmailMessage(
-                email,
-                "Your OTP Code",
-                "Your OTP is: " + otp);
-
-        try {
-            String json = objectMapper.writeValueAsString(message);
-
-            redisTemplate.convertAndSend("auth-email-channel", json);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to publish email message", e);
-        }
+        emailService.sendVerifyEmail(email, otp);
     }
 
     @Override
@@ -204,47 +194,7 @@ public class AuthServiceImpl implements AuthService {
                 user.getId().toString(),
                 Duration.ofMinutes(5));
 
-        String resetLink = appConfig.getFrontendUrl() + "/auth/reset-password?token=" + rawToken;
-
-        String htmlContent = """
-                <div style="font-family: Arial, sans-serif;">
-                    <h2>Password Reset Request</h2>
-                    <p>We received a request to reset your password.</p>
-                    <p>Click the button below to reset it:</p>
-
-                    <div style="text-align:center; margin:20px 0;">
-                        <a href="%s"
-                           style="
-                             background-color:#4CAF50;
-                             color:white;
-                             padding:12px 24px;
-                             text-decoration:none;
-                             border-radius:6px;
-                             display:inline-block;
-                             font-weight:bold;">
-                           Reset Your Password
-                        </a>
-                    </div>
-
-                    <p>If the button doesn’t work, copy this link:</p>
-                    <p>%s</p>
-
-                    <p>This link will expire in 15 minutes.</p>
-                </div>
-                """.formatted(resetLink, resetLink);
-
-        EmailMessage message = new EmailMessage(
-                email,
-                "Reset Your Password",
-                htmlContent);
-
-        try {
-            String json = objectMapper.writeValueAsString(message);
-            redisTemplate.convertAndSend("auth-email-channel", json);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to publish email message", e);
-        }
+        emailService.sendResetPasswordEmail(email, rawToken);
     }
 
     @Override

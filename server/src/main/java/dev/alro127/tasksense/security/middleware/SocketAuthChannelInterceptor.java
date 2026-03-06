@@ -1,4 +1,4 @@
-package dev.alro127.tasksense.socket;
+package dev.alro127.tasksense.security.middleware;
 
 import dev.alro127.tasksense.security.jwt.JwtTokenProvider;
 import lombok.AllArgsConstructor;
@@ -15,13 +15,18 @@ import java.util.List;
 
 @Component
 @AllArgsConstructor
-public class AuthChannelInterceptor implements ChannelInterceptor {
+public class SocketAuthChannelInterceptor implements ChannelInterceptor {
     private final JwtTokenProvider jwtTokenProvider;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
 
-        StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+        StompHeaderAccessor accessor =
+                MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+
+        if (accessor == null) {
+            return message;
+        }
 
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
 
@@ -33,8 +38,9 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
 
                 String username = jwtTokenProvider.getUsernameFromToken(token);
 
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        username, null, List.of());
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                username, null, List.of());
 
                 accessor.setUser(authentication);
             }

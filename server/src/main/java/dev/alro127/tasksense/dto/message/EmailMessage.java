@@ -1,16 +1,23 @@
 package dev.alro127.tasksense.dto.message;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import dev.alro127.tasksense.domain.enums.EmailType;
+import lombok.*;
 
-@RequiredArgsConstructor
-@AllArgsConstructor
+import java.util.Map;
+
+@Builder
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class EmailMessage {
+    private EmailType type;
+
     private String to;
+
     private String subject;
+
     private String content;
+
+    private Map<String, Object> payload;
 }

@@ -4,6 +4,7 @@ import dev.alro127.tasksense.domain.entity.WorkspaceInviteEntity;
 import dev.alro127.tasksense.domain.enums.InviteStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface WorkspaceInviteRepository extends JpaRepository<WorkspaceInviteEntity, Long> {
@@ -11,5 +12,5 @@ public interface WorkspaceInviteRepository extends JpaRepository<WorkspaceInvite
 
     boolean existsByWorkspaceIdAndEmailAndStatus(Long workspaceId, String email, InviteStatus inviteStatus);
 
-    Optional<WorkspaceInviteEntity> findByWorkspaceId(Long workspaceId);
+    List<WorkspaceInviteEntity> findByWorkspaceId(Long workspaceId);
 }

@@ -1,6 +1,6 @@
 package dev.alro127.tasksense.config.realtime;
 
-import dev.alro127.tasksense.socket.AuthChannelInterceptor;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -12,25 +12,21 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @Configuration
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
-public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
-
-    private final AuthChannelInterceptor authChannelInterceptor;
-
+public class SocketConfig implements WebSocketMessageBrokerConfigurer {
+    private final WebSocketAuthInterceptor authInterceptor;
     @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
-                .withSockJS();
+    public void configureMessageBroker(@NonNull MessageBrokerRegistry config) {
+        config.enableSimpleBroker("/queue", "/topic");
+        config.setApplicationDestinationPrefixes("/app");
+        config.setUserDestinationPrefix("/user");
     }
 
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.setApplicationDestinationPrefixes("/app");
-        registry.enableSimpleBroker("/topic", "/queue");
+    public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws").setAllowedOrigins("*");
     }
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(authChannelInterceptor);
+        registration.interceptors(authInterceptor);
     }
-
 }
