@@ -1,7 +1,7 @@
 # TaskSense - Frontend Project Context
 
 > File này dùng để giữ context cho AI và developers. Cập nhật sau mỗi sprint/thay đổi lớn.
-> **Cập nhật lần cuối**: Sprint 7 - Project CRUD & Member Management
+> **Cập nhật lần cuối**: Sprint 8 - Notification System
 
 ## 📋 Thông tin dự án
 
@@ -12,6 +12,7 @@
 - **Routing**: React Router v6
 - **Form Handling**: React Hook Form + Zod validation
 - **Toast**: Sonner (shadcn/ui integration)
+- **WebSocket**: @stomp/stompjs (STOMP over WebSocket)
 
 ## 🏗️ Backend API
 
@@ -71,6 +72,17 @@
   - `GET /projects/:projectId/join-requests` → danh sách join requests → `ProjectJoinRequest[]`
   - `PATCH /projects/:projectId/join-requests/:requestId/review` → body: `{status: "APPROVED"|"REJECTED"}` → `ProjectJoinRequest`
   - `DELETE /projects/:projectId/join-requests/:requestId` → huỷ join request
+- **Notification Endpoints**:
+  - `GET /notifications?cursor=?&limit=10` → danh sách notifications (cursor-based pagination) → `NotificationResponse[]`
+  - `GET /notifications/unread-count` → số thông báo chưa đọc → `number`
+  - `POST /notifications/:id/read` → đánh dấu 1 thông báo là đã đọc
+  - `POST /notifications/read-all` → đánh dấu tất cả là đã đọc → số lượng đã update
+  - `DELETE /notifications/:id` → xóa 1 thông báo
+  - `DELETE /notifications` → body: `{ids: number[]}` → xóa nhiều thông báo
+- **WebSocket**: `ws://localhost:8080/api/v1/ws` (STOMP)
+  - Connect header: `Authorization: Bearer <accessToken>`
+  - Subscribe: `/user/queue/notifications` → nhận `NotificationSocketMessage` real-time
+  - Backend route message theo `receiverEmail` (principal name = email từ JWT `sub`)
 - **API Response format**: `{code: string, message: string, data: T}`
 - **CORS allowed**: `http://localhost:5173`
 - **JWT**: Access Token + Refresh Token
@@ -82,7 +94,7 @@
 client/
 ├── src/
 │   ├── app/
-│   │   ├── store.ts          ← Đã thêm projectApi + projectMemberApi + projectJoinRequestApi
+│   │   ├── store.ts          ← Đã thêm notificationApi + notificationReducer
 │   │   └── hooks.ts
 │   ├── components/
 │   │   ├── ui/               ← Đã thêm: dialog, dropdown-menu, tabs, badge, sheet
@@ -94,6 +106,18 @@ client/
 │   │   │   └── authSlice.ts
 │   │   ├── dashboard/
 │   │   │   └── pages/DashboardPage.tsx
+│   │   ├── notification/                  ← Sprint 8 — HOÀN THÀNH
+│   │   │   ├── api/
+│   │   │   │   └── notificationApi.ts     ← RTK Query: 6 endpoints
+│   │   │   ├── components/
+│   │   │   │   ├── NotificationDropdown.tsx ← Bell icon + dropdown panel (infinite scroll)
+│   │   │   │   └── NotificationItem.tsx   ← Single notification row (icon, unread dot, time, delete)
+│   │   │   ├── hooks/
+│   │   │   │   └── useNotificationSocket.ts ← STOMP persistent connection
+│   │   │   ├── utils/
+│   │   │   │   └── notificationUtils.ts   ← getNotificationText(), getNotificationTarget()
+│   │   │   ├── notificationSlice.ts       ← Redux: realtimeItems, unreadCount, bellAnimating
+│   │   │   └── index.ts
 │   │   ├── user/
 │   │   │   ├── api/
 │   │   │   │   ├── userApi.ts             ← getUserById trả về ApiResponse<User> (đầy đủ fields)
@@ -355,6 +379,58 @@ client/
 - ✅ **AddMembersModal** — tách mỗi row search results thành 2 zone: click tên/avatar → mở `UserProfileDrawer`; click nút `+` → thêm vào selection chips
 - ✅ Cài thêm **shadcn/ui**: `sheet`
 
+### Sprint 8 - Notification System ✅ COMPLETED
+
+- ✅ **Types** — thêm vào `types/api.ts`:
+  - `EntityType` type: `'WORKSPACE' | 'PROJECT' | 'TASK' | 'INVITATION' | 'COMMENT'`
+  - `NotificationType` type: 9 loại — `TASK_ASSIGNED`, `WORKSPACE_INVITE`, `WORKSPACE_INVITE_ACCEPT`, `WORKSPACE_JOIN_REQUEST`, `WORKSPACE_REMOVE_MEMBER`, `WORKSPACE_ROLE_CHANGE`, `PROJECT_JOIN_REQUEST`, `COMMENT_MENTION`, `PROJECT_ROLE_UPDATED`
+  - `NotificationResponse` — `id, type, actorId, receiverId, referenceType (EntityType), referenceId, payload, read, createdAt`
+  - `NotificationSocketMessage` — cùng shape với `NotificationResponse` (backend có `id`)
+  - `DeleteNotificationsRequest` — `{ids: number[]}`
+- ✅ **notificationApi** — RTK Query với 6 endpoints:
+  - `getNotifications` — cursor-based pagination (`cursor`, `limit=10`), tag `Notification`
+  - `getUnreadCount` — tag `UnreadCount`
+  - `markAsRead` — invalidate `UnreadCount`
+  - `markAllAsRead` — invalidate `Notification` + `UnreadCount`
+  - `deleteNotification` — invalidate `Notification` + `UnreadCount`
+  - `deleteNotifications` — bulk delete, invalidate tương tự
+- ✅ **notificationSlice** — Redux state gồm:
+  - `realtimeItems: NotificationResponse[]` — items push qua WebSocket (newest first)
+  - `unreadCount: number` — badge số đỏ trên bell
+  - `bellAnimating: boolean` — trigger animation khi có notification mới
+  - Actions: `pushRealtimeNotification`, `setUnreadCount`, `decrementUnreadCount`, `clearUnreadCount`, `markRealtimeItemRead`, `markAllRealtimeItemsRead`, `removeRealtimeItem`, `triggerBellAnimation`, `stopBellAnimation`, `clearNotifications`
+- ✅ **useNotificationSocket** hook:
+  - Persistent STOMP connection từ khi user authenticate
+  - Mount 1 lần trong `MainLayout`, tự disconnect khi logout
+  - Subscribe `/user/queue/notifications`
+  - Khi nhận message: dispatch `pushRealtimeNotification` + `invalidateTags(["UnreadCount"])` + `triggerBellAnimation` + show `toast()`
+  - Auto reconnect mỗi 5s nếu mất kết nối
+- ✅ **NotificationItem** component:
+  - Icon màu per-type: `CheckSquare` (blue), `Users` (green), `UserCheck` (green), `UserPlus` (cyan), `UserMinus` (red), `ShieldCheck` (amber/purple), `FolderPlus` (cyan), `MessageSquare` (amber)
+  - Unread dot (blue) góc trái + background `primary/5` khi chưa đọc
+  - Text bold khi unread, muted khi đã đọc
+  - Time ago (`date-fns formatDistanceToNow`)
+  - Delete button xuất hiện khi hover (group hover)
+- ✅ **NotificationDropdown** component:
+  - Bell icon trong header với badge đỏ (số unread, tối đa "99+")
+  - Bell shake animation (`bell-shake` CSS class) khi nhận notification mới
+  - Dropdown panel `w-80 sm:w-96`, tối đa `max-h-[420px]` scroll
+  - Header panel: "Mark all read" button (chỉ hiện khi có unread)
+  - Infinite scroll với `IntersectionObserver` — cursor-based load more
+  - Merge realtime items (từ Redux) + REST items (từ API), dedup theo id
+  - Click item: mark as read (optimistic) + navigate to context + close dropdown
+  - Empty state với Bell icon + "All caught up!"
+  - Close on outside click
+- ✅ **notificationUtils.ts**:
+  - `getNotificationText(notification)` — trả `{title, description}` theo type. Đọc `payload.referenceName` (generic), `payload.sender` (actor), `payload.newRole`, etc.
+  - `getNotificationTarget(notification)` — trả route string để navigate. `WORKSPACE_INVITE` dẫn đến `/workspaces/invitation?token=<token>` (từ payload)
+- ✅ **MainLayout** cập nhật:
+  - Mount `useNotificationSocket()` để khởi động WS connection
+  - Thêm `<NotificationDropdown />` vào header (bên trái Profile button)
+  - Dispatch `clearNotifications()` khi logout
+- ✅ **index.css**: thêm `@keyframes bell-shake` + `.bell-shake` class
+- ✅ **store.ts**: đăng ký `notificationReducer` + `notificationApi`
+
 ### Sprint 7 - Project CRUD & Member Management ✅ COMPLETED
 
 - ✅ **Types** — thêm vào `types/api.ts`:
@@ -588,10 +664,27 @@ npm run preview
 - **`MemberCard`**: card dọc (khác với WorkspaceMembersTab dùng row ngang). Remove action mở Dialog trong chính card (inline), không bubble lên parent.
 - **`workspaceName` breadcrumb pattern**: `ProjectCard` navigate với `state: { workspaceName }`. `ProjectDetailPage` đọc từ `location.state` trước, fallback sang gọi `useGetWorkspaceByIdQuery` nếu state không có.
 
+### Notification Architecture
+
+- **Connection lifecycle**: `useNotificationSocket()` mount trong `MainLayout` — kết nối ngay khi user vào `MainLayout`, disconnect khi logout (cleanup trong `clearNotifications`). Luôn có duy nhất 1 connection trong toàn session.
+- **WebSocket routing**: Spring Security `convertAndSendToUser` dùng `principal.getName()` = `JWT sub` = **email**. Do đó BE **phải** route bằng `receiverEmail` (không phải numeric id).
+- **unreadCount flow**: Fetch 1 lần lúc mount (`useGetUnreadCountQuery`, không polling) → sync vào Redux `setUnreadCount`. Mỗi socket push: Redux `unreadCount += 1` + `invalidateTags(["UnreadCount"])` để refetch từ server.
+- **Bell animation**: Toggle CSS class `.bell-shake` (không dùng Tailwind arbitrary `animate-[...]` vì Tailwind v4 không nhận `@keyframes` từ global CSS qua class). Flag `bellAnimating` trong Redux, auto-clear sau 1s qua `setTimeout`.
+- **Pagination**: cursor-based — `GET /notifications?cursor=<lastId>&limit=10`. `IntersectionObserver` trên sentinel div ở cuối list trigger load thêm.
+- **Item merge**: `realtimeItems` (Redux, mới nhất trước) ghép với `apiItems` (REST, cursor page). Dedup theo `id` — realtime thắng nếu trùng id.
+- **Payload conventions** (từ BE):
+  - `payload.referenceName` — tên entity (workspace/project/task name)
+  - `payload.sender` — tên người gửi invite (chỉ `WORKSPACE_INVITE`)
+  - `payload.actorName` — fallback actor name cho các type khác
+  - `payload.token` — raw invite token (chỉ `WORKSPACE_INVITE`), dùng navigate `/workspaces/invitation?token=<token>`
+  - `payload.newRole`, `payload.oldRole` — cho `WORKSPACE_ROLE_CHANGE`, `PROJECT_ROLE_UPDATED`
+- **Optimistic mark-as-read**: Click item → local state update + Redux `markRealtimeItemRead` + `decrementUnreadCount` → gọi `markAsRead` API async. Không chờ API response để cập nhật UI.
+
 ### Việc cần làm tiếp theo
 
 - **Tasks (Sprint tiếp)**: Implement task management (board, list). Route `/workspaces/:id/projects/:projectId` tab Tasks hiện là placeholder.
 - **Join Request (user side)**: FE đã có `sendJoinRequest` + `cancelJoinRequest` nhưng chưa có UI trigger cho non-member. Cần thêm button "Request to Join" trong ProjectDetailPage khi currentUserRole là undefined.
+- **Notification — Join Request UI**: `WORKSPACE_JOIN_REQUEST` và `PROJECT_JOIN_REQUEST` notifications cần navigate đến tab Members/Requests tương ứng để manager review.
 - **Khi backend user API sẵn sàng**:
   - Thay mock data bằng `GET /users/me` (đã tích hợp sẵn trong `MainLayout` qua `useGetCurrentUserQuery`)
   - Submit `ProfilePage` (tab Info) qua `PUT /users/me` — logic đã có sẵn, chỉ cần backend up
