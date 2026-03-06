@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,6 +47,7 @@ export function EditProfilePage() {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<ProfileEditFormData>({
     resolver: zodResolver(profileEditSchema),
@@ -68,7 +70,6 @@ export function EditProfilePage() {
         bio: data.bio || undefined,
       };
 
-      console.log(selectedFile)
       // If user selected a new avatar, upload it to S3 first
       if (selectedFile) {
         try {
@@ -108,6 +109,19 @@ export function EditProfilePage() {
   };
 
   const isLoading = isUpdating || isUploadingAvatar;
+
+  // Reset form khi currentUser được load từ API (lúc mount có thể vẫn là null)
+  useEffect(() => {
+    if (user) {
+      reset({
+        fullName: user.fullName || "",
+        phone: user.phone || "",
+        gender: (user.gender as "MALE" | "FEMALE" | "OTHER") || undefined,
+        dob: user.dob ? user.dob.split("T")[0] : "",
+        bio: user.bio || "",
+      });
+    }
+  }, [user, reset]);
 
   return (
     <div className="min-h-screen bg-background px-4 py-8">

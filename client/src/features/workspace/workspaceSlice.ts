@@ -54,9 +54,16 @@ const workspaceSlice = createSlice({
       localStorage.setItem(PINNED_KEY, JSON.stringify(state.pinnedIds));
       localStorage.setItem(RECENT_KEY, JSON.stringify(state.recentIds));
     },
+
+    clearWorkspace(state) {
+      state.pinnedIds = [];
+      state.recentIds = [];
+      localStorage.removeItem(PINNED_KEY);
+      localStorage.removeItem(RECENT_KEY);
+    },
   },
 });
 
-export const { togglePin, addRecent, removeFromPinnedAndRecent } =
+export const { togglePin, addRecent, removeFromPinnedAndRecent, clearWorkspace } =
   workspaceSlice.actions;
 export default workspaceSlice.reducer;

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  AlertTriangle,
   Loader2,
   MoreHorizontal,
   UserPlus,
@@ -68,7 +69,7 @@ const ROLE_CONFIG: Record<
   },
 };
 
-const ROLES_FOR_CHANGE: WorkspaceRole[] = ["OWNER", "MANAGER", "MEMBER", "VIEWER"];
+const ROLES_FOR_CHANGE: WorkspaceRole[] = ["MANAGER", "MEMBER", "VIEWER"];
 
 // ─── Helper: avatar fallback ─────────────────────────────────────────────────
 function AvatarFallback({ name }: { name: string | null }) {
@@ -444,7 +445,7 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
       {/* ── Remove Confirmation Dialog ── */}
       <Dialog
         open={!!removeTarget}
-        onOpenChange={(open) => !open && setRemoveTarget(null)}
+        onOpenChange={(open) => !open && !isRemoving && setRemoveTarget(null)}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -454,9 +455,22 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
               <span className="font-medium text-foreground">
                 {removeTarget?.user.fullName ?? removeTarget?.user.email}
               </span>{" "}
-              from this workspace? They will lose access immediately.
+              from this workspace?
             </DialogDescription>
           </DialogHeader>
+
+          {/* Warning box */}
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-400">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="space-y-1">
+              <p className="font-medium">This action cannot be undone</p>
+              <p className="text-xs">
+                They will immediately lose access to this workspace and all its
+                projects. They can be re-invited later if needed.
+              </p>
+            </div>
+          </div>
+
           <DialogFooter>
             <Button
               variant="outline"

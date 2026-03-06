@@ -6,6 +6,7 @@ import dev.alro127.tasksense.dto.request.UpdateWorkspaceRoleRequest;
 import dev.alro127.tasksense.dto.response.WorkspaceMemberResponse;
 import dev.alro127.tasksense.exception.ConflictException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
+import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
 import dev.alro127.tasksense.service.WorkspaceMemberService;
@@ -22,6 +23,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
     @Override
     public List<WorkspaceMemberResponse> getWorkspaceMembers(Long workspaceId) {
@@ -34,11 +36,12 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
                 .map(WorkspaceMemberResponse::mapToResponse)
                 .toList();
     }
+
     @Override
     @Transactional
     public WorkspaceMemberResponse updateMemberRole(Long workspaceId,
-                                                    Long memberId,
-                                                    UpdateWorkspaceRoleRequest request) {
+            Long memberId,
+            UpdateWorkspaceRoleRequest request) {
 
         WorkspaceMemberEntity member = workspaceMemberRepository
                 .findByIdAndWorkspaceId(memberId, workspaceId)
@@ -46,15 +49,8 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
         WorkspaceRole newRole = request.getRole();
 
-        if (member.getRole() == WorkspaceRole.OWNER
-                && newRole != WorkspaceRole.OWNER) {
-
-            long ownerCount = workspaceMemberRepository
-                    .countByWorkspaceIdAndRole(workspaceId, WorkspaceRole.OWNER);
-
-            if (ownerCount <= 1) {
-                throw new ConflictException("Cannot downgrade the last workspace owner");
-            }
+        if (member.getRole() == WorkspaceRole.OWNER) {
+            throw new ConflictException("Workspace have only one owner");
         }
 
         member.setRole(newRole);
@@ -80,6 +76,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
             }
         }
 
+        projectMemberRepository.deleteByWorkspaceIdAndUserId(workspaceId, memberId);
         workspaceMemberRepository.delete(member);
     }
 }

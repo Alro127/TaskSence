@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -89,6 +90,20 @@ function ProfileInfoTab({ avatarState }: ProfileInfoTabProps) {
   const bioValue = watch("bio") || "";
   const hasUnsavedChanges = isDirty || !!selectedFile;
   const isLoading = isUpdating || isUploadingAvatar;
+
+  // Khi user data được load về từ API (currentUser đang null lúc mount),
+  // reset form với dữ liệu thực
+  useEffect(() => {
+    if (user) {
+      reset({
+        fullName: user.fullName || "",
+        phone: user.phone || "",
+        gender: (user.gender as "MALE" | "FEMALE" | "OTHER") || undefined,
+        dob: user.dob ? user.dob.split("T")[0] : "",
+        bio: user.bio || "",
+      });
+    }
+  }, [user, reset]);
 
   const onSubmit = async (data: ProfileEditFormData) => {
     try {

@@ -4,5 +4,6 @@ public enum MemberAddStatus {
     CREATED,
     RESTORED,
     ALREADY_EXISTS,
-    NOT_FOUND
+    NOT_FOUND,
+    NOT_IN_WORKSPACE
 }

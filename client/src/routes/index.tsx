@@ -17,6 +17,7 @@ import { DashboardPage } from "@/features/dashboard/pages";
 import { ProfilePage } from "@/features/user/pages";
 import { WorkspacesPage, WorkspaceDetailPage, WorkspaceInvitationPage } from "@/features/workspace/pages";
 import { TeamTemplatesPage, TeamTemplateDetailPage } from "@/features/team-template/pages";
+import { CreateProjectPage, ProjectDetailPage } from "@/features/project/pages";
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -91,6 +92,14 @@ const routes: RouteObject[] = [
       {
         path: "workspaces/:id",
         element: <WorkspaceDetailPage />,
+      },
+      {
+        path: "workspaces/:id/projects/new",
+        element: <CreateProjectPage />,
+      },
+      {
+        path: "workspaces/:id/projects/:projectId",
+        element: <ProjectDetailPage />,
       },
       {
         path: "team-templates",
