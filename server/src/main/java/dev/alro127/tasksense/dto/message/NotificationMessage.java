@@ -1,5 +1,6 @@
 package dev.alro127.tasksense.dto.message;
 
+import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.NotificationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,7 +19,7 @@ public class NotificationMessage {
     private Long actorId;
     private NotificationType type;
 
-    private String referenceType;
+    private EntityType referenceType;
     private Long referenceId;
 
     private Map<String, Object> payload;

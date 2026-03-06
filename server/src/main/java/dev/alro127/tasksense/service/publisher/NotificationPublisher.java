@@ -12,17 +12,14 @@ import org.springframework.stereotype.Service;
 public class NotificationPublisher {
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private final ObjectMapper objectMapper;
 
     public void publish(NotificationMessage message) {
 
         try {
 
-            String json = objectMapper.writeValueAsString(message);
-
             redisTemplate.convertAndSend(
                     RedisKeys.NOTIFICATION_CHANNEL,
-                    json
+                    message
             );
 
         } catch (Exception e) {

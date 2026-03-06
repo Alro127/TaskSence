@@ -301,3 +301,51 @@ export interface SendProjectJoinRequestBody {
 export interface ReviewProjectJoinRequestBody {
   status: "APPROVED" | "REJECTED";
 }
+
+// ─── Notification ────────────────────────────────────────────────────────────
+export type EntityType =
+  | "WORKSPACE"
+  | "PROJECT"
+  | "TASK"
+  | "INVITATION"
+  | "COMMENT";
+
+export type NotificationType =
+  | "TASK_ASSIGNED"
+  | "WORKSPACE_INVITE"
+  | "WORKSPACE_INVITE_ACCEPT"
+  | "WORKSPACE_JOIN_REQUEST"
+  | "WORKSPACE_REMOVE_MEMBER"
+  | "WORKSPACE_ROLE_CHANGE"
+  | "PROJECT_JOIN_REQUEST"
+  | "COMMENT_MENTION"
+  | "PROJECT_ROLE_UPDATED";
+
+export interface NotificationResponse {
+  id: number;
+  type: NotificationType;
+  actorId: number | null;
+  receiverId: number;
+  referenceType: EntityType | null;
+  referenceId: number | null;
+  payload: Record<string, unknown> | null;
+  read: boolean;
+  createdAt: string;
+}
+
+// Shape of real-time message pushed via WebSocket
+export interface NotificationSocketMessage {
+  id: number;
+  type: NotificationType;
+  actorId: number | null;
+  receiverId: number;
+  referenceType: EntityType | null;
+  referenceId: number | null;
+  payload: Record<string, unknown> | null;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface DeleteNotificationsRequest {
+  ids: number[];
+}

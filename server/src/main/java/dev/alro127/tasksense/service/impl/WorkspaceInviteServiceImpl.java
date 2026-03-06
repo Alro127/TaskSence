@@ -6,6 +6,7 @@ import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceInviteEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
 import dev.alro127.tasksense.domain.enums.EmailType;
+import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.InviteStatus;
 import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.dto.message.EmailMessage;
@@ -37,6 +38,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -99,6 +101,15 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
 
         workspaceInviteRepository.save(invite);
 
+        userRepository.findByEmail(invite.getEmail()).ifPresent(user -> notificationPublisher.publish(NotificationMessage.builder()
+                .receiverId(user.getId())
+                .actorId(currentUser.getId())
+                .type(NotificationType.WORKSPACE_INVITE)
+                .referenceType(EntityType.INVITATION)
+                .referenceId(workspaceId)
+                .payload(Map.of("referenceName", workspace.getName(), "sender", currentUser.getFullName(), "token", rawToken))
+                .build()));
+
         emailService.sendWorkspaceInviteEmail(request.getEmail(), rawToken);
 
         return WorkspaceInviteResponse.mapToResponse(invite);
@@ -159,10 +170,10 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
         notificationPublisher.publish(NotificationMessage.builder()
                 .receiverId(invite.getInvitedBy().getId())
                 .actorId(null)
-                .type(NotificationType.WORKSPACE_INVITE)
-                .referenceType("INVITATION")
-                .referenceId(member.getId())
-                .payload(null)
+                .type(NotificationType.WORKSPACE_INVITE_ACCEPT)
+                .referenceType(EntityType.WORKSPACE)
+                .referenceId(member.getWorkspace().getId())
+                .payload(Map.of("referenceName", member.getWorkspace().getName()))
                 .build());
 
         return WorkspaceInviteResponse.mapToResponse(invite);

@@ -1,5 +1,6 @@
 package dev.alro127.tasksense.domain.entity;
 
+import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.NotificationType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -32,7 +33,8 @@ public class NotificationEntity {
     @Enumerated(EnumType.STRING)
     private NotificationType type;
 
-    private String referenceType;
+    @Enumerated(EnumType.STRING)
+    private EntityType referenceType;
 
     private Long referenceId;
 
