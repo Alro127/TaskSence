@@ -1,7 +1,6 @@
 package dev.alro127.tasksense.config.database;
 
 import dev.alro127.tasksense.service.subcriber.EmailSubscriber;
-import dev.alro127.tasksense.service.subcriber.NotificationDbSubscriber;
 import dev.alro127.tasksense.service.subcriber.SocketSubscriber;
 import dev.alro127.tasksense.util.redis.RedisKeys;
 import lombok.RequiredArgsConstructor;
@@ -20,28 +19,7 @@ import tools.jackson.databind.ObjectMapper;
 public class RedisConfig {
 
     private final EmailSubscriber emailSubscriber;
-    private final NotificationDbSubscriber notificationDbSubscriber;
     private final SocketSubscriber socketSubscriber;
-
-//    @Bean
-//    public RedisTemplate<String, String> stringRedisTemplate(RedisConnectionFactory factory) {
-//
-//        RedisTemplate<String, String> template = new RedisTemplate<>();
-//
-//        template.setConnectionFactory(factory);
-//
-//        StringRedisSerializer serializer = new StringRedisSerializer();
-//
-//        template.setKeySerializer(serializer);
-//        template.setValueSerializer(serializer);
-//
-//        template.setHashKeySerializer(serializer);
-//        template.setHashValueSerializer(serializer);
-//
-//        template.afterPropertiesSet();
-//
-//        return template;
-//    }
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
@@ -83,11 +61,6 @@ public class RedisConfig {
         );
 
         // Notification channels
-        container.addMessageListener(
-                notificationDbSubscriber,
-                new ChannelTopic(RedisKeys.NOTIFICATION_CHANNEL)
-        );
-
         container.addMessageListener(
                 socketSubscriber,
                 new ChannelTopic(RedisKeys.NOTIFICATION_CHANNEL)

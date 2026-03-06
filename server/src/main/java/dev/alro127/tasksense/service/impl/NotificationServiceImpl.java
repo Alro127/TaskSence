@@ -1,11 +1,13 @@
 package dev.alro127.tasksense.service.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.alro127.tasksense.domain.entity.NotificationEntity;
+import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.dto.common.NotificationResponse;
+import dev.alro127.tasksense.dto.message.NotificationMessage;
+import dev.alro127.tasksense.repository.jpa.UserRepository;
 import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.SecurityService;
+import dev.alro127.tasksense.service.publisher.NotificationPublisher;
 import dev.alro127.tasksense.util.redis.RedisKeys;
 import dev.alro127.tasksense.repository.jpa.NotificationRepository;
 import jakarta.transaction.Transactional;
@@ -14,9 +16,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -25,8 +27,9 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository repository;
     private final RedisTemplate<String, Object> redisTemplate;
-    private final ObjectMapper objectMapper;
+    private final UserRepository userRepository;
     private final SecurityService securityService;
+    private final NotificationPublisher notificationPublisher;
 
     @Override
     public List<NotificationResponse> getMyNotifications(Long cursor, int limit) {
@@ -80,7 +83,9 @@ public class NotificationServiceImpl implements NotificationService {
 
         long count = repository.countByReceiverIdAndReadAtIsNull(userId);
 
-        redisTemplate.opsForValue().set(key, count);
+        System.out.println("unread count:" + count);
+
+        redisTemplate.opsForValue().set(key, count, Duration.ofHours(1));
 
         return count;
     }
@@ -113,6 +118,11 @@ public class NotificationServiceImpl implements NotificationService {
 
         redisTemplate.delete(RedisKeys.recent(userId));
 
+        redisTemplate.opsForValue().set(
+                RedisKeys.unreadCount(userId),
+                0
+        );
+
         return updated;
     }
 
@@ -138,5 +148,33 @@ public class NotificationServiceImpl implements NotificationService {
         redisTemplate.delete(RedisKeys.recent(userId));
 
         return deleted;
+    }
+
+    @Transactional
+    @Override
+    public void saveAndPublic(NotificationMessage message) {
+
+        UserEntity receiver = userRepository.findById(message.getReceiverId()).orElse(null);
+
+        if (receiver == null) {
+            System.out.println("Receiver is null");
+            return;
+        }
+
+        NotificationEntity entity = NotificationEntity.builder()
+                .receiver(receiver)
+                .actorId(message.getActorId())
+                .type(message.getType())
+                .referenceType(message.getReferenceType())
+                .referenceId(message.getReferenceId())
+                .payload(message.getPayload())
+                .build();
+
+        NotificationEntity saved = repository.save(entity);
+
+        message.setId(saved.getId());
+        message.setReceiverEmail(receiver.getEmail());
+
+        notificationPublisher.publish(message);
     }
 }

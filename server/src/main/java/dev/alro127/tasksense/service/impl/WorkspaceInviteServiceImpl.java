@@ -1,15 +1,12 @@
 package dev.alro127.tasksense.service.impl;
 
-import dev.alro127.tasksense.config.common.AppConfig;
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceInviteEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
-import dev.alro127.tasksense.domain.enums.EmailType;
 import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.InviteStatus;
 import dev.alro127.tasksense.domain.enums.NotificationType;
-import dev.alro127.tasksense.dto.message.EmailMessage;
 import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.dto.request.CreateBulkWorkspaceInviteRequest;
 import dev.alro127.tasksense.dto.request.BulkInviteItemRequest;
@@ -25,15 +22,12 @@ import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
 import dev.alro127.tasksense.security.hash.TokenHasher;
 import dev.alro127.tasksense.security.token.TokenProvider;
 import dev.alro127.tasksense.service.EmailService;
+import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.WorkspaceInviteService;
-import dev.alro127.tasksense.service.publisher.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.ObjectMapper;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -52,7 +46,7 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
     private final TokenProvider tokenProvider;
     private final TokenHasher tokenHasher;
     private final EmailService emailService;
-    private final NotificationPublisher notificationPublisher;
+    private final NotificationService notificationService;
 
 
     @Override
@@ -101,7 +95,7 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
 
         workspaceInviteRepository.save(invite);
 
-        userRepository.findByEmail(invite.getEmail()).ifPresent(user -> notificationPublisher.publish(NotificationMessage.builder()
+        userRepository.findByEmail(invite.getEmail()).ifPresent(user -> notificationService.saveAndPublic(NotificationMessage.builder()
                 .receiverId(user.getId())
                 .actorId(currentUser.getId())
                 .type(NotificationType.WORKSPACE_INVITE)
@@ -167,14 +161,16 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
         invite.setStatus(InviteStatus.ACCEPTED);
         invite.setAcceptedAt(OffsetDateTime.now());
 
-        notificationPublisher.publish(NotificationMessage.builder()
+        NotificationMessage message = NotificationMessage.builder()
                 .receiverId(invite.getInvitedBy().getId())
                 .actorId(null)
                 .type(NotificationType.WORKSPACE_INVITE_ACCEPT)
                 .referenceType(EntityType.WORKSPACE)
                 .referenceId(member.getWorkspace().getId())
                 .payload(Map.of("referenceName", member.getWorkspace().getName()))
-                .build());
+                .build();
+
+        notificationService.saveAndPublic(message);
 
         return WorkspaceInviteResponse.mapToResponse(invite);
     }

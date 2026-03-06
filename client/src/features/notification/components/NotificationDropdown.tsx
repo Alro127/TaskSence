@@ -43,10 +43,9 @@ export function NotificationDropdown() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  // Get initial unread count from server and sync to Redux
-  const { data: unreadData } = useGetUnreadCountQuery(undefined, {
-    pollingInterval: 60000, // fallback poll every 60s
-  });
+  // Fetch once on mount (= on login, since NotificationDropdown lives inside MainLayout).
+  // Refetched automatically when socket pushes a new notification via invalidateTags(["UnreadCount"]).
+  const { data: unreadData } = useGetUnreadCountQuery(undefined);
 
   useEffect(() => {
     if (unreadData?.data !== undefined) {
@@ -204,12 +203,12 @@ export function NotificationDropdown() {
       >
         <Bell
           className={cn(
-            "h-5 w-5",
-            bellAnimating && "animate-[shake_0.5s_ease-in-out]"
+            "h-5 w-5 transition-colors",
+            bellAnimating && "bell-shake text-primary"
           )}
         />
         {displayCount && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">
+          <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow">
             {displayCount}
           </span>
         )}

@@ -1,6 +1,5 @@
 package dev.alro127.tasksense.service.publisher;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.util.redis.RedisKeys;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +20,11 @@ public class NotificationPublisher {
                     RedisKeys.NOTIFICATION_CHANNEL,
                     message
             );
+
+            if (message.getReceiverId() != null) {
+                redisTemplate.opsForValue()
+                        .increment(RedisKeys.unreadCount(message.getReceiverId()));
+            }
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to publish notification", e);
