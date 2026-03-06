@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import {
+  ArrowRightLeft,
   ChevronRight,
   ListTodo,
   Loader2,
@@ -22,14 +23,22 @@ import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import type { JoinRequestStatus, ProjectJoinRequest } from "@/types/api";
+import type { JoinRequestStatus, ProjectJoinRequest, ProjectMember } from "@/types/api";
 
 import { useGetProjectByIdQuery, useGetCurrentUserRoleQuery } from "../api/projectApi";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
-import { useGetMembersQuery } from "../api/projectMemberApi";
+import { useGetMembersQuery, useUpdateMemberRoleMutation } from "../api/projectMemberApi";
 import { useGetJoinRequestsQuery, useReviewJoinRequestMutation } from "../api/projectJoinRequestApi";
 import {
   DeleteProjectDialog,
@@ -157,6 +166,114 @@ function JoinRequestItem({
   );
 }
 
+// ─── Transfer Manager Dialog ─────────────────────────────────────────────────
+function TransferManagerDialog({
+  open,
+  onOpenChange,
+  projectId,
+  sourceManagerId,
+  members,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  projectId: number;
+  sourceManagerId: number | null;
+  members: ProjectMember[];
+}) {
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [updateRole, { isLoading }] = useUpdateMemberRoleMutation();
+
+  const candidates = members.filter((m) => m.role !== "MANAGER");
+
+  const handleClose = () => {
+    setSelectedUserId(null);
+    onOpenChange(false);
+  };
+
+  const handleTransfer = async () => {
+    if (!selectedUserId || !sourceManagerId) return;
+    try {
+      await updateRole({ projectId, userId: selectedUserId, role: "MANAGER" }).unwrap();
+      await updateRole({ projectId, userId: sourceManagerId, role: "MEMBER" }).unwrap();
+      toast.success("Manager role transferred successfully.");
+      handleClose();
+      window.location.reload();
+    } catch {
+      toast.error("Failed to transfer manager role.");
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !isLoading && !o && handleClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Transfer Manager Role</DialogTitle>
+          <DialogDescription>
+            Select a member to become the new project manager. The current manager will be moved to Member role.
+          </DialogDescription>
+        </DialogHeader>
+
+        {candidates.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-6 text-center">
+            <Users className="h-8 w-8 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">No other members to transfer to.</p>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            {candidates.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setSelectedUserId(m.user.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-colors",
+                  selectedUserId === m.user.id
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-muted/50",
+                )}
+              >
+                {m.user.avatarUrl ? (
+                  <img
+                    src={m.user.avatarUrl}
+                    alt={m.user.fullName ?? m.user.email}
+                    className="h-8 w-8 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                    {(m.user.fullName ?? m.user.email).charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{m.user.fullName ?? "—"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{m.user.email}</p>
+                </div>
+                <Badge variant="secondary" className="text-xs shrink-0">
+                  {ROLE_LABEL[m.role]}
+                </Badge>
+                {selectedUserId === m.user.id && (
+                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button disabled={!selectedUserId || isLoading} onClick={handleTransfer}>
+            {isLoading && (
+              <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            )}
+            <ArrowRightLeft className="mr-2 h-4 w-4" />
+            Transfer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Main Page ──────────────────────────────────────────────────────────────────
 export function ProjectDetailPage() {
   const { id: workspaceIdStr, projectId: projectIdStr } = useParams<{
@@ -208,6 +325,8 @@ export function ProjectDetailPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
+  const [isTransferManagerOpen, setIsTransferManagerOpen] = useState(false);
+  const [transferSourceId, setTransferSourceId] = useState<number | null>(null);
 
   // ── Loading ──
   if (isProjectLoading) {
@@ -492,6 +611,10 @@ export function ProjectDetailPage() {
                   member={member}
                   canManage={isManager}
                   currentUserId={currentUserId}
+                  onTransferManager={(managerId) => {
+                    setTransferSourceId(managerId);
+                    setIsTransferManagerOpen(true);
+                  }}
                 />
               ))}
             </div>
@@ -565,6 +688,14 @@ export function ProjectDetailPage() {
         projectId={projectId}
         workspaceId={workspaceId}
         onMembersAdded={() => setIsAddMembersOpen(false)}
+      />
+
+      <TransferManagerDialog
+        open={isTransferManagerOpen}
+        onOpenChange={setIsTransferManagerOpen}
+        projectId={projectId}
+        sourceManagerId={transferSourceId}
+        members={members}
       />
     </div>
   );

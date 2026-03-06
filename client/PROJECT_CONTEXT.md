@@ -1,6 +1,7 @@
 # TaskSense - Frontend Project Context
 
 > File này dùng để giữ context cho AI và developers. Cập nhật sau mỗi sprint/thay đổi lớn.
+> **Cập nhật lần cuối**: Sprint 7 - Project CRUD & Member Management
 
 ## 📋 Thông tin dự án
 
@@ -29,6 +30,8 @@
 - **User Endpoints**:
   - `GET /users/me` → lấy thông tin user hiện tại
   - `PUT /users/me` → body: `{fullName?, phone?, gender?, dob?, bio?, avatarUrl?}` → update full profile (support avatar)
+  - `GET /users/:id` → lấy thông tin đầy đủ của user khác (dùng cho UserProfileDrawer)
+  - `GET /users/search?keyword=...` → tìm kiếm user theo tên/email → `UserSearchResult[]`
 - **Workspace Endpoints**:
   - `POST /workspaces` → body: `{name, description?}` → `WorkspaceResponse`
   - `GET /workspaces` → danh sách workspace của current user
@@ -51,6 +54,23 @@
   - `POST /users/me/skills` → body: `{skillName, level (1-5)}` → `UserSkillResponse`
   - `PUT /users/me/skills/:skillId` → body: `{skillName, level}` → `UserSkillResponse`
   - `DELETE /users/me/skills/:skillId` → xóa skill
+- **Project Endpoints**:
+  - `GET /workspaces/:workspaceId/projects` → danh sách projects trong workspace → `Project[]`
+  - `GET /workspaces/:workspaceId/projects/:projectId` → chi tiết project → `Project`
+  - `POST /workspaces/:workspaceId/projects` → body: `{name, description?, status?, startDate?, endDate?}` → `Project`
+  - `PUT /workspaces/:workspaceId/projects/:projectId` → body: `UpdateProjectRequest` → `Project`
+  - `DELETE /workspaces/:workspaceId/projects/:projectId` → xóa project
+  - `GET /projects/:projectId/members/me/role` → lấy role của current user trong project → `ProjectMemberRole`
+- **Project Member Endpoints**:
+  - `GET /projects/:projectId/members` → danh sách members (embed `UserSummaryResponse`) → `ProjectMember[]`
+  - `POST /projects/:projectId/members` → body: `{members: [{userId, role}]}` → `AddProjectMemberResultItem[]`
+  - `PATCH /projects/:projectId/members/:userId/role` → body: `{role}` → `ProjectMember`
+  - `DELETE /projects/:projectId/members/:userId` → xóa member
+- **Project Join Request Endpoints**:
+  - `POST /projects/:projectId/join-requests` → body: `{message?}` → `ProjectJoinRequest`
+  - `GET /projects/:projectId/join-requests` → danh sách join requests → `ProjectJoinRequest[]`
+  - `PATCH /projects/:projectId/join-requests/:requestId/review` → body: `{status: "APPROVED"|"REJECTED"}` → `ProjectJoinRequest`
+  - `DELETE /projects/:projectId/join-requests/:requestId` → huỷ join request
 - **API Response format**: `{code: string, message: string, data: T}`
 - **CORS allowed**: `http://localhost:5173`
 - **JWT**: Access Token + Refresh Token
@@ -62,7 +82,7 @@
 client/
 ├── src/
 │   ├── app/
-│   │   ├── store.ts          ← Đã thêm workspaceApi + workspaceReducer + userSkillApi
+│   │   ├── store.ts          ← Đã thêm projectApi + projectMemberApi + projectJoinRequestApi
 │   │   └── hooks.ts
 │   ├── components/
 │   │   ├── ui/               ← Đã thêm: dialog, dropdown-menu, tabs, badge, sheet
@@ -73,52 +93,72 @@ client/
 │   │   │   ├── pages/
 │   │   │   └── authSlice.ts
 │   │   ├── dashboard/
-│   │   │   └── pages/DashboardPage.tsx   ← Đã thêm WorkspaceSection
+│   │   │   └── pages/DashboardPage.tsx
 │   │   ├── user/
 │   │   │   ├── api/
 │   │   │   │   ├── userApi.ts             ← getUserById trả về ApiResponse<User> (đầy đủ fields)
-│   │   │   │   └── userSkillApi.ts       ← RTK Query CRUD cho skills
+│   │   │   │   └── userSkillApi.ts        ← RTK Query CRUD cho skills
 │   │   │   ├── components/
 │   │   │   │   ├── AvatarUpload.tsx
-│   │   │   │   ├── SkillStars.tsx        ← ★ Star rating (display + interactive)
-│   │   │   │   ├── SkillsSection.tsx     ← Skills tab: list + inline add/edit
+│   │   │   │   ├── SkillStars.tsx         ← ★ Star rating (display + interactive)
+│   │   │   │   ├── SkillsSection.tsx      ← Skills tab: list + inline add/edit
 │   │   │   │   ├── UserProfileCard.tsx
-│   │   │   │   └── UserProfileDrawer.tsx ← Sheet xem profile người khác (view-only)
+│   │   │   │   └── UserProfileDrawer.tsx  ← Sheet xem profile người khác (view-only)
 │   │   │   ├── hooks/
 │   │   │   │   └── useAvatarUpload.ts
 │   │   │   ├── pages/
-│   │   │   │   ├── EditProfilePage.tsx   ← Giữ lại, /dashboard/edit-profile redirect → /profile
-│   │   │   │   └── ProfilePage.tsx       ← /profile (2 tabs: Info + Skills)
+│   │   │   │   ├── EditProfilePage.tsx    ← Redirect về /profile (backward compat)
+│   │   │   │   └── ProfilePage.tsx        ← /profile (2 tabs: Info + Skills)
 │   │   │   └── userSlice.ts
-│   │   └── workspace/                    ← NEW FEATURE
-│   │       ├── api/workspaceApi.ts       ← RTK Query CRUD endpoints
-│   │       ├── workspaceSlice.ts         ← pinnedIds + recentIds (localStorage)
-│   │       ├── components/
-│   │       │   ├── WorkspaceCard.tsx     ← Card với pin toggle + 3-dot menu
-│   │       │   ├── WorkspaceCardGhost.tsx ← Ghost "New Workspace" card
-│   │       │   ├── CreateWorkspaceModal.tsx
-│   │       │   ├── EditWorkspaceModal.tsx
-│   │       │   ├── DeleteWorkspaceDialog.tsx ← Type-to-confirm
-│   │       │   ├── InviteMemberModal.tsx ← Invite single (kept for reference)
-│   │       │   ├── BulkInviteModal.tsx   ← Bulk invite: search + email + template import
-│   │       │   ├── WorkspaceMembersTab.tsx ← Members + Pending Invites
-│   │       │   └── index.ts
-│   │       └── pages/
-│   │           ├── WorkspacesPage.tsx    ← /workspaces
-│   │           ├── WorkspaceDetailPage.tsx ← /workspaces/:id
-│   │           ├── WorkspaceInvitationPage.tsx ← /workspaces/invitation?token=...
-│   │           └── index.ts
-│   │   └── team-template/                ← Sprint 5
+│   │   ├── workspace/
+│   │   │   ├── api/
+│   │   │   │   ├── workspaceApi.ts        ← RTK Query CRUD endpoints
+│   │   │   │   ├── workspaceMemberApi.ts  ← RTK Query member management
+│   │   │   │   └── workspaceInviteApi.ts  ← RTK Query invite management
+│   │   │   ├── workspaceSlice.ts          ← pinnedIds + recentIds (localStorage)
+│   │   │   ├── components/
+│   │   │   │   ├── WorkspaceCard.tsx
+│   │   │   │   ├── WorkspaceCardGhost.tsx
+│   │   │   │   ├── CreateWorkspaceModal.tsx
+│   │   │   │   ├── EditWorkspaceModal.tsx
+│   │   │   │   ├── DeleteWorkspaceDialog.tsx ← Type-to-confirm
+│   │   │   │   ├── InviteMemberModal.tsx  ← Single invite (kept, replaced by BulkInviteModal)
+│   │   │   │   ├── BulkInviteModal.tsx    ← Bulk invite: search + email + template import
+│   │   │   │   ├── WorkspaceMembersTab.tsx← Members + Pending Invites
+│   │   │   │   └── index.ts
+│   │   │   └── pages/
+│   │   │       ├── WorkspacesPage.tsx     ← /workspaces
+│   │   │       ├── WorkspaceDetailPage.tsx← /workspaces/:id (Projects tab dùng real API)
+│   │   │       ├── WorkspaceInvitationPage.tsx ← /workspaces/invitation?token=...
+│   │   │       └── index.ts
+│   │   ├── project/                       ← Sprint 7 — HOÀN THÀNH
+│   │   │   ├── api/
+│   │   │   │   ├── projectApi.ts          ← RTK Query CRUD + getCurrentUserRole
+│   │   │   │   ├── projectMemberApi.ts    ← RTK Query member management
+│   │   │   │   └── projectJoinRequestApi.ts ← RTK Query join request management
+│   │   │   ├── components/
+│   │   │   │   ├── ProjectCard.tsx        ← Card + STATUS_CONFIG + ROLE_LABEL exports
+│   │   │   │   ├── ProjectCardGhost.tsx   ← Ghost "New Project" card
+│   │   │   │   ├── EditProjectModal.tsx   ← Edit project dialog (name, desc, status, dates)
+│   │   │   │   ├── DeleteProjectDialog.tsx← Type-to-confirm delete
+│   │   │   │   ├── MemberCard.tsx         ← Member card với role badge + change role/remove
+│   │   │   │   ├── AddMembersModal.tsx    ← Thêm member từ workspace members list
+│   │   │   │   └── index.ts
+│   │   │   └── pages/
+│   │   │       ├── CreateProjectPage.tsx  ← /workspaces/:id/projects/new (full form)
+│   │   │       ├── ProjectDetailPage.tsx  ← /workspaces/:id/projects/:projectId (4 tabs)
+│   │   │       └── index.ts
+│   │   └── team-template/
 │   │       ├── api/
-│   │       │   ├── teamTemplateApi.ts    ← RTK Query CRUD
-│   │       │   └── teamMemberTemplateApi.ts ← RTK Query members
+│   │       │   ├── teamTemplateApi.ts     ← RTK Query CRUD
+│   │       │   └── teamMemberTemplateApi.ts← RTK Query members
 │   │       ├── components/
 │   │       │   ├── TeamTemplateCard.tsx
 │   │       │   ├── TeamTemplateCardGhost.tsx
 │   │       │   ├── CreateTeamTemplateModal.tsx
 │   │       │   ├── EditTeamTemplateModal.tsx
 │   │       │   ├── DeleteTeamTemplateDialog.tsx ← Type-to-confirm
-│   │       │   ├── AddMembersModal.tsx   ← Search + batch add
+│   │       │   ├── AddMembersModal.tsx    ← Search + batch add
 │   │       │   └── index.ts
 │   │       └── pages/
 │   │           ├── TeamTemplatesPage.tsx  ← /team-templates
@@ -126,11 +166,10 @@ client/
 │   │           └── index.ts
 │   ├── layouts/
 │   │   ├── AuthLayout.tsx
-│   │   └── MainLayout.tsx    ← Sidebar "Profile" trỏ sang /profile; "Team Templates" → /team-templates
-│   ├── routes/index.tsx      ← /profile (ProfilePage), /team-templates, /team-templates/:id
-│   ├── types/api.ts          ← Đã thêm Workspace, TeamTemplate, TeamMemberTemplate,
-│   │                            AddTeamMemberResultItem, MemberAddStatus, UserSearchResult,
-│   │                            UserSkill, UserSkillRequest
+│   │   └── MainLayout.tsx    ← Sidebar với 8 nav items; profile drawer từ header
+│   ├── routes/index.tsx      ← Đã thêm /workspaces/:id/projects/new + /workspaces/:id/projects/:projectId
+│   ├── types/api.ts          ← Đầy đủ tất cả types: Auth, User, Workspace, WorkspaceMember/Invite,
+   │                            TeamTemplate, Project, ProjectMember, ProjectJoinRequest, UserSkill, etc.
 │   ├── App.tsx
 │   ├── main.tsx
 │   └── index.css
@@ -291,18 +330,6 @@ client/
 - ✅ Cập nhật **routes** thêm `/team-templates` và `/team-templates/:id`
 - ✅ Cập nhật **Sidebar** thêm mục "Team Templates" (`Users` icon)
 
-### Sprint 5.1 - View Member Profile ✅ COMPLETED
-
-- ✅ **UserProfileDrawer** (`features/user/components/UserProfileDrawer.tsx`) — Sheet read-only xem thông tin người dùng khác:
-  - Props: `userId: number | null`, `open: boolean`, `onClose: () => void`
-  - Fetch `GET /users/:id` (RTK Query `useGetUserByIdQuery` với skip khi `userId` null)
-  - 2 tabs: **Info** (bio, email, phone, gender, dob) + **Skills** (reuse `<SkillsSection userId={...} />`)
-  - Loading/error states
-- ✅ **getUserById** type fix: từ `ApiResponse<UserSearchResult>` → `ApiResponse<User>` (đầy đủ fields: bio, phone, gender, dob)
-- ✅ **MembersTab** — click avatar hoặc tên → mở `UserProfileDrawer`; hiển thị `avatarUrl` thực nếu có
-- ✅ **AddMembersModal** — tách mỗi row search results thành 2 zone: click tên/avatar → mở `UserProfileDrawer`; click nút `+` → thêm vào selection chips
-- ✅ Cài thêm **shadcn/ui**: `sheet`
-
 #### Backend API — Team Template
 
 | Method   | Endpoint                              | Mô tả                                          |
@@ -316,11 +343,109 @@ client/
 | `POST`   | `/team-templates/:id/members/batch`   | Thêm nhiều member cùng lúc                     |
 | `DELETE` | `/team-templates/:id/members/:userId` | Xóa member khỏi template                       |
 
+### Sprint 5.1 - View Member Profile ✅ COMPLETED
+
+- ✅ **UserProfileDrawer** (`features/user/components/UserProfileDrawer.tsx`) — Sheet read-only xem thông tin người dùng khác:
+  - Props: `userId: number | null`, `open: boolean`, `onClose: () => void`
+  - Fetch `GET /users/:id` (RTK Query `useGetUserByIdQuery` với skip khi `userId` null)
+  - 2 tabs: **Info** (bio, email, phone, gender, dob) + **Skills** (reuse `<SkillsSection userId={...} />`)
+  - Loading/error states
+- ✅ **getUserById** type fix: từ `ApiResponse<UserSearchResult>` → `ApiResponse<User>` (đầy đủ fields: bio, phone, gender, dob)
+- ✅ **MembersTab** — click avatar hoặc tên → mở `UserProfileDrawer`; hiển thị `avatarUrl` thực nếu có
+- ✅ **AddMembersModal** — tách mỗi row search results thành 2 zone: click tên/avatar → mở `UserProfileDrawer`; click nút `+` → thêm vào selection chips
+- ✅ Cài thêm **shadcn/ui**: `sheet`
+
+### Sprint 7 - Project CRUD & Member Management ✅ COMPLETED
+
+- ✅ **Types** — thêm vào `types/api.ts`:
+  - `ProjectStatus` type: `'ACTIVE' | 'COMPLETED' | 'ARCHIVED' | 'ON_HOLD'`
+  - `ProjectMemberRole` type: `'MANAGER' | 'MEMBER' | 'VIEWER'`
+  - `ProjectMemberAddStatus` type: `'CREATED' | 'RESTORED' | 'ALREADY_EXISTS' | 'NOT_FOUND'`
+  - `JoinRequestStatus` type: `'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'`
+  - `Project` — `id, workspaceId, name, description, status, startDate, endDate, createdAt, updatedAt`
+  - `CreateProjectRequest`, `UpdateProjectRequest`
+  - `ProjectMember` — embed `UserSummaryResponse`, có `role`, `projectId`, `createdAt`
+  - `ProjectMemberItem`, `AddProjectMemberRequest`, `AddProjectMemberResultItem`
+  - `UpdateProjectMemberRoleRequest`
+  - `ProjectJoinRequest` — `user, status, message, reviewedBy, reviewedAt, createdAt`
+  - `SendProjectJoinRequestBody`, `ReviewProjectJoinRequestBody`
+- ✅ **projectApi** — RTK Query với 6 endpoints:
+  - `getProjectsByWorkspace` — tag `Project:WORKSPACE_{id}`
+  - `getProjectById` — tag `Project:{id}`
+  - `createProject`, `updateProject`, `deleteProject` — invalidate workspace tag
+  - `getCurrentUserRole` — `GET /projects/:id/members/me/role` → `ProjectMemberRole`
+- ✅ **projectMemberApi** — RTK Query với 4 endpoints: `getMembers`, `addMembers`, `updateMemberRole`, `removeMember`
+- ✅ **projectJoinRequestApi** — RTK Query với 4 endpoints: `sendJoinRequest`, `getJoinRequests`, `reviewJoinRequest`, `cancelJoinRequest`
+- ✅ **WorkspaceDetailPage** — Projects tab thay MOCK_PROJECTS bằng real API (`useGetProjectsByWorkspaceQuery`):
+  - Grid lưới `ProjectCard` + `ProjectCardGhost` (navigate → CreateProjectPage)
+  - Summary: số active / completed / archived
+  - Loading state với spinner
+- ✅ **ProjectCard** (`features/project/components/ProjectCard.tsx`):
+  - Hiển thị: name, description (line-clamp-2), status badge (color-coded), member count, due date
+  - Click card → navigate `/workspaces/:id/projects/:projectId` (với `state.workspaceName`)
+  - 3-dot menu (chỉ MANAGER): Edit + Delete
+  - `STATUS_CONFIG` và `ROLE_LABEL` được export để dùng ở các nơi khác
+- ✅ **ProjectCardGhost** — ghost card navigate đến `/workspaces/:id/projects/new`
+- ✅ **CreateProjectPage** (`/workspaces/:id/projects/new`):
+  - Breadcrumb: `Workspaces > [name] > New Project`
+  - Form (RHF + Zod): Name (required), Description (optional), Status (select, default ACTIVE), Start Date, End Date
+  - Submit → `POST /workspaces/:id/projects` → navigate sang ProjectDetailPage
+- ✅ **ProjectDetailPage** (`/workspaces/:id/projects/:projectId`) — 4 tabs:
+  - **Overview tab**: Project info card (status, members count, start/end date, description). Edit button cho MANAGER.
+  - **Tasks tab**: Placeholder UI (dành cho sprint sau)
+  - **Members tab**: Grid `MemberCard` component. "Add Members" button cho MANAGER.
+  - **Join Requests tab** (chỉ MANAGER thấy): list `JoinRequestItem` với Approve/Reject actions. Badge hiện pending count.
+  - Header: Project name + status badge + description + current user role. Edit/Delete button cho MANAGER.
+  - Breadcrumb: `Workspaces > [workspaceName] > [projectName]`. `workspaceName` lấy từ `location.state` (truyền từ ProjectCard navigate) hoặc gọi API nếu không có.
+- ✅ **EditProjectModal** — Dialog edit project (name, desc, status, startDate, endDate). pre-fill + isDirty guard.
+- ✅ **DeleteProjectDialog** — type-to-confirm (gõ tên project). navigate về workspace sau khi xóa.
+- ✅ **MemberCard** (`features/project/components/MemberCard.tsx`):
+  - Card dọc (grid layout): avatar, name + email, role badge (crown/user/eye icon)
+  - Hover → 3-dot menu (chỉ khi `canManage && !isSelf`): Change Role submenu + Remove
+  - Remove → mở confirmation Dialog (khác với WorkspaceMembersTab dùng inline confirm)
+- ✅ **AddMembersModal** (`features/project/components/AddMembersModal.tsx`):
+  - Nguồn thêm member: **members của workspace** (không phải search toàn hệ thống)
+  - Filter out những người đã là project member
+  - Search/filter theo tên hoặc email trong danh sách workspace members
+  - Chọn role per-user (inline Select), hoặc default role áp dụng cho tất cả
+  - Batch submit → `POST /projects/:id/members` → hiển thị kết quả (CREATED / RESTORED / ALREADY_EXISTS)
+- ✅ **JoinRequestItem** (inline component trong ProjectDetailPage):
+  - Hiển thị: avatar, name, email, status badge, message, timestamp
+  - PENDING + canReview → Approve / Reject buttons
+- ✅ Cập nhật **store.ts**: thêm `projectApi`, `projectMemberApi`, `projectJoinRequestApi`
+- ✅ Cập nhật **routes**: thêm `/workspaces/:id/projects/new` và `/workspaces/:id/projects/:projectId`
+
+## 🗺️ Routes hiện tại
+
+| Path                                  | Component                 | Ghi chú                               |
+| ------------------------------------- | ------------------------- | ------------------------------------- |
+| `/`                                   | → `/dashboard`            | redirect                              |
+| `/auth/login`                         | `LoginPage`               | trong `AuthLayout`                    |
+| `/auth/register`                      | `RegisterPage`            |                                       |
+| `/auth/verify-otp`                    | `VerifyOtpPage`           |                                       |
+| `/auth/forgot-password`               | `ForgotPasswordPage`      |                                       |
+| `/auth/reset-password`                | `ResetPasswordPage`       |                                       |
+| `/dashboard`                          | `DashboardPage`           | trong `MainLayout`                    |
+| `/dashboard/edit-profile`             | → `/profile`              | redirect (backward compat)            |
+| `/profile`                            | `ProfilePage`             | 2 tabs: Info + Skills                 |
+| `/workspaces`                         | `WorkspacesPage`          | Pinned / Recent / All                 |
+| `/workspaces/invitation`              | `WorkspaceInvitationPage` | **phải đứng trước `:id`**             |
+| `/workspaces/:id`                     | `WorkspaceDetailPage`     | 3 tabs: Projects / Members / Settings |
+| `/workspaces/:id/projects/new`        | `CreateProjectPage`       |                                       |
+| `/workspaces/:id/projects/:projectId` | `ProjectDetailPage`       | 4 tabs                                |
+| `/team-templates`                     | `TeamTemplatesPage`       |                                       |
+| `/team-templates/:id`                 | `TeamTemplateDetailPage`  | 2 tabs: Members + Settings            |
+| `/tasks`                              | `PlaceholderPage`         | mock                                  |
+| `/calendar`                           | `PlaceholderPage`         | mock                                  |
+| `/analytics`                          | `PlaceholderPage`         | mock                                  |
+| `/settings`                           | `PlaceholderPage`         | mock                                  |
+| `*`                                   | → `/auth/login`           | catch-all                             |
+
 ## 📝 Quyết định thiết kế hiện tại
 
 1. **Ưu tiên trang chủ sau login**: tập trung task board, không hiển thị profile trực tiếp trong dashboard body.
 2. **Profile access**: mở bằng **drawer bên phải** từ avatar/header.
-3. **Sidebar**: hiển thị icon + label (Dashboard, My Tasks, Calendar, Analytics, Profile, Settings).
+3. **Sidebar**: hiển thị icon + label — Dashboard, Workspaces, Team Templates, My Tasks, Calendar, Analytics, Profile, Settings.
 4. **Profile page** (`/profile`):
    - 2 tabs: **Info** và **Skills**
    - Route cũ `/dashboard/edit-profile` redirect sang `/profile` để backward compat
@@ -328,23 +453,6 @@ client/
 5. **Profile fields** (tab Info):
    - Read-only: `email`
    - Editable: `fullName`, `phone`, `gender`, `dob`, `bio`
-   - **Avatar upload** (UPDATED):
-     - Vị trí: tab Info trong ProfilePage (phía trên các field khác)
-     - Preview: square 1:1 aspect ratio (centered, rounded-lg)
-     - Max file size: 5MB
-     - Allowed formats: JPG, PNG, WebP
-     - UX Flow:
-       1. User nhấn "Choose Image" → select file
-       2. Validate file (size, type) + create preview
-       3. Preview hiển thị, có nút "Choose Different" để đổi ảnh hoặc "X" để cancel
-       4. User nhấn "Save Changes" (form button) → check nếu có avatar selected
-       5. Nếu có avatar: gọi `POST /media/presign/avatar` để lấy presigned URL
-       6. Upload file trực tiếp lên S3 sử dụng presigned URL
-       7. Lấy `fileUrl` từ response
-       8. Gắn `avatarUrl: fileUrl` vào request payload update profile
-       9. Gọi `PUT /users/me` với full profile data (có avatarUrl)
-       10. Redux invalidates "User" tag + UI update reflect changes
-       11. Preview cleared, toast success
 6. **Profile data hiện tại**: dùng mock data trong `userSlice` đến khi backend sẵn sàng.
 7. **Skills design**:
    - **Level display**: ★ star rating (1–5 sao màu amber). Kèm label text bên phải (Beginner / Elementary / Intermediate / Advanced / Expert).
@@ -360,10 +468,19 @@ client/
 9. **Workspace Detail** (`/workspaces/:id`):
    - Breadcrumb: `Workspaces > [name]`.
    - 3 tabs: Projects / Members / Settings.
-   - **Projects tab**: hiện mock data (`MOCK_PROJECTS` constant trong file). Khi backend Project API sẵn sàng thì thay bằng RTK Query.
-   - **Settings tab**: form chỉnh sửa inline (không navigate sang trang khác). Nút Save chỉ enable khi `isDirty`. Danger Zone có nút Delete mở `DeleteWorkspaceDialog`.
+   - **Projects tab**: dùng real API (`useGetProjectsByWorkspaceQuery`). Ghost card → `/workspaces/:id/projects/new`.
+   - **Settings tab**: form chỉnh sửa inline. Nút Save chỉ enable khi `isDirty`. Danger Zone có nút Delete mở `DeleteWorkspaceDialog`.
    - Khi delete thành công từ detail page: navigate về `/workspaces`.
-10. **Delete workflow**: Bắt buộc gõ lại đúng tên workspace (paste bị chặn bằng `onPaste preventDefault`). Nút delete disabled cho đến khi text khớp.
+10. **Delete workflow (workspace/project)**: Bắt buộc gõ lại đúng tên (paste bị chặn bằng `onPaste preventDefault`). Nút delete disabled cho đến khi text khớp.
+11. **Project Detail** (`/workspaces/:id/projects/:projectId`):
+    - Breadcrumb: `Workspaces > [workspaceName] > [projectName]`. `workspaceName` truyền qua `location.state` từ card click hoặc fetch fallback.
+    - 4 tabs: Overview / Tasks / Members / Join Requests.
+    - **Tasks tab**: placeholder, chờ sprint sau.
+    - **Join Requests tab**: chỉ hiện cho MANAGER. Badge đếm pending.
+    - Role detection: gọi `GET /projects/:id/members/me/role` riêng (không embed trong project response).
+12. **AddMembersModal (Project)** khác với **BulkInviteModal (Workspace)**:
+    - Project: source là workspace members (không search toàn hệ thống), batch add với role per-member.
+    - Workspace: source là search hệ thống + direct email + template import, send invite qua email.
 
 ## 🔧 Environment Variables
 
@@ -456,25 +573,27 @@ npm run preview
 - **`workspaceApi`** (RTK Query): tag `'Workspace'` — tất cả mutation đều invalidate tag này.
 - **`workspaceSlice`**: chỉ lưu state local (`pinnedIds`, `recentIds`), không cache workspace data. Workspace data đến từ RTK Query cache.
 - **`WorkspaceCard`** nhận `onEdit` / `onDelete` callback → page-level state quản lý modal target (`editTarget`, `deleteTarget`). Pattern này dùng chung cho cả `WorkspacesPage` và `WorkspaceDetailPage`.
-- **Mock projects** nằm trong `WorkspaceDetailPage.tsx` như constant `MOCK_PROJECTS`. Khi backend Project API ready:
-  - Tạo `features/project/api/projectApi.ts`
-  - Thay `MOCK_PROJECTS` bằng `useGetProjectsByWorkspaceQuery(workspaceId)`
-  - Mở ghost card "New Project" (hiện đang `cursor-not-allowed` + `disabled`)
+- **Projects tab** trong `WorkspaceDetailPage` dùng `useGetProjectsByWorkspaceQuery` (real API). Ghost card `ProjectCardGhost` navigate đến `/workspaces/:id/projects/new`.
 - **Routing patterns**: `/workspaces` và `/workspaces/:id` đều nằm trong `MainLayout` (authenticated).
 
-### Việc cần làm khi backend workspace/project API sẵn sàng
+### Project Architecture
 
-- `WorkspacesPage`: hiện dùng real API qua `useGetMyWorkspacesQuery` — **đã hoạt động**, chỉ cần backend chạy.
-- `WorkspaceDetailPage`: cập nhật thông tin workspace từ `useGetWorkspaceByIdQuery` — **đã hoạt động**.
-- `WorkspaceDetailPage` Projects tab: thay `MOCK_PROJECTS` bằng RTK Query call thực.
-- `Members tab`: ~~implement khi có API member management~~ ✅ **Đã hoàn thành** (Sprint 6)
-- Khi backend user API sẵn sàng:
-  - thay mock data bằng `GET /users/me` (đã tích hợp sẵn trong `MainLayout`)
-  - submit `ProfilePage` (tab Info) qua `PUT /users/me` — logic đã có sẵn
-- Profile drawer là entry chính cho thông tin cá nhân ở giai đoạn hiện tại.
+- **`projectApi`** (RTK Query): tag `'Project'` keyed by `projectId` hoặc `WORKSPACE_{workspaceId}`. Endpoints: `getProjectsByWorkspace`, `getProjectById`, `createProject`, `updateProject`, `deleteProject`, `getCurrentUserRole`.
+- **`projectMemberApi`** (RTK Query): tag `'ProjectMember'` keyed by `projectId`. Endpoints: `getMembers`, `addMembers`, `updateMemberRole`, `removeMember`.
+- **`projectJoinRequestApi`** (RTK Query): tag `'ProjectJoinRequest'` keyed by `projectId`. Endpoints: `sendJoinRequest`, `getJoinRequests`, `reviewJoinRequest`, `cancelJoinRequest`.
+- **Role detection**: `ProjectDetailPage` gọi `useGetCurrentUserRoleQuery(projectId)` riêng để xác định `isManager`. Kết quả `MANAGER` mới thấy các action buttons và Join Requests tab.
+- **`STATUS_CONFIG`** export từ `ProjectCard.tsx`: mapping `ProjectStatus` → `{label, icon, badgeClass}`. Import trực tiếp ở `CreateProjectPage`, `EditProjectModal`, `ProjectDetailPage`.
+- **`ROLE_LABEL`** export từ `ProjectCard.tsx`: mapping `ProjectMemberRole` → display string.
+- **`AddMembersModal` (project)**: lấy source từ `useGetWorkspaceMembersQuery(workspaceId)`, filter bỏ những ai đã là project member. Chỉ thêm workspace members, không search toàn hệ thống.
+- **`MemberCard`**: card dọc (khác với WorkspaceMembersTab dùng row ngang). Remove action mở Dialog trong chính card (inline), không bubble lên parent.
+- **`workspaceName` breadcrumb pattern**: `ProjectCard` navigate với `state: { workspaceName }`. `ProjectDetailPage` đọc từ `location.state` trước, fallback sang gọi `useGetWorkspaceByIdQuery` nếu state không có.
 
-### Việc cần làm cho User Skills
+### Việc cần làm tiếp theo
 
-- API đã sẵn sàng (`userSkillApi`), chỉ cần backend chạy.
-- Khi muốn hiển thị skill của user khác (ví dụ trang profile public): dùng `<SkillsSection userId={targetUserId} />`.
-- `EditProfilePage.tsx` có thể xóa bỏ khi cần dọn dẹp codebase (hiện không được route đến trực tiếp).
+- **Tasks (Sprint tiếp)**: Implement task management (board, list). Route `/workspaces/:id/projects/:projectId` tab Tasks hiện là placeholder.
+- **Join Request (user side)**: FE đã có `sendJoinRequest` + `cancelJoinRequest` nhưng chưa có UI trigger cho non-member. Cần thêm button "Request to Join" trong ProjectDetailPage khi currentUserRole là undefined.
+- **Khi backend user API sẵn sàng**:
+  - Thay mock data bằng `GET /users/me` (đã tích hợp sẵn trong `MainLayout` qua `useGetCurrentUserQuery`)
+  - Submit `ProfilePage` (tab Info) qua `PUT /users/me` — logic đã có sẵn, chỉ cần backend up
+- **`EditProfilePage.tsx`**: có thể xóa bỏ khi cần dọn dẹp codebase (hiện không được route đến trực tiếp, chỉ redirect về `/profile`).
+- **My Tasks, Calendar, Analytics, Settings**: hiện là `PlaceholderPage`, chờ implement.

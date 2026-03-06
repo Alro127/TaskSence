@@ -180,6 +180,10 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 ProjectMemberEntity member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project member not found"));
 
+                if (member.getRole() == ProjectMemberRole.MANAGER) {
+                        throw new BadRequestException("Cannot remove a manager from the project.");
+                }
+
                 projectMemberRepository.delete(member);
         }
 

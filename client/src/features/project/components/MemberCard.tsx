@@ -1,4 +1,4 @@
-import { AlertTriangle, CrownIcon, EyeIcon, MoreVertical, Trash2, User2Icon, UserCog } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, CrownIcon, EyeIcon, MoreVertical, Trash2, User2Icon, UserCog } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -42,9 +42,11 @@ interface MemberCardProps {
   canManage: boolean;
   /** The current user's own id, to prevent self-removal. */
   currentUserId: number;
+  /** Called when the manager clicks "Transfer Manager Role" on a MANAGER card. Passes the manager's userId. */
+  onTransferManager?: (managerId: number) => void;
 }
 
-export function MemberCard({ member, canManage, currentUserId }: MemberCardProps) {
+export function MemberCard({ member, canManage, currentUserId, onTransferManager }: MemberCardProps) {
   const [updateRole, { isLoading: isUpdating }] = useUpdateMemberRoleMutation();
   const [removeMember, { isLoading: isRemoving }] = useRemoveMemberMutation();
   const [open, setOpen] = useState(false);
@@ -119,8 +121,8 @@ export function MemberCard({ member, canManage, currentUserId }: MemberCardProps
         {ROLE_LABEL[member.role]}
       </span>
 
-      {/* Management dropdown */}
-      {canManage && !isSelf && (
+      {/* Management dropdown — visible when canManage AND (not self OR self is MANAGER wanting to transfer) */}
+      {canManage && (!isSelf || member.role === "MANAGER") && (
         <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <DropdownMenu open={open} onOpenChange={setOpen}>
             <DropdownMenuTrigger asChild>
@@ -134,35 +136,50 @@ export function MemberCard({ member, canManage, currentUserId }: MemberCardProps
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                Change role
-              </DropdownMenuLabel>
-              {(["MANAGER", "MEMBER", "VIEWER"] as ProjectMemberRole[]).map(
-                (role) => (
-                  <DropdownMenuItem
-                    key={role}
-                    className={cn(member.role === role && "font-semibold")}
-                    onClick={() => handleRoleChange(role)}
-                  >
-                    <UserCog className="mr-2 h-3.5 w-3.5" />
-                    {ROLE_LABEL[role]}
-                    {member.role === role && (
-                      <span className="ml-auto text-xs text-muted-foreground">current</span>
-                    )}
-                  </DropdownMenuItem>
-                ),
+              {/* Show Change Role section only for other members, not self */}
+              {!isSelf && (
+                <>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    Change role
+                  </DropdownMenuLabel>
+                  {(["MEMBER", "VIEWER"] as ProjectMemberRole[]).map((role) => (
+                    <DropdownMenuItem
+                      key={role}
+                      className={cn(member.role === role && "font-semibold")}
+                      onClick={() => handleRoleChange(role)}
+                    >
+                      <UserCog className="mr-2 h-3.5 w-3.5" />
+                      {ROLE_LABEL[role]}
+                      {member.role === role && (
+                        <span className="ml-auto text-xs text-muted-foreground">current</span>
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                </>
               )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onSelect={() => {
-                  setOpen(false);
-                  setIsRemoveDialogOpen(true);
-                }}
-              >
-                <Trash2 className="mr-2 h-3.5 w-3.5" />
-                Remove from project
-              </DropdownMenuItem>
+              {member.role === "MANAGER" ? (
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setOpen(false);
+                    onTransferManager?.(member.user.id);
+                  }}
+                >
+                  <ArrowRightLeft className="mr-2 h-3.5 w-3.5" />
+                  Transfer Manager Role
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={() => {
+                    setOpen(false);
+                    setIsRemoveDialogOpen(true);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-3.5 w-3.5" />
+                  Remove from project
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
