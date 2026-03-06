@@ -23,7 +23,6 @@ const notificationSlice = createSlice({
   reducers: {
     // Called when WS pushes a new notification
     pushRealtimeNotification(state, action: PayloadAction<NotificationResponse>) {
-      // Prepend to list, avoid duplicates
       const exists = state.realtimeItems.some((n) => n.id === action.payload.id);
       if (!exists) {
         state.realtimeItems.unshift(action.payload);

@@ -31,7 +31,7 @@ public class SocketSubscriber implements MessageListener {
                     objectMapper.readValue(body, NotificationMessage.class);
 
             messagingTemplate.convertAndSendToUser(
-                    notification.getReceiverId().toString(),
+                    notification.getReceiverEmail(),
                     "/queue/notifications",
                     notification
             );

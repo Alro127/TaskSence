@@ -1,6 +1,7 @@
 package dev.alro127.tasksense.service;
 
 import dev.alro127.tasksense.dto.common.NotificationResponse;
+import dev.alro127.tasksense.dto.message.NotificationMessage;
 import jakarta.transaction.Transactional;
 
 import java.util.List;
@@ -20,4 +21,7 @@ public interface NotificationService {
 
     @Transactional
     int deleteNotifications(List<Long> ids);
+
+    @Transactional
+    void saveAndPublic(NotificationMessage message);
 }

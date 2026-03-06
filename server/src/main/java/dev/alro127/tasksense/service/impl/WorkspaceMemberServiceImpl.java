@@ -12,9 +12,9 @@ import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
+import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.WorkspaceMemberService;
-import dev.alro127.tasksense.service.publisher.NotificationPublisher;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,7 +31,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final WorkspaceRepository workspaceRepository;
     private final ProjectMemberRepository projectMemberRepository;
-    private final NotificationPublisher notificationPublisher;
+    private final NotificationService notificationService;
     private final SecurityService securityService;
 
     @Override
@@ -64,7 +64,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
         member.setRole(newRole);
 
-        notificationPublisher.publish(NotificationMessage.builder()
+        notificationService.saveAndPublic(NotificationMessage.builder()
                 .receiverId(member.getUser().getId())
                 .actorId(securityService.getCurrentUserId())
                 .type(NotificationType.WORKSPACE_ROLE_CHANGE)
@@ -99,7 +99,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
         //projectMemberRepository.deleteByWorkspaceIdAndUserId(workspaceId, memberId);
         workspaceMemberRepository.save(member);
 
-        notificationPublisher.publish(NotificationMessage.builder()
+        notificationService.saveAndPublic(NotificationMessage.builder()
                 .receiverId(member.getUser().getId())
                 .actorId(securityService.getCurrentUserId())
                 .type(NotificationType.WORKSPACE_REMOVE_MEMBER)

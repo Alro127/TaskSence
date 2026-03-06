@@ -43,10 +43,10 @@ export function useNotificationSocket() {
           try {
             const message: NotificationSocketMessage = JSON.parse(frame.body);
 
-            // Normalize to NotificationResponse shape
+            // Normalize socket message to NotificationResponse shape
             const notification = {
               ...message,
-              read: message.read ?? false,
+              read: false, // real-time push is always unread
             };
 
             // Push to Redux state
