@@ -13,6 +13,8 @@ import { teamMemberTemplateApi } from "@/features/team-template/api/teamMemberTe
 import { projectApi } from "@/features/project/api/projectApi";
 import { projectMemberApi } from "@/features/project/api/projectMemberApi";
 import { projectJoinRequestApi } from "@/features/project/api/projectJoinRequestApi";
+import { notificationApi } from "@/features/notification/api/notificationApi";
+import notificationReducer from "@/features/notification/notificationSlice";
 
 const combinedReducer = combineReducers({
   auth: authReducer,
@@ -29,6 +31,8 @@ const combinedReducer = combineReducers({
   [projectApi.reducerPath]: projectApi.reducer,
   [projectMemberApi.reducerPath]: projectMemberApi.reducer,
   [projectJoinRequestApi.reducerPath]: projectJoinRequestApi.reducer,
+  notification: notificationReducer,
+  [notificationApi.reducerPath]: notificationApi.reducer,
 });
 
 type RootReducerState = ReturnType<typeof combinedReducer>;
@@ -60,7 +64,8 @@ export const store = configureStore({
       .concat(teamMemberTemplateApi.middleware)
       .concat(projectApi.middleware)
       .concat(projectMemberApi.middleware)
-      .concat(projectJoinRequestApi.middleware),
+      .concat(projectJoinRequestApi.middleware)
+      .concat(notificationApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

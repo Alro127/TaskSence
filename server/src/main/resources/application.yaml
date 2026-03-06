@@ -13,7 +13,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate # Hibernate chỉ check schema
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         jdbc:

@@ -13,17 +13,14 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class EmailPublisher {
     private final RedisTemplate<String, Object> redisTemplate;
-    private final ObjectMapper objectMapper;
 
     public void publish(EmailMessage message) {
 
         try {
 
-            String json = objectMapper.writeValueAsString(message);
-
             redisTemplate.convertAndSend(
                     RedisKeys.AUTH_EMAIL_CHANNEL,
-                    json
+                    message
             );
 
         } catch (Exception e) {

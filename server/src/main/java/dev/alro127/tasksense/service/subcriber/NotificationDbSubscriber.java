@@ -38,6 +38,7 @@ public class NotificationDbSubscriber implements MessageListener {
             UserEntity receiver = userRepository.findById(notification.getReceiverId()).orElse(null);
 
             if (receiver == null) {
+                System.out.println("Receiver is null");
                 return;
             }
 
@@ -51,6 +52,8 @@ public class NotificationDbSubscriber implements MessageListener {
                     .build();
 
             repository.save(entity);
+
+            System.out.println("Notification saved");
 
         } catch (Exception e) {
             throw new RuntimeException(e);
