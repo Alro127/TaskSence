@@ -20,7 +20,7 @@ import { logout } from "@/features/auth/authSlice";
 import { useLogoutMutation } from "@/features/auth/api/authApi";
 import { UserProfileCard } from "@/features/user/components";
 import { useGetCurrentUserQuery } from "@/features/user/api/userApi";
-import { clearCurrentUser, updateCurrentUser } from "@/features/user/userSlice";
+import { clearCurrentUser, setCurrentUser } from "@/features/user/userSlice";
 import { clearWorkspace } from "@/features/workspace/workspaceSlice";
 import { NotificationDropdown } from "@/features/notification/components/NotificationDropdown";
 import { useNotificationSocket } from "@/features/notification/hooks/useNotificationSocket";
@@ -57,10 +57,11 @@ export function MainLayout() {
     }
   }, [isAuthenticated, navigate]);
 
-  // Update Redux store with fetched user data
+  // Hydrate Redux store with fetched user data (use setCurrentUser so it works
+  // even on page reload when currentUser is still null in initial state)
   useEffect(() => {
     if (userData?.data) {
-      dispatch(updateCurrentUser(userData.data));
+      dispatch(setCurrentUser(userData.data));
     }
   }, [userData?.data, dispatch]);
 
