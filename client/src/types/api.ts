@@ -349,3 +349,55 @@ export interface NotificationSocketMessage {
 export interface DeleteNotificationsRequest {
   ids: number[];
 }
+
+// ─── Task ────────────────────────────────────────────────────────────────────
+export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+export type TaskStatus = "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE";
+
+export interface TaskResponse {
+  id: number;
+  projectId: number;
+  parentTaskId: number | null;
+  title: string;
+  description: string | null;
+  priority: TaskPriority | null;
+  status: TaskStatus;
+  startDate: string | null;
+  dueDate: string | null;
+  completedAt: string | null;
+  position: number | null;
+  createdBy: UserSummaryResponse;
+  assignees: UserSummaryResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTaskRequest {
+  title: string;
+  description?: string;
+  priority?: TaskPriority;
+  startDate?: string;
+  dueDate?: string;
+  parentTaskId?: number;
+  assigneeIds?: number[];
+}
+
+export interface UpdateTaskRequest {
+  title?: string;
+  description?: string;
+  priority?: TaskPriority;
+  status?: TaskStatus;
+  startDate?: string;
+  dueDate?: string;
+  position?: number;
+  assigneeIds?: number[];
+  parentTaskId?: number;
+  removeParent?: boolean;
+}
+
+export interface TaskSearchParams {
+  status?: TaskStatus;
+  keyword?: string;
+  cursor?: number;
+  size?: number;
+}

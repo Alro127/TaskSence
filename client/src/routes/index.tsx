@@ -18,6 +18,7 @@ import { ProfilePage } from "@/features/user/pages";
 import { WorkspacesPage, WorkspaceDetailPage, WorkspaceInvitationPage } from "@/features/workspace/pages";
 import { TeamTemplatesPage, TeamTemplateDetailPage } from "@/features/team-template/pages";
 import { CreateProjectPage, ProjectDetailPage } from "@/features/project/pages";
+import { TaskBoardPage, TaskDetailPage } from "@/features/task/pages";
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -100,6 +101,14 @@ const routes: RouteObject[] = [
       {
         path: "workspaces/:id/projects/:projectId",
         element: <ProjectDetailPage />,
+      },
+      {
+        path: "workspaces/:id/projects/:projectId/tasks",
+        element: <TaskBoardPage />,
+      },
+      {
+        path: "workspaces/:id/projects/:projectId/tasks/:taskId",
+        element: <TaskDetailPage />,
       },
       {
         path: "team-templates",
