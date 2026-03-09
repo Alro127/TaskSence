@@ -1,5 +1,7 @@
 package dev.alro127.tasksense.service.impl;
 
+import dev.alro127.tasksense.domain.entity.UserEntity;
+import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
 import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.NotificationType;
@@ -10,6 +12,7 @@ import dev.alro127.tasksense.dto.response.WorkspaceMemberResponse;
 import dev.alro127.tasksense.exception.ConflictException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
+import dev.alro127.tasksense.repository.jpa.UserRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
 import dev.alro127.tasksense.service.NotificationService;
@@ -33,6 +36,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
     private final ProjectMemberRepository projectMemberRepository;
     private final NotificationService notificationService;
     private final SecurityService securityService;
+    private final UserRepository userRepository;
 
     @Override
     public List<WorkspaceMemberResponse> getWorkspaceMembers(Long workspaceId) {
@@ -44,6 +48,29 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
                 .stream()
                 .map(WorkspaceMemberResponse::mapToResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public void addUserToWorkspace(Long workspaceId, Long userId) {
+
+        WorkspaceEntity workspace = workspaceRepository.findById(workspaceId).orElseThrow(
+                () -> new ResourceNotFoundException("Workspace not found"));
+
+        UserEntity user = userRepository.findById(userId).orElseThrow(
+                () -> new ResourceNotFoundException("User not found"));
+
+        WorkspaceMemberEntity member = workspaceMemberRepository.findByWorkspaceIdAndUserIdIgnoreRestriction(workspaceId,userId)
+                .orElse(WorkspaceMemberEntity.builder()
+                        .workspace(workspace)
+                        .user(user)
+                        .role(WorkspaceRole.MEMBER)
+                        .joinedAt(OffsetDateTime.now())
+                        .build());
+        member.setDeletedAt(null);
+        member.setRole(WorkspaceRole.MEMBER);
+
+        workspaceMemberRepository.save(member);
     }
 
     @Override

@@ -1,12 +1,17 @@
 import { useState } from "react";
 import {
   AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  XCircle,
   Loader2,
   MoreHorizontal,
   UserPlus,
   Users,
   Mail,
   Clock,
+  Inbox,
   ShieldCheck,
   Shield,
   Eye,
@@ -15,7 +20,6 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
@@ -39,6 +43,7 @@ import { useAppSelector } from "@/app/hooks";
 import { UserProfileDrawer } from "@/features/user/components/UserProfileDrawer";
 import { useGetWorkspaceMembersQuery, useUpdateMemberRoleMutation, useRemoveMemberMutation } from "../api/workspaceMemberApi";
 import { useGetWorkspaceInvitesQuery, useRevokeInviteMutation } from "../api/workspaceInviteApi";
+import { useGetWorkspaceJoinRequestsQuery, useReviewJoinRequestMutation } from "../api/workspaceJoinRequestApi";
 import { BulkInviteModal } from "./BulkInviteModal";
 import type { WorkspaceMember, WorkspaceRole } from "@/types/api";
 
@@ -103,27 +108,32 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
   const { data: invitesData, isLoading: invitesLoading } =
     useGetWorkspaceInvitesQuery(workspaceId);
 
+  // Compute current user's role early so join requests query can use it
+  const members = membersData?.data ?? [];
+  const myMember = members.find((m) => m.user.id === currentUserId);
+  const myRole = myMember?.role ?? null;
+  const canManage = myRole === "OWNER" || myRole === "MANAGER";
+
+  const { data: joinRequestsData, isLoading: joinRequestsLoading } =
+    useGetWorkspaceJoinRequestsQuery(workspaceId, { skip: !canManage });
+
   const [updateRole, { isLoading: isUpdatingRole }] = useUpdateMemberRoleMutation();
   const [removeMember, { isLoading: isRemoving }] = useRemoveMemberMutation();
   const [revokeInvite, { isLoading: isRevoking }] = useRevokeInviteMutation();
+  const [reviewJoinRequest] = useReviewJoinRequestMutation();
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
   const [removeTarget, setRemoveTarget] = useState<WorkspaceMember | null>(null);
-  const [pendingRoleChange, setPendingRoleChange] = useState<{
-    member: WorkspaceMember;
-    newRole: WorkspaceRole;
-  } | null>(null);
+  const [expandedRequestId, setExpandedRequestId] = useState<number | null>(null);
+  const [reviewingId, setReviewingId] = useState<number | null>(null);
 
-  const members = membersData?.data ?? [];
   const pendingInvites = (invitesData?.data ?? []).filter(
     (inv) => inv.status === "PENDING"
   );
-
-  // Detect current user's role
-  const myMember = members.find((m) => m.user.id === currentUserId);
-  const myRole = myMember?.role ?? null;
-  const canManage = myRole === "OWNER" || myRole === "MANAGER";
+  const pendingJoinRequests = (joinRequestsData?.data ?? []).filter(
+    (req) => req.status === "PENDING"
+  );
 
   // ── Role change ────────────────────────────────────────────────────────────
   const handleRoleChange = async (member: WorkspaceMember, newRole: WorkspaceRole) => {
@@ -137,8 +147,6 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
     } catch (err: unknown) {
       const error = err as { data?: { message?: string } };
       toast.error(error?.data?.message ?? "Failed to update role");
-    } finally {
-      setPendingRoleChange(null);
     }
   };
 
@@ -155,6 +163,32 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
     } catch (err: unknown) {
       const error = err as { data?: { message?: string } };
       toast.error(error?.data?.message ?? "Failed to remove member");
+    }
+  };
+
+  // ── Review join request ────────────────────────────────────────────────────
+  const handleReview = async (
+    requestId: number,
+    status: "APPROVED" | "REJECTED"
+  ) => {
+    setReviewingId(requestId);
+    try {
+      await reviewJoinRequest({
+        requestId,
+        workspaceId,
+        body: { status },
+      }).unwrap();
+      toast.success(
+        status === "APPROVED"
+          ? "Join request approved"
+          : "Join request rejected"
+      );
+      setExpandedRequestId(null);
+    } catch (err: unknown) {
+      const error = err as { data?: { message?: string } };
+      toast.error(error?.data?.message ?? "Failed to review request");
+    } finally {
+      setReviewingId(null);
     }
   };
 
@@ -425,6 +459,155 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
                         >
                           Revoke
                         </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ── Join Requests section ── */}
+      {canManage && (
+        <>
+          <Separator />
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-base font-semibold">
+                Join Requests
+                {pendingJoinRequests.length > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+                    {pendingJoinRequests.length}
+                  </span>
+                )}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                People requesting to join this workspace.
+              </p>
+            </div>
+
+            {joinRequestsLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : pendingJoinRequests.length === 0 ? (
+              <div className="flex min-h-[100px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/30 p-6 text-center">
+                <Inbox className="h-6 w-6 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  No pending join requests
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border">
+                <ul className="divide-y">
+                  {pendingJoinRequests.map((req) => {
+                    const isExpanded = expandedRequestId === req.id;
+                    const isReviewing = reviewingId === req.id;
+                    return (
+                      <li key={req.id} className="px-4 py-3">
+                        {/* ── Row header ── */}
+                        <div
+                          className="flex cursor-pointer items-center gap-3"
+                          onClick={() =>
+                            setExpandedRequestId(
+                              isExpanded ? null : req.id
+                            )
+                          }
+                        >
+                          {/* Avatar */}
+                          <div className="shrink-0">
+                            {req.user.avatarUrl ? (
+                              <img
+                                src={req.user.avatarUrl}
+                                alt={req.user.fullName ?? req.user.email}
+                                className="h-9 w-9 rounded-full object-cover"
+                              />
+                            ) : (
+                              <AvatarFallback name={req.user.fullName} />
+                            )}
+                          </div>
+
+                          {/* Info */}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium">
+                              {req.user.fullName ?? req.user.email}
+                            </p>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              <span>
+                                Requested{" "}
+                                {formatDistanceToNow(
+                                  new Date(req.createdAt),
+                                  { addSuffix: true }
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Expand toggle */}
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          )}
+                        </div>
+
+                        {/* ── Expanded content ── */}
+                        {isExpanded && (
+                          <div className="mt-3 space-y-3 pl-12">
+                            {req.message ? (
+                              <div className="rounded-md bg-muted/50 px-3 py-2">
+                                <p className="text-xs font-medium text-muted-foreground mb-1">
+                                  Message
+                                </p>
+                                <p className="text-sm">{req.message}</p>
+                              </div>
+                            ) : (
+                              <p className="text-xs italic text-muted-foreground">
+                                No message provided
+                              </p>
+                            )}
+
+                            {/* Action buttons */}
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                                disabled={isReviewing}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReview(req.id, "APPROVED");
+                                }}
+                              >
+                                {isReviewing ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                )}
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="gap-1.5"
+                                disabled={isReviewing}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReview(req.id, "REJECTED");
+                                }}
+                              >
+                                {isReviewing ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <XCircle className="h-3.5 w-3.5" />
+                                )}
+                                Reject
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </li>
                     );
                   })}

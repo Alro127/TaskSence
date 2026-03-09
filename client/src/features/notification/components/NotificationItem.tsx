@@ -9,6 +9,7 @@ import {
   MessageSquare,
   ShieldCheck,
   Bell,
+  ClipboardCheck,
 } from "lucide-react";
 import type { NotificationResponse, NotificationType } from "@/types/api";
 import { getNotificationText } from "../utils/notificationUtils";
@@ -25,6 +26,7 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   WORKSPACE_INVITE: <Users className="h-4 w-4 text-green-500" />,
   WORKSPACE_INVITE_ACCEPT: <UserCheck className="h-4 w-4 text-green-500" />,
   WORKSPACE_JOIN_REQUEST: <UserPlus className="h-4 w-4 text-cyan-500" />,
+  WORKSPACE_REVIEW_REQUEST: <ClipboardCheck className="h-4 w-4 text-green-500" />,
   WORKSPACE_REMOVE_MEMBER: <UserMinus className="h-4 w-4 text-destructive" />,
   WORKSPACE_ROLE_CHANGE: <ShieldCheck className="h-4 w-4 text-amber-500" />,
   PROJECT_JOIN_REQUEST: <FolderPlus className="h-4 w-4 text-cyan-500" />,
@@ -42,9 +44,12 @@ export function NotificationItem({
     <Bell className="h-4 w-4 text-muted-foreground" />
   );
 
-  const timeAgo = formatDistanceToNow(new Date(notification.createdAt), {
-    addSuffix: true,
-  });
+  const timeAgo = (() => {
+    const d = new Date(notification.createdAt);
+    return isNaN(d.getTime())
+      ? "just now"
+      : formatDistanceToNow(d, { addSuffix: true });
+  })();
 
   return (
     <div

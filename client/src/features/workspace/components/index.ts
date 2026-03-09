@@ -6,3 +6,5 @@ export { DeleteWorkspaceDialog } from "./DeleteWorkspaceDialog";
 export { InviteMemberModal } from "./InviteMemberModal";
 export { BulkInviteModal } from "./BulkInviteModal";
 export { WorkspaceMembersTab } from "./WorkspaceMembersTab";
+export { WorkspaceExploreCard } from "./WorkspaceExploreCard";
+export { JoinRequestDialog } from "./JoinRequestDialog";
