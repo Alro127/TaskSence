@@ -1,7 +1,7 @@
 # TaskSense - Frontend Project Context
 
 > File này dùng để giữ context cho AI và developers. Cập nhật sau mỗi sprint/thay đổi lớn.
-> **Cập nhật lần cuối**: Sprint 8 - Notification System
+> **Cập nhật lần cuối**: Sprint 9 - Task CRUD & Permission System
 
 ## 📋 Thông tin dự án
 
@@ -72,8 +72,16 @@
   - `GET /projects/:projectId/join-requests` → danh sách join requests → `ProjectJoinRequest[]`
   - `PATCH /projects/:projectId/join-requests/:requestId/review` → body: `{status: "APPROVED"|"REJECTED"}` → `ProjectJoinRequest`
   - `DELETE /projects/:projectId/join-requests/:requestId` → huỷ join request
+- **Task Endpoints**:
+  - `POST /projects/:projectId/tasks` → body: `CreateTaskRequest` → `TaskResponse` *(MANAGER, MEMBER)*
+  - `GET /projects/:projectId/tasks` → danh sách tasks của project → `TaskResponse[]` *(tất cả roles)*
+  - `GET /projects/:projectId/tasks/search?status=&keyword=&cursor=&size=` → tìm kiếm task (cursor-based) → `TaskResponse[]` *(tất cả roles)*
+  - `GET /projects/:projectId/tasks/:taskId` → chi tiết task → `TaskResponse` *(tất cả roles)*
+  - `GET /projects/:projectId/tasks/:taskId/subtasks` → danh sách subtask → `TaskResponse[]` *(tất cả roles)*
+  - `PUT /projects/:projectId/tasks/:taskId` → body: `UpdateTaskRequest` → `TaskResponse` *(MANAGER: bất kỳ task; MEMBER: chỉ task mình tạo)*
+  - `PATCH /projects/:projectId/tasks/:taskId/status` → body: `{status}` → `TaskResponse` *(MANAGER: bất kỳ; MEMBER: task mình tạo hoặc được assign)*
+  - `DELETE /projects/:projectId/tasks/:taskId` → xóa task (soft delete) *(MANAGER: bất kỳ; MEMBER: chỉ task mình tạo)*
 - **Notification Endpoints**:
-  - `GET /notifications?cursor=?&limit=10` → danh sách notifications (cursor-based pagination) → `NotificationResponse[]`
   - `GET /notifications/unread-count` → số thông báo chưa đọc → `number`
   - `POST /notifications/:id/read` → đánh dấu 1 thông báo là đã đọc
   - `POST /notifications/read-all` → đánh dấu tất cả là đã đọc → số lượng đã update
@@ -431,6 +439,25 @@ client/
 - ✅ **index.css**: thêm `@keyframes bell-shake` + `.bell-shake` class
 - ✅ **store.ts**: đăng ký `notificationReducer` + `notificationApi`
 
+### Sprint 9 - Task CRUD & Permission System ✅ COMPLETED (Backend)
+
+- ✅ **Task Entity** — `TaskEntity` với các fields: `title`, `description`, `priority`, `status` (default `TODO`), `startDate`, `dueDate`, `completedAt`, `position`, `createdBy`, `assignees` (ManyToMany), `parentTask` (self-reference), `deletedAt` (soft delete)
+- ✅ **Task Enums**: `TaskStatus` (`TODO`, `IN_PROGRESS`, `DONE`, `OVERDUE`, `BLOCKED`, `CANCELLED`), `TaskPriority` (`LOW`, `MEDIUM`, `HIGH`, `URGENT`)
+- ✅ **Task API** — 8 endpoints (xem Backend API section)
+- ✅ **Permission model** theo `ProjectMemberRole`:
+
+  | Action | MANAGER | MEMBER | VIEWER |
+  |---|---|---|---|
+  | Đọc task (get/list/search/subtasks) | ✅ | ✅ | ✅ |
+  | Tạo task | ✅ | ✅ | ❌ |
+  | Update task (full) | ✅ bất kỳ | ✅ chỉ task mình tạo | ❌ |
+  | Update status | ✅ bất kỳ | ✅ task mình tạo hoặc được assign | ❌ |
+  | Xóa task | ✅ bất kỳ | ✅ chỉ task mình tạo | ❌ |
+
+- ✅ **`updateTaskStatus`** tách thành endpoint riêng `PATCH /:taskId/status` để xử lý permission assignee độc lập với `updateTask`
+- ✅ **Subtask support** — `parentTask` self-reference với validation chống circular dependency + max depth 5
+- ✅ **Cursor-based search** — filter theo `status`, `keyword`, cursor pagination
+
 ### Sprint 7 - Project CRUD & Member Management ✅ COMPLETED
 
 - ✅ **Types** — thêm vào `types/api.ts`:
@@ -557,6 +584,11 @@ client/
 12. **AddMembersModal (Project)** khác với **BulkInviteModal (Workspace)**:
     - Project: source là workspace members (không search toàn hệ thống), batch add với role per-member.
     - Workspace: source là search hệ thống + direct email + template import, send invite qua email.
+13. **Task permission model**:
+    - `updateTask` (full edit) chỉ dành cho MANAGER hoặc người tạo task (MEMBER).
+    - `updateTaskStatus` là endpoint riêng (`PATCH /:taskId/status`) — cho phép assignee update status mà không cần quyền edit toàn bộ task.
+    - VIEWER không được thực hiện bất kỳ thao tác ghi nào trên task.
+    - Frontend cần gọi đúng endpoint tùy theo action: dùng `PUT /:taskId` cho edit đầy đủ, `PATCH /:taskId/status` khi chỉ đổi status.
 
 ## 🔧 Environment Variables
 
