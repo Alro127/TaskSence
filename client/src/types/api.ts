@@ -419,6 +419,10 @@ export interface UpdateTaskRequest {
   removeParent?: boolean;
 }
 
+export interface UpdateTaskStatusRequest {
+  status: TaskStatus;
+}
+
 export interface TaskSearchParams {
   status?: TaskStatus;
   keyword?: string;

@@ -55,7 +55,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { TaskPriority, TaskResponse, TaskStatus } from "@/types/api";
 
-import { useGetTasksByProjectQuery, useDeleteTaskMutation, useUpdateTaskMutation } from "../api/taskApi";
+import { useGetTasksByProjectQuery, useDeleteTaskMutation, useUpdateTaskStatusMutation } from "../api/taskApi";
 import { TaskFormSheet } from "../components/TaskFormSheet";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
 import { useGetProjectByIdQuery } from "@/features/project/api/projectApi";
@@ -468,7 +468,7 @@ export function TaskBoardPage() {
   const projectName = projectData?.data?.name ?? "Project";
 
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
-  const [updateTask] = useUpdateTaskMutation();
+  const [updateTaskStatus] = useUpdateTaskStatusMutation();
 
   // ─── UI state ───────────────────────────────────────────────────────────────
   type ViewMode = "list" | "board";
@@ -584,7 +584,7 @@ export function TaskBoardPage() {
     if (!task) return;
     if (task.status === droppedOnColumn.value) return;
     try {
-      await updateTask({
+      await updateTaskStatus({
         projectId,
         taskId: task.id,
         status: droppedOnColumn.value,
