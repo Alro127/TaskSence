@@ -62,6 +62,20 @@ export const workspaceApi = createApi({
       }),
       invalidatesTags: ["Workspace"],
     }),
+
+    searchWorkspaces: builder.query<
+      ApiResponse<Workspace[]>,
+      { name: string; cursor?: number; limit?: number }
+    >({
+      query: ({ name, cursor, limit = 20 }) => ({
+        url: "/workspaces/search",
+        params: { name, ...(cursor ? { cursor } : {}), limit },
+      }),
+    }),
+
+    getPublicWorkspaces: builder.query<ApiResponse<Workspace[]>, number>({
+      query: (userId) => `/workspaces/public/${userId}`,
+    }),
   }),
 });
 
@@ -71,4 +85,6 @@ export const {
   useCreateWorkspaceMutation,
   useUpdateWorkspaceMutation,
   useDeleteWorkspaceMutation,
+  useSearchWorkspacesQuery,
+  useGetPublicWorkspacesQuery,
 } = workspaceApi;

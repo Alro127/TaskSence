@@ -298,6 +298,29 @@ export interface SendProjectJoinRequestBody {
   message?: string;
 }
 
+// ─── Workspace Join Request ───────────────────────────────────────────────────
+export type WorkspaceJoinRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+
+export interface WorkspaceJoinRequest {
+  id: number;
+  workspaceId: number;
+  user: UserSummaryResponse;
+  status: WorkspaceJoinRequestStatus;
+  message: string | null;
+  reviewedBy: UserSummaryResponse | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateWorkspaceJoinRequestBody {
+  message?: string;
+}
+
+export interface ReviewWorkspaceJoinRequestBody {
+  status: "APPROVED" | "REJECTED";
+}
+
 export interface ReviewProjectJoinRequestBody {
   status: "APPROVED" | "REJECTED";
 }
@@ -315,6 +338,7 @@ export type NotificationType =
   | "WORKSPACE_INVITE"
   | "WORKSPACE_INVITE_ACCEPT"
   | "WORKSPACE_JOIN_REQUEST"
+  | "WORKSPACE_REVIEW_REQUEST"
   | "WORKSPACE_REMOVE_MEMBER"
   | "WORKSPACE_ROLE_CHANGE"
   | "PROJECT_JOIN_REQUEST"

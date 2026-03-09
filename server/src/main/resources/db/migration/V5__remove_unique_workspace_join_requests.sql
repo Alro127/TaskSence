@@ -1,0 +1,2 @@
+ALTER TABLE workspace_join_requests
+DROP CONSTRAINT IF EXISTS workspace_join_requests_workspace_id_user_id_key;

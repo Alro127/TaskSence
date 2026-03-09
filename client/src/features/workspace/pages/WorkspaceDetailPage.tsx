@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -47,8 +47,10 @@ type SettingsFormData = z.infer<typeof settingsSchema>;
 export function WorkspaceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const dispatch = useAppDispatch();
   const workspaceId = Number(id);
+  const defaultTab = searchParams.get("tab") ?? "projects";
 
   const { data, isLoading, isError } = useGetWorkspaceByIdQuery(workspaceId, {
     skip: isNaN(workspaceId),
@@ -148,7 +150,7 @@ export function WorkspaceDetailPage() {
       </div>
 
       {/* ── Tabs ── */}
-      <Tabs defaultValue="projects">
+      <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="projects" className="gap-2">
             <LayoutGrid className="h-4 w-4" />

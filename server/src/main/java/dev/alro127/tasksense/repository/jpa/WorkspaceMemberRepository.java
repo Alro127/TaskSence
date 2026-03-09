@@ -3,16 +3,29 @@ package dev.alro127.tasksense.repository.jpa;
 import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
 import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface WorkspaceMemberRepository extends JpaRepository< WorkspaceMemberEntity, Long> {
-    boolean existsByWorkspaceIdAndUserId(Long workspaceId, Long id);
+
+    @Query(value = """
+        SELECT *
+            FROM workspace_members wm
+            WHERE wm.workspace_id = :workspaceId
+            AND wm.user_id = :userId
+        """,
+            nativeQuery = true)
+    Optional<WorkspaceMemberEntity>  findByWorkspaceIdAndUserIdIgnoreRestriction(Long workspaceId, Long userId);
+
+    Optional<WorkspaceMemberEntity> findByWorkspaceIdAndUserId(Long workspaceId, Long userId);
 
     List<WorkspaceMemberEntity> findByWorkspaceId(Long workspaceId);
 
     long countByWorkspaceIdAndRole(Long workspaceId, WorkspaceRole workspaceRole);
 
     Optional<WorkspaceMemberEntity> findByIdAndWorkspaceId(Long memberId, Long workspaceId);
+
+    boolean existsByWorkspaceIdAndUserId(Long workspaceId, Long userId);
 }
