@@ -9,9 +9,12 @@ public interface WorkspaceMemberService {
 
     List<WorkspaceMemberResponse> getWorkspaceMembers(Long workspaceId);
 
+    void addUserToWorkspace(Long workspaceId, Long userId);
+
     WorkspaceMemberResponse updateMemberRole(Long workspaceId,
                                              Long memberId,
                                              UpdateWorkspaceRoleRequest request);
 
     void removeMember(Long workspaceId, Long memberId);
+
 }

@@ -15,7 +15,7 @@ import {
 } from "@/features/auth/pages";
 import { DashboardPage } from "@/features/dashboard/pages";
 import { ProfilePage } from "@/features/user/pages";
-import { WorkspacesPage, WorkspaceDetailPage, WorkspaceInvitationPage } from "@/features/workspace/pages";
+import { WorkspacesPage, WorkspaceDetailPage, WorkspaceInvitationPage, WorkspaceExplorePage } from "@/features/workspace/pages";
 import { TeamTemplatesPage, TeamTemplateDetailPage } from "@/features/team-template/pages";
 import { CreateProjectPage, ProjectDetailPage } from "@/features/project/pages";
 
@@ -84,6 +84,10 @@ const routes: RouteObject[] = [
       {
         path: "workspaces",
         element: <WorkspacesPage />,
+      },
+      {
+        path: "workspaces/explore",
+        element: <WorkspaceExplorePage />,
       },
       {
         path: "workspaces/invitation",

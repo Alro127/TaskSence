@@ -19,4 +19,8 @@ public interface WorkspaceService {
     WorkspaceResponse updateWorkspace(Long id, UpdateWorkspaceRequest request);
 
     void deleteWorkspace(Long id);
+
+    List<WorkspaceResponse> searchWorkspaces(String name, Long cursor, int limit);
+
+    List<WorkspaceResponse> getPublicWorkspaces(Long userId);
 }

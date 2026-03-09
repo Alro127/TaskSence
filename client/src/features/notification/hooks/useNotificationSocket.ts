@@ -46,6 +46,9 @@ export function useNotificationSocket() {
             // Normalize socket message to NotificationResponse shape
             const notification = {
               ...message,
+              // Backend NotificationMessage DTO may not include createdAt;
+              // fall back to current time so date formatting never throws.
+              createdAt: message.createdAt ?? new Date().toISOString(),
               read: false, // real-time push is always unread
             };
 

@@ -44,6 +44,14 @@ export function getNotificationText(
       title: "Join request",
       description: `${actorName} requested to join "${workspaceName}"`,
     },
+    WORKSPACE_REVIEW_REQUEST: {
+      title: notification.referenceId
+        ? "Join request approved"
+        : "Join request rejected",
+      description: notification.referenceId
+        ? `Your request to join "${workspaceName}" was approved`
+        : `Your request to join "${workspaceName}" was rejected`,
+    },
     WORKSPACE_REMOVE_MEMBER: {
       title: "Removed from workspace",
       description: `You have been removed from "${workspaceName}"`,
@@ -97,6 +105,12 @@ export function getNotificationTarget(notification: NotificationResponse): strin
       const workspaceId =
         notification.referenceId ??
         (payload.workspaceId as number | undefined);
+      // Navigate to members tab so owner can review directly
+      return workspaceId ? `/workspaces/${workspaceId}?tab=members` : "/workspaces";
+    }
+    case "WORKSPACE_REVIEW_REQUEST": {
+      // referenceId is set only when APPROVED (backend sets it conditionally)
+      const workspaceId = notification.referenceId;
       return workspaceId ? `/workspaces/${workspaceId}` : "/workspaces";
     }
     case "WORKSPACE_REMOVE_MEMBER": {

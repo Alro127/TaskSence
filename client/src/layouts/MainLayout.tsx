@@ -3,6 +3,7 @@ import { NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
 import {
   BarChart3,
   Calendar,
+  Compass,
   FolderKanban,
   LayoutDashboard,
   LogOut,
@@ -29,6 +30,7 @@ import { clearNotifications } from "@/features/notification/notificationSlice";
 const navItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "Workspaces", to: "/workspaces", icon: FolderKanban },
+  { label: "Explore", to: "/workspaces/explore", icon: Compass, indent: true },
   { label: "Team Templates", to: "/team-templates", icon: Users },
   { label: "My Tasks", to: "/tasks", icon: CheckSquare },
   { label: "Calendar", to: "/calendar", icon: Calendar },
@@ -105,9 +107,11 @@ export function MainLayout() {
                 <NavLink
                   key={item.label}
                   to={item.to}
+                  end={item.to === "/workspaces"}
                   className={({ isActive }) =>
                     [
                       "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                      item.indent ? "ml-3" : "",
                       isActive
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",

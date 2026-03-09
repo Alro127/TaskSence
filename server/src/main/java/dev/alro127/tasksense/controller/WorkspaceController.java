@@ -78,4 +78,35 @@ public class WorkspaceController {
 
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<WorkspaceResponse>>> searchWorkspaces(
+            @RequestParam String name,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+
+        ApiResponse<List<WorkspaceResponse>> response = new ApiResponse<>(
+                "200",
+                "Search workspace successfully",
+                workspaceService.searchWorkspaces(name, cursor, limit),
+                null
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/public/{userId}")
+    public ResponseEntity<ApiResponse<List<WorkspaceResponse>>> getPublicWorkspaces(
+            @PathVariable Long userId) {
+
+        ApiResponse<List<WorkspaceResponse>> response = new ApiResponse<>(
+                "200",
+                "Get public workspaces successfully",
+                workspaceService.getPublicWorkspaces(userId),
+                null
+        );
+
+        return ResponseEntity.ok(response);
+    }
 }

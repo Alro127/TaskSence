@@ -14,6 +14,8 @@ import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
 import dev.alro127.tasksense.service.WorkspaceService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -116,6 +118,30 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         workspace.setDeletedAt(OffsetDateTime.now());
 
         workspaceRepository.save(workspace);
+    }
+
+    @Override
+    public List<WorkspaceResponse> searchWorkspaces(String name, Long cursor, int limit) {
+
+        Pageable pageable = PageRequest.of(0, limit);
+
+        List<WorkspaceEntity> workspaces =
+                workspaceRepository.searchWorkspaces(name, cursor, pageable);
+
+        return workspaces.stream()
+                .map(WorkspaceResponse::mapToResponse)
+                .toList();
+    }
+
+    @Override
+    public List<WorkspaceResponse> getPublicWorkspaces(Long userId) {
+
+        List<WorkspaceEntity> workspaces =
+                workspaceRepository.findPublicWorkspacesByOwner(userId);
+
+        return workspaces.stream()
+                .map(WorkspaceResponse::mapToResponse)
+                .toList();
     }
 
     private UserEntity getCurrentUser() {

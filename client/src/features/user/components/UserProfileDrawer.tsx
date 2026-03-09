@@ -1,4 +1,4 @@
-import { AlertCircle, CalendarDays, Loader2, Mail, Phone, UserRound } from "lucide-react";
+import { AlertCircle, CalendarDays, FolderKanban, Loader2, Mail, Phone, UserRound } from "lucide-react";
 import { format } from "date-fns";
 
 import {
@@ -11,6 +11,9 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SkillsSection } from "./SkillsSection";
 import { useGetUserByIdQuery } from "../api/userApi";
+import { useGetPublicWorkspacesQuery } from "@/features/workspace/api/workspaceApi";
+import { useGetMyWorkspacesQuery } from "@/features/workspace/api/workspaceApi";
+import { WorkspaceExploreCard } from "@/features/workspace/components/WorkspaceExploreCard";
 import type { User } from "@/types/api";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -57,6 +60,17 @@ export function UserProfileDrawer({ userId, open, onClose }: UserProfileDrawerPr
   const { data, isLoading, isError } = useGetUserByIdQuery(userId!, {
     skip: !userId,
   });
+
+  const { data: publicWsData, isLoading: isWsLoading } = useGetPublicWorkspacesQuery(userId!, {
+    skip: !userId,
+  });
+
+  const { data: myWsData } = useGetMyWorkspacesQuery();
+  const myWorkspaceIds = new Set((myWsData?.data ?? []).map((w) => w.id));
+
+  const publicWorkspaces = (publicWsData?.data ?? []).filter(
+    (ws) => !myWorkspaceIds.has(ws.id)
+  );
 
   const user = data?.data as User | undefined;
   const avatarInitial = (user?.fullName ?? user?.email ?? "?")[0].toUpperCase();
@@ -122,6 +136,9 @@ export function UserProfileDrawer({ userId, open, onClose }: UserProfileDrawerPr
               <TabsTrigger value="skills" className="flex-1">
                 Skills
               </TabsTrigger>
+              <TabsTrigger value="workspaces" className="flex-1">
+                Workspaces
+              </TabsTrigger>
             </TabsList>
 
             {/* ── Info tab ── */}
@@ -177,6 +194,31 @@ export function UserProfileDrawer({ userId, open, onClose }: UserProfileDrawerPr
               className="mt-0 flex-1 overflow-y-auto px-6 py-4"
             >
               {userId != null && <SkillsSection userId={userId} />}
+            </TabsContent>
+
+            {/* ── Workspaces tab ── */}
+            <TabsContent
+              value="workspaces"
+              className="mt-0 flex-1 overflow-y-auto px-6 py-4"
+            >
+              {isWsLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : publicWorkspaces.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+                  <FolderKanban className="h-8 w-8 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    No public workspaces to show.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {publicWorkspaces.map((ws) => (
+                    <WorkspaceExploreCard key={ws.id} workspace={ws} />
+                  ))}
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         )}
