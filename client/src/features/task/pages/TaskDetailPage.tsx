@@ -10,6 +10,7 @@ import {
   Loader2,
   MoreHorizontal,
   Plus,
+  SquarePen,
   Trash2,
   X,
 } from "lucide-react";
@@ -50,6 +51,9 @@ import {
   useCreateTaskMutation,
 } from "../api/taskApi";
 import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
+import { TaskFormSheet } from "../components/TaskFormSheet";
+import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
+import { useGetProjectByIdQuery } from "@/features/project/api/projectApi";
 
 // ─── Config ──────────────────────────────────────────────────────────────────────
 const STATUS_OPTIONS: { value: TaskStatus; label: string; badgeClass: string }[] = [
@@ -142,6 +146,24 @@ export function TaskDetailPage() {
   const { data: membersData } = useGetMembersQuery(projectId, { skip: isNaN(projectId) });
   const members = membersData?.data ?? [];
 
+  const { data: workspaceData } = useGetWorkspaceByIdQuery(workspaceId, {
+    skip: isNaN(workspaceId),
+  });
+  const { data: projectData } = useGetProjectByIdQuery(
+    { workspaceId, projectId },
+    { skip: isNaN(workspaceId) || isNaN(projectId) },
+  );
+  const workspaceName = workspaceData?.data?.name ?? "Workspace";
+  const projectName = projectData?.data?.name ?? "Project";
+
+  // Fetch parent task when this is a subtask
+  const parentTaskId = task?.parentTaskId ?? null;
+  const { data: parentTaskData } = useGetTaskByIdQuery(
+    { projectId, taskId: parentTaskId ?? 0 },
+    { skip: parentTaskId == null },
+  );
+  const parentTask = parentTaskData?.data ?? null;
+
   // ─── Mutations ───────────────────────────────────────────────────────────────
   const [updateTask] = useUpdateTaskMutation();
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
@@ -159,6 +181,7 @@ export function TaskDetailPage() {
 
   const [showAssigneeMenu, setShowAssigneeMenu] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [subtaskSheetOpen, setSubtaskSheetOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // ─── Save handlers ───────────────────────────────────────────────────────────
@@ -253,7 +276,7 @@ export function TaskDetailPage() {
 
   function toggleSubtaskDone(subtaskId: number, currentStatus: TaskStatus) {
     const status: TaskStatus = currentStatus === "DONE" ? "TODO" : "DONE";
-    updateTask({ projectId, taskId: subtaskId, status })
+    updateTask({ projectId, taskId: subtaskId, status, _parentTaskId: taskId })
       .unwrap()
       .catch(() => toast.error("Failed to update subtask"));
   }
@@ -326,7 +349,14 @@ export function TaskDetailPage() {
           to={`/workspaces/${workspaceId}`}
           className="hover:text-foreground transition-colors"
         >
-          Workspace
+          {workspaceName}
+        </Link>
+        <ChevronRight className="h-3 w-3" />
+        <Link
+          to={`/workspaces/${workspaceId}/projects/${projectId}`}
+          className="hover:text-foreground transition-colors"
+        >
+          {projectName}
         </Link>
         <ChevronRight className="h-3 w-3" />
         <Link
@@ -336,6 +366,17 @@ export function TaskDetailPage() {
           Tasks
         </Link>
         <ChevronRight className="h-3 w-3" />
+        {parentTask && (
+          <>
+            <Link
+              to={`/workspaces/${workspaceId}/projects/${projectId}/tasks/${parentTask.id}`}
+              className="max-w-[150px] truncate hover:text-foreground transition-colors"
+            >
+              {parentTask.title}
+            </Link>
+            <ChevronRight className="h-3 w-3" />
+          </>
+        )}
         <span className="max-w-[200px] truncate font-medium text-foreground">
           {task.title}
         </span>
@@ -409,7 +450,7 @@ export function TaskDetailPage() {
                   to={`/workspaces/${workspaceId}/projects/${projectId}/tasks/${task.parentTaskId}`}
                   className="text-primary hover:underline"
                 >
-                  Task #{task.parentTaskId}
+                  {parentTask?.title ?? `Task #${task.parentTaskId}`}
                 </Link>
               </p>
             )}
@@ -523,22 +564,31 @@ export function TaskDetailPage() {
                 ))}
 
                 {/* Add subtask */}
-                <div className="flex items-center gap-2 pt-2">
-                  <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <input
-                    value={newSubtaskTitle}
-                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && newSubtaskTitle.trim()) addSubtask();
-                    }}
-                    placeholder="Add a subtask..."
-                    className="flex-1 rounded-md border-0 bg-transparent px-2 py-1 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  {newSubtaskTitle.trim() && (
-                    <Button size="sm" className="h-6 text-xs" onClick={addSubtask}>
-                      Add
-                    </Button>
-                  )}
+                <div className="mt-2 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <input
+                      value={newSubtaskTitle}
+                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newSubtaskTitle.trim()) addSubtask();
+                      }}
+                      placeholder="Quick add (Enter to save)..."
+                      className="flex-1 rounded-md border-0 bg-transparent px-2 py-1 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                    {newSubtaskTitle.trim() && (
+                      <Button size="sm" className="h-6 text-xs" onClick={addSubtask}>
+                        Add
+                      </Button>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setSubtaskSheetOpen(true)}
+                    className="ml-6 flex items-center gap-1.5 text-xs text-primary hover:underline"
+                  >
+                    <SquarePen className="h-3 w-3" />
+                    Add with more details
+                  </button>
                 </div>
               </div>
             )}
@@ -749,6 +799,14 @@ export function TaskDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* ── Subtask full-form sheet ── */}
+      <TaskFormSheet
+        open={subtaskSheetOpen}
+        onOpenChange={setSubtaskSheetOpen}
+        projectId={projectId}
+        parentTaskId={taskId}
+      />
 
       {/* ── Delete Dialog ── */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

@@ -50,6 +50,7 @@ export function TaskFormSheet({
   parentTaskId,
 }: TaskFormSheetProps) {
   const isEdit = !!task;
+  const isSubtask = !isEdit && parentTaskId != null;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -125,9 +126,15 @@ export function TaskFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md overflow-y-auto" showOverlay={false}>
         <SheetHeader>
-          <SheetTitle>{isEdit ? "Edit Task" : "New Task"}</SheetTitle>
+          <SheetTitle>
+            {isEdit ? "Edit Task" : isSubtask ? "New Subtask" : "New Task"}
+          </SheetTitle>
           <SheetDescription>
-            {isEdit ? "Update task details." : "Add a new task to this project."}
+            {isEdit
+              ? "Update task details."
+              : isSubtask
+                ? "Add a subtask with full details."
+                : "Add a new task to this project."}
           </SheetDescription>
         </SheetHeader>
 
@@ -255,7 +262,7 @@ export function TaskFormSheet({
             </Button>
             <Button type="submit" disabled={isLoading || !title.trim()}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEdit ? "Save Changes" : "Create Task"}
+              {isEdit ? "Save Changes" : isSubtask ? "Create Subtask" : "Create Task"}
             </Button>
           </SheetFooter>
         </form>

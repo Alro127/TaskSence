@@ -3,10 +3,12 @@ package dev.alro127.tasksense.service.impl;
 import dev.alro127.tasksense.domain.entity.ProjectEntity;
 import dev.alro127.tasksense.domain.entity.TaskEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
+import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
 import dev.alro127.tasksense.dto.request.CreateTaskRequest;
 import dev.alro127.tasksense.dto.request.TaskSearchRequest;
 import dev.alro127.tasksense.dto.request.UpdateTaskRequest;
+import dev.alro127.tasksense.dto.request.UpdateTaskStatusRequest;
 import dev.alro127.tasksense.dto.response.TaskResponse;
 import dev.alro127.tasksense.exception.BadRequestException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
@@ -47,6 +49,44 @@ public class TaskServiceImpl implements TaskService {
     private void requireProjectMember(Long projectId, Long userId) {
         if (!projectMemberRepository.existsByProjectIdAndUserId(projectId, userId)) {
             throw new UnauthorizedException("You are not a member of this project");
+        }
+    }
+
+    private boolean isManager(Long projectId, Long userId) {
+        return projectMemberRepository.existsByProjectIdAndUserIdAndRole(projectId, userId, ProjectMemberRole.MANAGER);
+    }
+
+    /**
+     * VIEWER cannot create, update, or delete tasks.
+     */
+    private void requireNotViewer(Long projectId, Long userId) {
+        if (!isManager(projectId, userId) &&
+                !projectMemberRepository.existsByProjectIdAndUserIdAndRole(projectId, userId, ProjectMemberRole.MEMBER)) {
+            throw new UnauthorizedException("Viewers are not allowed to perform this action");
+        }
+    }
+
+    /**
+     * MANAGER: can modify any task.
+     * MEMBER: can only modify tasks they created.
+     */
+    private void requireTaskEditPermission(Long projectId, Long userId, TaskEntity task) {
+        if (isManager(projectId, userId)) return;
+        if (!task.getCreatedBy().getId().equals(userId)) {
+            throw new UnauthorizedException("You do not have permission to modify this task");
+        }
+    }
+
+    /**
+     * MANAGER: can update status of any task.
+     * MEMBER: can update status of tasks they created or are assigned to.
+     */
+    private void requireTaskStatusPermission(Long projectId, Long userId, TaskEntity task) {
+        if (isManager(projectId, userId)) return;
+        boolean isCreator = task.getCreatedBy().getId().equals(userId);
+        boolean isAssignee = task.getAssignees().stream().anyMatch(u -> u.getId().equals(userId));
+        if (!isCreator && !isAssignee) {
+            throw new UnauthorizedException("You do not have permission to update status of this task");
         }
     }
 
@@ -99,6 +139,7 @@ public class TaskServiceImpl implements TaskService {
     public TaskResponse createTask(Long projectId, CreateTaskRequest request) {
         UserEntity currentUser = securityService.getCurrentUser();
         requireProjectMember(projectId, currentUser.getId());
+        requireNotViewer(projectId, currentUser.getId());
 
         ProjectEntity project = getProjectOrThrow(projectId);
 
@@ -170,8 +211,10 @@ public class TaskServiceImpl implements TaskService {
     public TaskResponse updateTask(Long projectId, Long taskId, UpdateTaskRequest request) {
         UserEntity currentUser = securityService.getCurrentUser();
         requireProjectMember(projectId, currentUser.getId());
+        requireNotViewer(projectId, currentUser.getId());
 
         TaskEntity task = getTaskOrThrow(projectId, taskId);
+        requireTaskEditPermission(projectId, currentUser.getId(), task);
 
         if (request.getTitle() != null)
             task.setTitle(request.getTitle().trim());
@@ -211,11 +254,35 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional
+    public TaskResponse updateTaskStatus(Long projectId, Long taskId, UpdateTaskStatusRequest request) {
+        UserEntity currentUser = securityService.getCurrentUser();
+        requireProjectMember(projectId, currentUser.getId());
+        requireNotViewer(projectId, currentUser.getId());
+
+        TaskEntity task = getTaskOrThrow(projectId, taskId);
+        requireTaskStatusPermission(projectId, currentUser.getId(), task);
+
+        task.setStatus(request.getStatus());
+        if (request.getStatus() == TaskStatus.DONE) {
+            task.setCompletedAt(OffsetDateTime.now());
+        } else {
+            task.setCompletedAt(null);
+        }
+
+        taskRepository.save(task);
+        return TaskResponse.mapToResponse(task);
+    }
+
+    @Override
+    @Transactional
     public void deleteTask(Long projectId, Long taskId) {
         UserEntity currentUser = securityService.getCurrentUser();
         requireProjectMember(projectId, currentUser.getId());
+        requireNotViewer(projectId, currentUser.getId());
 
         TaskEntity task = getTaskOrThrow(projectId, taskId);
+        requireTaskEditPermission(projectId, currentUser.getId(), task);
+
         task.setDeletedAt(OffsetDateTime.now());
         taskRepository.save(task);
     }

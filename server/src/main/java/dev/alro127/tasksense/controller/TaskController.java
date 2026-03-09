@@ -4,6 +4,7 @@ import dev.alro127.tasksense.dto.common.ApiResponse;
 import dev.alro127.tasksense.dto.request.CreateTaskRequest;
 import dev.alro127.tasksense.dto.request.TaskSearchRequest;
 import dev.alro127.tasksense.dto.request.UpdateTaskRequest;
+import dev.alro127.tasksense.dto.request.UpdateTaskStatusRequest;
 import dev.alro127.tasksense.dto.response.TaskResponse;
 import dev.alro127.tasksense.service.TaskService;
 import jakarta.validation.Valid;
@@ -93,6 +94,20 @@ public class TaskController {
                                 "200",
                                 "Update task successfully",
                                 taskService.updateTask(projectId, taskId, request),
+                                null);
+
+                return ResponseEntity.ok(response);
+        }
+
+        @PatchMapping("/{taskId}/status")
+        public ResponseEntity<ApiResponse<TaskResponse>> updateTaskStatus(
+                        @PathVariable Long projectId,
+                        @PathVariable Long taskId,
+                        @Valid @RequestBody UpdateTaskStatusRequest request) {
+                ApiResponse<TaskResponse> response = new ApiResponse<>(
+                                "200",
+                                "Update task status successfully",
+                                taskService.updateTaskStatus(projectId, taskId, request),
                                 null);
 
                 return ResponseEntity.ok(response);

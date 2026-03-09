@@ -3,6 +3,7 @@ package dev.alro127.tasksense.service;
 import dev.alro127.tasksense.dto.request.CreateTaskRequest;
 import dev.alro127.tasksense.dto.request.TaskSearchRequest;
 import dev.alro127.tasksense.dto.request.UpdateTaskRequest;
+import dev.alro127.tasksense.dto.request.UpdateTaskStatusRequest;
 import dev.alro127.tasksense.dto.response.TaskResponse;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,8 @@ public interface TaskService {
     List<TaskResponse> getSubTasks(Long projectId, Long parentTaskId);
 
     TaskResponse updateTask(Long projectId, Long taskId, UpdateTaskRequest request);
+
+    TaskResponse updateTaskStatus(Long projectId, Long taskId, UpdateTaskStatusRequest request);
 
     void deleteTask(Long projectId, Long taskId);
 }

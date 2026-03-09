@@ -32,6 +32,62 @@
 | Warning Amber | `#F59E0B` | Warning, caution          | `text-amber-500` |
 | Info Blue     | `#3B82F6` | Informational messages    | `text-blue-500`  |
 
+### Task Status Colors
+
+Dùng nhất quán cho tất cả badge/tag thể hiện **trạng thái** task. Định nghĩa tập trung qua `taskStatusConfig`:
+
+```tsx
+// src/features/task/constants/taskStatus.ts
+export const taskStatusConfig = {
+  todo: { label: "To Do", className: "bg-slate-100 text-slate-600" },
+  in_progress: { label: "In Progress", className: "bg-blue-100 text-blue-700" },
+  done: { label: "Done", className: "bg-green-100 text-green-700" },
+  overdue: { label: "Overdue", className: "bg-red-100 text-red-700" },
+  blocked: { label: "Blocked", className: "bg-amber-100 text-amber-700" },
+  cancelled: { label: "Cancelled", className: "bg-gray-100 text-gray-500" },
+} as const;
+
+export type TaskStatus = keyof typeof taskStatusConfig;
+```
+
+> **Rule**: Chỉ thêm entry mới vào `taskStatusConfig` khi có status mới từ Backend. Không hardcode class status ở nơi khác.
+
+### Task Priority Colors
+
+Hệ thống riêng biệt cho **mức ưu tiên** task — không dùng chung với status. Định nghĩa tập trung qua `taskPriorityConfig`:
+
+```tsx
+// src/features/task/constants/taskPriority.ts
+export const taskPriorityConfig = {
+  low: {
+    label: "Low",
+    className: "text-slate-400",
+    iconClass: "text-slate-400",
+  },
+  medium: {
+    label: "Medium",
+    className: "text-amber-500",
+    iconClass: "text-amber-500",
+  },
+  high: {
+    label: "High",
+    className: "text-orange-500",
+    iconClass: "text-orange-500",
+  },
+  urgent: {
+    label: "Urgent",
+    className: "text-red-600 font-semibold",
+    iconClass: "text-red-600",
+  },
+} as const;
+
+export type TaskPriority = keyof typeof taskPriorityConfig;
+```
+
+> **Rule**: Priority chỉ ảnh hưởng đến **text color + icon color**, không dùng background như status. Tách biệt hoàn toàn với `taskStatusConfig`.
+
+---
+
 ## 📐 Typography
 
 ### Font Family
@@ -41,20 +97,25 @@
 
 ### Font Sizes (dùng Tailwind classes)
 
-| Element       | Class                   | Size |
-| ------------- | ----------------------- | ---- |
-| Page Title    | `text-2xl font-bold`    | 24px |
-| Section Title | `text-xl font-semibold` | 20px |
-| Card Title    | `text-lg font-semibold` | 18px |
-| Body          | `text-sm`               | 14px |
-| Small/Caption | `text-xs`               | 12px |
-| Label         | `text-sm font-medium`   | 14px |
+| Element       | Class                                         | Size |
+| ------------- | --------------------------------------------- | ---- |
+| Page Title    | `text-2xl font-bold`                          | 24px |
+| Section Title | `text-xl font-semibold`                       | 20px |
+| Card Title    | `text-lg font-semibold`                       | 18px |
+| Body          | `text-sm`                                     | 14px |
+| Small/Caption | `text-xs`                                     | 12px |
+| Label         | `text-sm font-medium`                         | 14px |
+| Metadata/Date | `text-xs text-muted-foreground`               | 12px |
+| Tag/Label     | `text-xs font-medium uppercase tracking-wide` | 12px |
+| Empty state   | `text-sm text-muted-foreground text-center`   | 14px |
+
+---
 
 ## 📦 Spacing
 
 Dùng Tailwind spacing scale:
 | Usage | Class | Value |
-|--------------------|----------------|---------|
+|--------------------|----------|-------|
 | Page padding | `p-6` | 24px |
 | Card padding | `p-6` | 24px |
 | Section gap | `gap-6` | 24px |
@@ -62,16 +123,20 @@ Dùng Tailwind spacing scale:
 | Inline gap | `gap-2` | 8px |
 | Tight gap | `gap-1` | 4px |
 
+---
+
 ## 🔲 Border Radius
 
 Sử dụng shadcn/ui radius tokens:
 | Element | Class |
-|------------|---------------|
+|---------|----------------|
 | Button | `rounded-md` |
 | Card | `rounded-lg` |
 | Input | `rounded-md` |
-| Badge | `rounded-full`|
+| Badge | `rounded-full` |
 | Modal | `rounded-lg` |
+
+---
 
 ## 🔘 Button Variants
 
@@ -112,6 +177,8 @@ Sử dụng shadcn/ui Button component:
 | Large     | `size="lg"`      | 40px   |
 | Icon only | `size="icon"`    | 36x36  |
 
+---
+
 ## 📝 Form Fields
 
 ### Input Pattern
@@ -129,6 +196,8 @@ Sử dụng shadcn/ui Button component:
 - **Error**: `border-destructive` + error message below
 - **Disabled**: Dùng `disabled` attribute (opacity tự động giảm)
 - **Focus**: Ring `ring-ring` (mặc định shadcn)
+
+---
 
 ## 🏗️ Layout Patterns
 
@@ -178,6 +247,8 @@ Sử dụng shadcn/ui Button component:
 - **Pattern reuse**: Dùng lại `SkillsSection` với prop `userId` (view-only mode)
 - **Visual cue**: Hover tên user → `hover:text-primary hover:underline`; hover avatar → `hover:ring-2 hover:ring-primary/40`
 
+---
+
 ## 🔔 Toast/Notification
 
 Dùng `sonner` (tích hợp shadcn):
@@ -200,11 +271,13 @@ toast.success("Chào mừng!", {
 });
 ```
 
+---
+
 ## 📱 Responsive Breakpoints
 
 Dùng Tailwind default breakpoints:
 | Breakpoint | Min Width | Usage |
-|------------|-----------|------------------------|
+|------------|-----------|---------------|
 | `sm` | 640px | Small tablets |
 | `md` | 768px | Tablets |
 | `lg` | 1024px | Desktop |
@@ -216,6 +289,8 @@ Dùng Tailwind default breakpoints:
 - `md:` prefix cho tablet+
 - `lg:` prefix cho desktop+
 
+---
+
 ## 📋 Component Library
 
 ### Reusable Components Location: `src/components/`
@@ -226,6 +301,7 @@ Dùng Tailwind default breakpoints:
 | LoadingSpinner  | `components/common/`        | Full-page or inline loading state                              |
 | PasswordInput   | `components/common/`        | Password field with show/hide toggle                           |
 | GoogleButton    | `components/common/`        | OAuth button wrapper                                           |
+| EmptyState      | `components/common/`        | Empty state với illustration + CTA                             |
 | UserProfileCard | `features/user/components/` | Profile display card (Avatar + Info)                           |
 
 ### Feature-specific Components Location: `src/features/[feature]/`
@@ -235,6 +311,8 @@ Dùng Tailwind default breakpoints:
 | auth      | LoginPage, RegisterPage, etc.                       | Auth flows                                         |
 | user      | UserProfileCard, EditProfilePage, UserProfileDrawer | Profile management + read-only view of other users |
 | dashboard | DashboardPage                                       | Home page after login                              |
+
+---
 
 ## ✅ Do's and Don'ts
 
@@ -246,6 +324,8 @@ Dùng Tailwind default breakpoints:
 - Dùng `cn()` utility để merge classes có điều kiện
 - Đặt error messages dưới input fields
 - Dùng `sonner` toast cho server responses
+- Dùng `taskStatusConfig` cho status badge — `taskPriorityConfig` cho priority (tách riêng, không dùng lẫn)
+- Dùng Skeleton thay Spinner cho danh sách đang load
 
 ### DON'T:
 
@@ -254,3 +334,159 @@ Dùng Tailwind default breakpoints:
 - Dùng inline styles
 - Mix CSS modules với Tailwind
 - Sửa files trong `components/ui/` (auto-generated bởi shadcn)
+- Để màn hình trống — luôn dùng `<EmptyState />` khi không có data
+- Dùng `taskStatusConfig` để render priority, và ngược lại
+
+---
+
+## 🧠 UX/UI Principles & AI Instructions
+
+### 1. Business Logic & Hierarchy
+
+AI cần tuân thủ thứ tự ưu tiên thị giác cho ứng dụng TaskSense:
+
+**Z-Index System:**
+
+| Level   | Value | Elements                   |
+| ------- | ----- | -------------------------- |
+| Level 0 | base  | `bg-background`            |
+| Level 1 | —     | `bg-card`, Sidebar         |
+| Level 2 | z-40  | Header (sticky)            |
+| Level 3 | z-50  | Modals, Drawers, Dropdowns |
+
+### 2. Visual Polish & Effects
+
+**Glassmorphism** (Bắt buộc cho Header/Sidebar):
+
+```
+bg-background/80 backdrop-blur-md sticky top-0 border-b z-40
+```
+
+**Glass Card** (tuỳ chọn cho dashboard widgets):
+
+```
+bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm rounded-lg
+```
+
+**Elevation (Shadows):**
+
+| State   | Class                                                    |
+| ------- | -------------------------------------------------------- |
+| Default | `shadow-sm`                                              |
+| Hover   | `shadow-md -translate-y-0.5 transition-all duration-200` |
+| Active  | `shadow-sm scale-[0.99]`                                 |
+
+### 3. Micro-interactions (Framer Motion)
+
+AI **bắt buộc** dùng các snippet sau khi viết list hoặc page mới:
+
+```tsx
+import { motion } from "framer-motion";
+
+// Container — stagger children
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05, delayChildren: 0.1 },
+  },
+};
+
+// Item — fade + slide up
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.25 } },
+};
+
+// Usage
+<motion.ul variants={containerVariants} initial="hidden" animate="visible">
+  {items.map((item) => (
+    <motion.li key={item.id} variants={itemVariants}>
+      <TaskCard task={item} />
+    </motion.li>
+  ))}
+</motion.ul>
+
+// Button tap feedback
+<motion.div whileTap={{ scale: 0.97 }}>
+  <Button>Submit</Button>
+</motion.div>
+
+// Page / section entrance
+<motion.div
+  initial={{ opacity: 0, y: 16 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.3 }}
+>
+  {/* page content */}
+</motion.div>
+```
+
+### 4. Empty States
+
+**Không để màn hình trống.** Luôn dùng `<EmptyState />` khi không có data:
+
+```tsx
+// Props interface
+interface EmptyStateProps {
+  icon?: React.ReactNode; // Lucide icon hoặc illustration
+  title: string;
+  description?: string;
+  action?: React.ReactNode; // CTA button
+}
+
+// Example usage
+<EmptyState
+  icon={<ClipboardList className="h-10 w-10 text-muted-foreground" />}
+  title="Chưa có task nào"
+  description="Tạo task đầu tiên để bắt đầu sprint của bạn."
+  action={
+    <Button>
+      <Plus className="mr-2 h-4 w-4" /> Tạo task
+    </Button>
+  }
+/>;
+```
+
+### 5. Skeleton Loading
+
+Dùng `Skeleton` từ shadcn cho **mọi** danh sách đang load. Không dùng spinner cho list:
+
+```tsx
+// TaskCard skeleton
+function TaskCardSkeleton() {
+  return (
+    <div className="rounded-lg border bg-card p-4 space-y-3">
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-3 w-1/2" />
+      <div className="flex gap-2">
+        <Skeleton className="h-5 w-16 rounded-full" />
+        <Skeleton className="h-5 w-20 rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+// List skeleton
+{
+  isLoading &&
+    Array.from({ length: 4 }).map((_, i) => <TaskCardSkeleton key={i} />);
+}
+```
+
+### 6. State & Error Mapping (Golang Integration)
+
+**Optimistic UI**: Cập nhật UI ngay lập tức bằng React Query `onMutate` trước khi chờ Backend phản hồi.
+
+**Error Handling** — ánh xạ lỗi từ Golang API sang sonner toast:
+
+| HTTP Status | Toast                                               |
+| ----------- | --------------------------------------------------- |
+| 401 / 403   | `toast.error("Phiên đăng nhập hết hạn")`            |
+| 404         | `toast.error("Không tìm thấy dữ liệu")`             |
+| 422         | `toast.error("Dữ liệu không hợp lệ")`               |
+| 500         | `toast.error("Lỗi hệ thống, vui lòng thử lại sau")` |
+
+---
+
+> **AI META-RULE**: Luôn ưu tiên tính đơn giản. Nếu giao diện quá rối, hãy đề xuất rút gọn thông tin bằng cách dùng `Tooltip` hoặc `Popover`. Không thêm animation nếu không có trong snippet trên.

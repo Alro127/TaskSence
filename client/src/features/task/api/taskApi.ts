@@ -76,24 +76,30 @@ export const taskApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: (_result, _error, { projectId }) => [
+      invalidatesTags: (_result, _error, { projectId, parentTaskId }) => [
         { type: "Task", id: `PROJECT_${projectId}` },
+        ...(parentTaskId != null
+          ? [{ type: "Task" as const, id: `SUBTASKS_${parentTaskId}` }]
+          : []),
       ],
     }),
 
     updateTask: builder.mutation<
       ApiResponse<TaskResponse>,
-      { projectId: number; taskId: number } & UpdateTaskRequest
+      { projectId: number; taskId: number; _parentTaskId?: number } & UpdateTaskRequest
     >({
-      query: ({ projectId, taskId, ...body }) => ({
+      query: ({ projectId, taskId, _parentTaskId, ...body }) => ({
         url: `/projects/${projectId}/tasks/${taskId}`,
         method: "PUT",
         body,
       }),
-      invalidatesTags: (_result, _error, { projectId, taskId }) => [
+      invalidatesTags: (_result, _error, { projectId, taskId, _parentTaskId }) => [
         { type: "Task", id: taskId },
         { type: "Task", id: `PROJECT_${projectId}` },
         { type: "Task", id: `SUBTASKS_${taskId}` },
+        ...(_parentTaskId != null
+          ? [{ type: "Task" as const, id: `SUBTASKS_${_parentTaskId}` }]
+          : []),
       ],
     }),
 

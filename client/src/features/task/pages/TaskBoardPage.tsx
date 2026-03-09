@@ -57,6 +57,8 @@ import type { TaskPriority, TaskResponse, TaskStatus } from "@/types/api";
 
 import { useGetTasksByProjectQuery, useDeleteTaskMutation, useUpdateTaskMutation } from "../api/taskApi";
 import { TaskFormSheet } from "../components/TaskFormSheet";
+import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
+import { useGetProjectByIdQuery } from "@/features/project/api/projectApi";
 
 // ─── Config ──────────────────────────────────────────────────────────────────────
 const STATUS_COLUMNS: {
@@ -452,7 +454,18 @@ export function TaskBoardPage() {
   const { data: tasksData, isLoading } = useGetTasksByProjectQuery(projectId, {
     skip: isNaN(projectId),
   });
-  const tasks = tasksData?.data ?? [];
+  // Only show root tasks on the board — subtasks are managed inside TaskDetailPage
+  const tasks = (tasksData?.data ?? []).filter((t) => t.parentTaskId == null);
+
+  const { data: workspaceData } = useGetWorkspaceByIdQuery(workspaceId, {
+    skip: isNaN(workspaceId),
+  });
+  const { data: projectData } = useGetProjectByIdQuery(
+    { workspaceId, projectId },
+    { skip: isNaN(workspaceId) || isNaN(projectId) },
+  );
+  const workspaceName = workspaceData?.data?.name ?? "Workspace";
+  const projectName = projectData?.data?.name ?? "Project";
 
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
   const [updateTask] = useUpdateTaskMutation();
@@ -593,14 +606,14 @@ export function TaskBoardPage() {
           to={`/workspaces/${workspaceId}`}
           className="hover:text-foreground transition-colors"
         >
-          Workspace
+          {workspaceName}
         </Link>
         <ChevronRight className="h-3 w-3" />
         <Link
           to={`/workspaces/${workspaceId}/projects/${projectId}`}
           className="hover:text-foreground transition-colors"
         >
-          Project
+          {projectName}
         </Link>
         <ChevronRight className="h-3 w-3" />
         <span className="font-medium text-foreground">Tasks</span>
