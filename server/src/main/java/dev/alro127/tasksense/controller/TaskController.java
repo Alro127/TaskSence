@@ -10,6 +10,7 @@ import dev.alro127.tasksense.service.TaskService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,6 +23,7 @@ public class TaskController {
         private final TaskService taskService;
 
         @PostMapping
+        @PreAuthorize("@perm.project(#projectId, 'CREATE_TASK')")
         public ResponseEntity<ApiResponse<TaskResponse>> createTask(
                         @PathVariable Long projectId,
                         @Valid @RequestBody CreateTaskRequest request) {
@@ -35,6 +37,7 @@ public class TaskController {
         }
 
         @GetMapping
+        @PreAuthorize("@perm.project(#projectId, 'VIEW_TASKS')")
         public ResponseEntity<ApiResponse<List<TaskResponse>>> getTasksByProject(
                         @PathVariable Long projectId) {
                 ApiResponse<List<TaskResponse>> response = new ApiResponse<>(
@@ -47,6 +50,7 @@ public class TaskController {
         }
 
         @GetMapping("/search")
+        @PreAuthorize("@perm.project(#projectId, 'VIEW_TASKS')")
         public ResponseEntity<ApiResponse<List<TaskResponse>>> searchTasks(
                         @PathVariable Long projectId,
                         @ModelAttribute TaskSearchRequest request) {
@@ -60,6 +64,7 @@ public class TaskController {
         }
 
         @GetMapping("/{taskId}")
+        @PreAuthorize("@perm.project(#projectId, 'VIEW_TASKS')")
         public ResponseEntity<ApiResponse<TaskResponse>> getTaskById(
                         @PathVariable Long projectId,
                         @PathVariable Long taskId) {
@@ -73,6 +78,7 @@ public class TaskController {
         }
 
         @GetMapping("/{taskId}/subtasks")
+        @PreAuthorize("@perm.project(#projectId, 'VIEW_TASKS')")
         public ResponseEntity<ApiResponse<List<TaskResponse>>> getSubTasks(
                         @PathVariable Long projectId,
                         @PathVariable Long taskId) {
@@ -86,6 +92,7 @@ public class TaskController {
         }
 
         @PutMapping("/{taskId}")
+        @PreAuthorize("@perm.project(#projectId, 'UPDATE_TASK')")
         public ResponseEntity<ApiResponse<TaskResponse>> updateTask(
                         @PathVariable Long projectId,
                         @PathVariable Long taskId,
@@ -100,6 +107,7 @@ public class TaskController {
         }
 
         @PatchMapping("/{taskId}/status")
+        @PreAuthorize("@perm.project(#projectId, 'UPDATE_TASK_STATUS')")
         public ResponseEntity<ApiResponse<TaskResponse>> updateTaskStatus(
                         @PathVariable Long projectId,
                         @PathVariable Long taskId,
@@ -114,6 +122,7 @@ public class TaskController {
         }
 
         @DeleteMapping("/{taskId}")
+        @PreAuthorize("@perm.project(#projectId, 'DELETE_TASK')")
         public ResponseEntity<ApiResponse<Void>> deleteTask(
                         @PathVariable Long projectId,
                         @PathVariable Long taskId) {

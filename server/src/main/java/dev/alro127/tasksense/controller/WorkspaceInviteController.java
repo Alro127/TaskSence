@@ -10,6 +10,7 @@ import dev.alro127.tasksense.service.WorkspaceInviteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,79 +20,77 @@ import java.util.List;
 @RequiredArgsConstructor
 public class WorkspaceInviteController {
 
-    private final WorkspaceInviteService workspaceInviteService;
+        private final WorkspaceInviteService workspaceInviteService;
 
-    @PostMapping("/{workspaceId}/invites")
-    public ResponseEntity<ApiResponse<WorkspaceInviteResponse>> inviteMember(
-            @PathVariable Long workspaceId,
-            @Valid @RequestBody BulkInviteItemRequest request) {
+        @PostMapping("/{workspaceId}/invites")
+        @PreAuthorize("@perm.workspace(#workspaceId, 'INVITE_MEMBERS')")
+        public ResponseEntity<ApiResponse<WorkspaceInviteResponse>> inviteMember(
+                        @PathVariable Long workspaceId,
+                        @Valid @RequestBody BulkInviteItemRequest request) {
 
-        ApiResponse<WorkspaceInviteResponse> response = new ApiResponse<>(
-                "201",
-                "Invite member successfully",
-                workspaceInviteService.inviteMember(workspaceId, request),
-                null
-        );
+                ApiResponse<WorkspaceInviteResponse> response = new ApiResponse<>(
+                                "201",
+                                "Invite member successfully",
+                                workspaceInviteService.inviteMember(workspaceId, request),
+                                null);
 
-        return ResponseEntity.status(201).body(response);
-    }
+                return ResponseEntity.status(201).body(response);
+        }
 
-    @PostMapping("/{workspaceId}/invites/bulk")
-    public ResponseEntity<ApiResponse<BulkInviteResult>> inviteMultipleMembers(
-            @PathVariable Long workspaceId,
-            @Valid @RequestBody CreateBulkWorkspaceInviteRequest request) {
+        @PostMapping("/{workspaceId}/invites/bulk")
+        @PreAuthorize("@perm.workspace(#workspaceId, 'INVITE_MEMBERS')")
+        public ResponseEntity<ApiResponse<BulkInviteResult>> inviteMultipleMembers(
+                        @PathVariable Long workspaceId,
+                        @Valid @RequestBody CreateBulkWorkspaceInviteRequest request) {
 
-        ApiResponse<BulkInviteResult> response = new ApiResponse<>(
-                "201",
-                "Invite multiple members successfully",
-                workspaceInviteService.inviteMultipleMembers(workspaceId, request),
-                null
-        );
+                ApiResponse<BulkInviteResult> response = new ApiResponse<>(
+                                "201",
+                                "Invite multiple members successfully",
+                                workspaceInviteService.inviteMultipleMembers(workspaceId, request),
+                                null);
 
-        return ResponseEntity.status(201).body(response);
-    }
+                return ResponseEntity.status(201).body(response);
+        }
 
-    @GetMapping("/{workspaceId}/invites")
-    public ResponseEntity<ApiResponse<List<WorkspaceInviteResponse>>> getWorkspaceInvites(
-            @PathVariable Long workspaceId) {
+        @GetMapping("/{workspaceId}/invites")
+        @PreAuthorize("@perm.workspace(#workspaceId, 'INVITE_MEMBERS')")
+        public ResponseEntity<ApiResponse<List<WorkspaceInviteResponse>>> getWorkspaceInvites(
+                        @PathVariable Long workspaceId) {
 
-        ApiResponse<List<WorkspaceInviteResponse>> response = new ApiResponse<>(
-                "200",
-                "Get workspace invites successfully",
-                workspaceInviteService.getWorkspaceInvites(workspaceId),
-                null
-        );
+                ApiResponse<List<WorkspaceInviteResponse>> response = new ApiResponse<>(
+                                "200",
+                                "Get workspace invites successfully",
+                                workspaceInviteService.getWorkspaceInvites(workspaceId),
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @PostMapping("/invites/accept")
-    public ResponseEntity<ApiResponse<WorkspaceInviteResponse>> acceptInvite(
-            @Valid @RequestBody TokenRequest request) {
+        @PostMapping("/invites/accept")
+        public ResponseEntity<ApiResponse<WorkspaceInviteResponse>> acceptInvite(
+                        @Valid @RequestBody TokenRequest request) {
 
-        ApiResponse<WorkspaceInviteResponse> response = new ApiResponse<>(
-                "200",
-                "Accept workspace invite successfully",
-                workspaceInviteService.acceptInvite(request.getToken()),
-                null
-        );
+                ApiResponse<WorkspaceInviteResponse> response = new ApiResponse<>(
+                                "200",
+                                "Accept workspace invite successfully",
+                                workspaceInviteService.acceptInvite(request.getToken()),
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @PatchMapping("/invites/{inviteId}/revoke")
-    public ResponseEntity<ApiResponse<Void>> revokeInvite(
-            @PathVariable Long inviteId) {
+        @PatchMapping("/invites/{inviteId}/revoke")
+        public ResponseEntity<ApiResponse<Void>> revokeInvite(
+                        @PathVariable Long inviteId) {
 
-        workspaceInviteService.revokeInvite(inviteId);
+                workspaceInviteService.revokeInvite(inviteId);
 
-        ApiResponse<Void> response = new ApiResponse<>(
-                "200",
-                "Revoke workspace invite successfully",
-                null,
-                null
-        );
+                ApiResponse<Void> response = new ApiResponse<>(
+                                "200",
+                                "Revoke workspace invite successfully",
+                                null,
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 }
