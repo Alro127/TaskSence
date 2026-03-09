@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import {
+  ArrowRight,
   ArrowRightLeft,
   ChevronRight,
   ListTodo,
@@ -40,6 +41,7 @@ import { useGetProjectByIdQuery, useGetCurrentUserRoleQuery } from "../api/proje
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
 import { useGetMembersQuery, useUpdateMemberRoleMutation } from "../api/projectMemberApi";
 import { useGetJoinRequestsQuery, useReviewJoinRequestMutation } from "../api/projectJoinRequestApi";
+import { useGetTasksByProjectQuery } from "@/features/task/api/taskApi";
 import {
   DeleteProjectDialog,
   EditProjectModal,
@@ -321,6 +323,12 @@ export function ProjectDetailPage() {
   const joinRequests = joinRequestsData?.data ?? [];
   const pendingCount = joinRequests.filter((r) => r.status === "PENDING").length;
 
+  const { data: tasksData, isLoading: isTasksLoading } = useGetTasksByProjectQuery(
+    projectId,
+    { skip: isNaN(projectId) },
+  );
+  const tasks = tasksData?.data ?? [];
+
   // ── Modal states ──
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -561,16 +569,86 @@ export function ProjectDetailPage() {
         </TabsContent>
 
         {/* ── Tasks Tab ── */}
-        <TabsContent value="tasks" className="mt-6">
-          <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/30 text-center">
-            <ListTodo className="h-8 w-8 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">Task management</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Task boards and tracking will be available in a future sprint.
-              </p>
+        <TabsContent value="tasks" className="mt-6 space-y-6">
+          {isTasksLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          </div>
+          ) : (
+            <>
+              {/* ── Stats grid ── */}
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+                <Card className="p-4 space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
+                  <p className="text-2xl font-bold">{tasks.length}</p>
+                </Card>
+                <Card className="p-4 space-y-1 border-l-4 border-l-slate-400">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Todo</p>
+                  <p className="text-2xl font-bold text-slate-600">
+                    {tasks.filter((t) => t.status === "TODO").length}
+                  </p>
+                </Card>
+                <Card className="p-4 space-y-1 border-l-4 border-l-blue-500">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">In Progress</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {tasks.filter((t) => t.status === "IN_PROGRESS").length}
+                  </p>
+                </Card>
+                <Card className="p-4 space-y-1 border-l-4 border-l-amber-500">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Review</p>
+                  <p className="text-2xl font-bold text-amber-600">
+                    {tasks.filter((t) => t.status === "REVIEW").length}
+                  </p>
+                </Card>
+                <Card className="p-4 space-y-1 border-l-4 border-l-green-500">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Done</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {tasks.filter((t) => t.status === "DONE").length}
+                  </p>
+                </Card>
+              </div>
+
+              {/* ── Progress bar ── */}
+              {tasks.length > 0 && (() => {
+                const done = tasks.filter((t) => t.status === "DONE").length;
+                const pct = Math.round((done / tasks.length) * 100);
+                return (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Completion</span>
+                      <span className="font-medium text-foreground">{done}/{tasks.length} tasks done</span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-green-500 transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground text-right">{pct}% complete</p>
+                  </div>
+                );
+              })()}
+
+              {/* ── CTA ── */}
+              <div className="flex items-center justify-between rounded-xl border bg-card p-5">
+                <div>
+                  <p className="text-sm font-medium">Task Board</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Manage tasks with List and Kanban views, filters, and more.
+                  </p>
+                </div>
+                <Button
+                  onClick={() =>
+                    navigate(`/workspaces/${workspaceId}/projects/${projectId}/tasks`)
+                  }
+                >
+                  <ListTodo className="mr-2 h-4 w-4" />
+                  Open Task Board
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          )}
         </TabsContent>
 
         {/* ── Members Tab ── */}
