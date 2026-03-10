@@ -22,6 +22,8 @@ interface WorkspaceCardProps {
   onDelete: (workspace: Workspace) => void;
   projectCount?: number;
   variant?: "default" | "pinned";
+  /** Whether the current user can manage (edit/delete) this workspace (OWNER/MANAGER) */
+  canManage?: boolean;
 }
 
 export function WorkspaceCard({
@@ -32,6 +34,7 @@ export function WorkspaceCard({
   onDelete,
   projectCount = 0,
   variant = "default",
+  canManage = false,
 }: WorkspaceCardProps) {
   const navigate = useNavigate();
 
@@ -80,26 +83,28 @@ export function WorkspaceCard({
               )}
             </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm">
-                  <MoreVertical className="h-3.5 w-3.5" />
-                  <span className="sr-only">Workspace options</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(workspace)}>
-                  Edit workspace
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => onDelete(workspace)}
-                >
-                  Delete workspace
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {canManage && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon-sm">
+                    <MoreVertical className="h-3.5 w-3.5" />
+                    <span className="sr-only">Workspace options</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onEdit(workspace)}>
+                    Edit workspace
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => onDelete(workspace)}
+                  >
+                    Delete workspace
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 
