@@ -95,7 +95,7 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
 
         workspaceInviteRepository.save(invite);
 
-        userRepository.findByEmail(invite.getEmail()).ifPresent(user -> notificationService.saveAndPublic(NotificationMessage.builder()
+        userRepository.findByEmail(invite.getEmail()).ifPresent(user -> notificationService.saveAndPublish(NotificationMessage.builder()
                 .receiverId(user.getId())
                 .actorId(currentUser.getId())
                 .type(NotificationType.WORKSPACE_INVITE)
@@ -170,7 +170,7 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
                 .payload(Map.of("referenceName", member.getWorkspace().getName()))
                 .build();
 
-        notificationService.saveAndPublic(message);
+        notificationService.saveAndPublish(message);
 
         return WorkspaceInviteResponse.mapToResponse(invite);
     }

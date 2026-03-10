@@ -2,10 +2,13 @@ package dev.alro127.tasksense.service.impl;
 
 import dev.alro127.tasksense.domain.entity.NotificationEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
+import dev.alro127.tasksense.domain.enums.EntityType;
+import dev.alro127.tasksense.domain.enums.OutboxEventType;
 import dev.alro127.tasksense.dto.common.NotificationResponse;
 import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
 import dev.alro127.tasksense.service.NotificationService;
+import dev.alro127.tasksense.service.OutboxEventService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.publisher.NotificationPublisher;
 import dev.alro127.tasksense.util.redis.RedisKeys;
@@ -30,6 +33,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final UserRepository userRepository;
     private final SecurityService securityService;
     private final NotificationPublisher notificationPublisher;
+    private final OutboxEventService outboxEventService;
 
     @Override
     public List<NotificationResponse> getMyNotifications(Long cursor, int limit) {
@@ -152,7 +156,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Transactional
     @Override
-    public void saveAndPublic(NotificationMessage message) {
+    public void saveAndPublish(NotificationMessage message) {
 
         UserEntity receiver = userRepository.findById(message.getReceiverId()).orElse(null);
 
@@ -175,6 +179,22 @@ public class NotificationServiceImpl implements NotificationService {
         message.setId(saved.getId());
         message.setReceiverEmail(receiver.getEmail());
 
-        notificationPublisher.publish(message);
+        Long outboxId = outboxEventService.publishEvent(
+                OutboxEventType.NOTIFICATION,
+                EntityType.NOTIFICATION,
+                saved.getId(),
+                message
+        );
+
+        try {
+
+            notificationPublisher.publish(message);
+            outboxEventService.markSuccess(outboxId);
+
+        } catch (Exception e) {
+
+            System.out.println("Realtime publish failed, worker will retry");
+
+        }
     }
 }
