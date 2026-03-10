@@ -91,7 +91,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
         member.setRole(newRole);
 
-        notificationService.saveAndPublic(NotificationMessage.builder()
+        notificationService.saveAndPublish(NotificationMessage.builder()
                 .receiverId(member.getUser().getId())
                 .actorId(securityService.getCurrentUserId())
                 .type(NotificationType.WORKSPACE_ROLE_CHANGE)
@@ -126,7 +126,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
         //projectMemberRepository.deleteByWorkspaceIdAndUserId(workspaceId, memberId);
         workspaceMemberRepository.save(member);
 
-        notificationService.saveAndPublic(NotificationMessage.builder()
+        notificationService.saveAndPublish(NotificationMessage.builder()
                 .receiverId(member.getUser().getId())
                 .actorId(securityService.getCurrentUserId())
                 .type(NotificationType.WORKSPACE_REMOVE_MEMBER)

@@ -1,0 +1,51 @@
+package dev.alro127.tasksense.worker;
+
+import dev.alro127.tasksense.domain.entity.OutboxEventEntity;
+import dev.alro127.tasksense.domain.enums.DeliveryStatus;
+import dev.alro127.tasksense.dto.message.NotificationMessage;
+import dev.alro127.tasksense.repository.jpa.OutboxEventRepository;
+import dev.alro127.tasksense.service.publisher.NotificationPublisher;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
+
+import java.time.OffsetDateTime;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class OutboxEventProcessor {
+
+    private final NotificationPublisher notificationPublisher;
+    private final OutboxEventRepository repository;
+    private final ObjectMapper objectMapper;
+
+    @Transactional
+    public void processEvent(OutboxEventEntity event) {
+
+        try {
+
+            NotificationMessage message =
+                    objectMapper.readValue(
+                            event.getPayload().toString(),
+                            NotificationMessage.class
+                    );
+
+            notificationPublisher.publish(message);
+
+            event.setDeliveryStatus(DeliveryStatus.SUCCESS);
+            event.setPublishedAt(OffsetDateTime.now());
+
+        } catch (Exception e) {
+
+            event.setRetryCount(event.getRetryCount() + 1);
+            event.setDeliveryStatus(DeliveryStatus.FAILED);
+
+            log.error("Failed to process notification event {}", event.getId(), e);
+        }
+
+        repository.save(event);
+    }
+}
