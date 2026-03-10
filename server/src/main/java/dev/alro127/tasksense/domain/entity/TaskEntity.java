@@ -8,8 +8,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.io.Serializable;
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -52,10 +50,10 @@ public class TaskEntity {
     private TaskStatus status = TaskStatus.TODO;
 
     @Column(name = "start_date")
-    private LocalDate startDate;
+    private OffsetDateTime startDate;
 
     @Column(name = "due_date")
-    private LocalDate dueDate;
+    private OffsetDateTime dueDate;
 
     @Column(name = "completed_at")
     private OffsetDateTime completedAt;

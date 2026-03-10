@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import org.springframework.data.domain.Pageable;
 
-import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +26,18 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
 
   Optional<TaskEntity> findByIdAndProjectId(Long id, Long projectId);
 
+  @Query(value = """
+          SELECT DISTINCT t.* FROM tasks t
+          LEFT JOIN task_assignees ta ON t.id = ta.task_id
+          LEFT JOIN users u ON u.id = ta.user_id AND u.deleted_at IS NULL
+          WHERE t.deleted_at IS NULL
+            AND t.project_id = :projectId
+            AND (CAST(:status AS VARCHAR) IS NULL OR t.status = CAST(:status AS VARCHAR))
+            AND (CAST(:priority AS VARCHAR) IS NULL OR t.priority = CAST(:priority AS VARCHAR))
+            AND (CAST(:assigneeId AS BIGINT) IS NULL OR ta.user_id = CAST(:assigneeId AS BIGINT))
+            AND (CAST(:keyword AS VARCHAR) IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS VARCHAR), '%')))
+            AND (CAST(:dueDateFrom AS TIMESTAMPTZ) IS NULL OR t.due_date >= CAST(:dueDateFrom AS TIMESTAMPTZ))
+            AND (CAST(:dueDateTo AS TIMESTAMPTZ) IS NULL OR t.due_date <= CAST(:dueDateTo AS TIMESTAMPTZ))
   @Query("""
   SELECT t
   FROM TaskEntity t
@@ -45,15 +57,15 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
             AND (:dueDateFrom IS NULL OR t.dueDate >= :dueDateFrom)
             AND (:dueDateTo IS NULL OR t.dueDate <= :dueDateTo)
           ORDER BY t.position ASC, t.id DESC
-      """)
+      """, nativeQuery = true)
   List<TaskEntity> searchTasks(
       @Param("projectId") Long projectId,
-      @Param("status") TaskStatus status,
-      @Param("priority") TaskPriority priority,
+      @Param("status") String status,
+      @Param("priority") String priority,
       @Param("assigneeId") Long assigneeId,
       @Param("keyword") String keyword,
-      @Param("dueDateFrom") LocalDate dueDateFrom,
-      @Param("dueDateTo") LocalDate dueDateTo,
+      @Param("dueDateFrom") OffsetDateTime dueDateFrom,
+      @Param("dueDateTo") OffsetDateTime dueDateTo,
       Pageable pageable);
 
   @Query("""

@@ -6,7 +6,6 @@ import dev.alro127.tasksense.domain.enums.TaskStatus;
 import lombok.Builder;
 import lombok.Data;
 
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,9 +28,9 @@ public class TaskResponse {
 
     private TaskStatus status;
 
-    private LocalDate startDate;
+    private OffsetDateTime startDate;
 
-    private LocalDate dueDate;
+    private OffsetDateTime dueDate;
 
     private OffsetDateTime completedAt;
 
