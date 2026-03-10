@@ -21,7 +21,7 @@ public interface TaskService {
     List<TaskResponse> getTasksByProject(Long projectId);
 
     List<TaskResponse> searchTasks(Long projectId, TaskStatus status, TaskPriority priority, Long assigneeId,
-            String keyword, LocalDate dueDateFrom, LocalDate dueDateTo, Long cursor, int size);
+            String keyword, LocalDate dueDateFrom, LocalDate dueDateTo, int page, int size);
 
     List<TaskResponse> getSubTasks(Long projectId, Long parentTaskId);
 

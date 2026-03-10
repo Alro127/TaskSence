@@ -187,12 +187,12 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public List<TaskResponse> searchTasks(Long projectId, TaskStatus status, TaskPriority priority, Long assigneeId,
-            String keyword, LocalDate dueDateFrom, LocalDate dueDateTo, Long cursor, int size) {
+            String keyword, LocalDate dueDateFrom, LocalDate dueDateTo, int page, int size) {
         UserEntity currentUser = securityService.getCurrentUser();
         requireProjectMember(projectId, currentUser.getId());
 
         return taskRepository.searchTasks(projectId, status, priority, assigneeId, keyword, dueDateFrom, dueDateTo,
-                cursor, size)
+                PageRequest.of(page - 1, size))
                 .stream().map(TaskResponse::mapToResponse).toList();
     }
 

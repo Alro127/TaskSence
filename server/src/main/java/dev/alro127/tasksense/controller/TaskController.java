@@ -59,13 +59,13 @@ public class TaskController {
                         @RequestParam(required = false) String keyword,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateFrom,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateTo,
-                        @RequestParam(required = false) Long cursor,
+                        @RequestParam(defaultValue = "1") int page,
                         @RequestParam(defaultValue = "20") int size) {
                 ApiResponse<List<TaskResponse>> response = new ApiResponse<>(
                                 "200",
                                 "Search tasks successfully",
                                 taskService.searchTasks(projectId, status, priority, assigneeId, keyword,
-                                                dueDateFrom, dueDateTo, cursor, size),
+                                                dueDateFrom, dueDateTo, page, size),
                                 null);
 
                 return ResponseEntity.ok(response);
