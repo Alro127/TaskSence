@@ -27,6 +27,8 @@ public class OutboxEventProcessor {
 
         try {
 
+            System.out.println("process event");
+
             NotificationMessage message =
                     objectMapper.readValue(
                             event.getPayload().toString(),

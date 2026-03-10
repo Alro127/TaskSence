@@ -21,15 +21,17 @@ public class OutboxWorker {
     @Scheduled(fixedDelay = 10000)
     public void processNotificationEvents() {
 
+        System.out.println("Worker is running");
         while (true) {
 
             List<OutboxEventEntity> events =
                     repository.lockEventsForProcessing(
-                            OutboxEventType.NOTIFICATION,
+                            OutboxEventType.NOTIFICATION.name(),
                             100
                     );
 
             if (events.isEmpty()) {
+                System.out.println("events is empty");
                 return;
             }
 
