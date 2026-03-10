@@ -1,6 +1,7 @@
 # TaskSense - Frontend Project Context
 
 > File này dùng để giữ context cho AI và developers. Cập nhật sau mỗi sprint/thay đổi lớn.
+> **Cập nhật lần cuối**: Sprint 9 - Task CRUD & Permission System
 > **Cập nhật lần cuối**: Sprint 9 - Workspace Join Request + Notification Enhancements
 
 ## 📋 Thông tin dự án
@@ -72,6 +73,15 @@
   - `GET /projects/:projectId/join-requests` → danh sách join requests → `ProjectJoinRequest[]`
   - `PATCH /projects/:projectId/join-requests/:requestId/review` → body: `{status: "APPROVED"|"REJECTED"}` → `ProjectJoinRequest`
   - `DELETE /projects/:projectId/join-requests/:requestId` → huỷ join request
+- **Task Endpoints**:
+  - `POST /projects/:projectId/tasks` → body: `CreateTaskRequest` → `TaskResponse` _(MANAGER, MEMBER)_
+  - `GET /projects/:projectId/tasks` → danh sách tasks của project → `TaskResponse[]` _(tất cả roles)_
+  - `GET /projects/:projectId/tasks/search?status=&keyword=&cursor=&size=` → tìm kiếm task (cursor-based) → `TaskResponse[]` _(tất cả roles)_
+  - `GET /projects/:projectId/tasks/:taskId` → chi tiết task → `TaskResponse` _(tất cả roles)_
+  - `GET /projects/:projectId/tasks/:taskId/subtasks` → danh sách subtask → `TaskResponse[]` _(tất cả roles)_
+  - `PUT /projects/:projectId/tasks/:taskId` → body: `UpdateTaskRequest` → `TaskResponse` _(MANAGER: bất kỳ task; MEMBER: chỉ task mình tạo)_
+  - `PATCH /projects/:projectId/tasks/:taskId/status` → body: `{status}` → `TaskResponse` _(MANAGER: bất kỳ; MEMBER: task mình tạo hoặc được assign)_
+  - `DELETE /projects/:projectId/tasks/:taskId` → xóa task (soft delete) _(MANAGER: bất kỳ; MEMBER: chỉ task mình tạo)_
 - **Workspace Join Request Endpoints**:
   - `POST /workspaces/:workspaceId/join-requests` → body: `{message?}` → `WorkspaceJoinRequest`
   - `GET /workspaces/:workspaceId/join-requests` → danh sách join requests (OWNER/MANAGER) → `WorkspaceJoinRequest[]`
@@ -81,7 +91,6 @@
   - `GET /workspaces/search?name=...&cursor=...&limit=...` → tìm kiếm public workspaces → `WorkspaceResponse[]`
   - `GET /workspaces/public/:userId` → danh sách public workspaces của user khác → `WorkspaceResponse[]`
 - **Notification Endpoints**:
-  - `GET /notifications?cursor=?&limit=10` → danh sách notifications (cursor-based pagination) → `NotificationResponse[]`
   - `GET /notifications/unread-count` → số thông báo chưa đọc → `number`
   - `POST /notifications/:id/read` → đánh dấu 1 thông báo là đã đọc
   - `POST /notifications/read-all` → đánh dấu tất cả là đã đọc → số lượng đã update
@@ -184,6 +193,15 @@ client/
 │   │   │       ├── CreateProjectPage.tsx  ← /workspaces/:id/projects/new (full form)
 │   │   │       ├── ProjectDetailPage.tsx  ← /workspaces/:id/projects/:projectId (4 tabs)
 │   │   │       └── index.ts
+│   │   ├── task/                            ← Sprint 9 FE — Task Board & Detail
+│   │   │   ├── api/
+│   │   │   │   └── taskApi.ts              ← RTK Query: 8 endpoints (CRUD + search + subtasks + updateTaskStatus)
+│   │   │   ├── components/
+│   │   │   │   └── TaskFormSheet.tsx        ← Sheet tạo/sửa task (RHF + Zod)
+│   │   │   └── pages/
+│   │   │       ├── TaskBoardPage.tsx        ← Kanban board (drag-and-drop) + List view
+│   │   │       ├── TaskDetailPage.tsx       ← Chi tiết task + inline edit + subtasks
+│   │   │       └── index.ts
 │   │   └── team-template/
 │   │       ├── api/
 │   │       │   ├── teamTemplateApi.ts     ← RTK Query CRUD
@@ -206,7 +224,8 @@ client/
 │   ├── routes/index.tsx      ← Đã thêm /workspaces/explore + /workspaces/:id/projects/* + tab-aware navigation
 │   ├── types/api.ts          ← Đầy đủ tất cả types: Auth, User, Workspace, WorkspaceMember/Invite,
    │                            WorkspaceJoinRequest, TeamTemplate, Project, ProjectMember, ProjectJoinRequest,
-   │                            UserSkill, Notification (incl. WORKSPACE_REVIEW_REQUEST), etc.
+   │                            Task (incl. UpdateTaskStatusRequest), UserSkill,
+   │                            Notification (incl. WORKSPACE_REVIEW_REQUEST), etc.
 │   ├── App.tsx
 │   ├── main.tsx
 │   └── index.css
@@ -444,6 +463,68 @@ client/
 - ✅ **index.css**: thêm `@keyframes bell-shake` + `.bell-shake` class
 - ✅ **store.ts**: đăng ký `notificationReducer` + `notificationApi`
 
+### Sprint 9 - Task CRUD & Permission System ✅ COMPLETED (Backend)
+
+- ✅ **Task Entity** — `TaskEntity` với các fields: `title`, `description`, `priority`, `status` (default `TODO`), `startDate`, `dueDate`, `completedAt`, `position`, `createdBy`, `assignees` (ManyToMany), `parentTask` (self-reference), `deletedAt` (soft delete)
+- ✅ **Task Enums**: `TaskStatus` (`TODO`, `IN_PROGRESS`, `DONE`, `OVERDUE`, `BLOCKED`, `CANCELLED`), `TaskPriority` (`LOW`, `MEDIUM`, `HIGH`, `URGENT`)
+- ✅ **Task API** — 8 endpoints (xem Backend API section)
+- ✅ **Permission model** theo `ProjectMemberRole`:
+
+  | Action                              | MANAGER   | MEMBER                            | VIEWER |
+  | ----------------------------------- | --------- | --------------------------------- | ------ |
+  | Đọc task (get/list/search/subtasks) | ✅        | ✅                                | ✅     |
+  | Tạo task                            | ✅        | ✅                                | ❌     |
+  | Update task (full)                  | ✅ bất kỳ | ✅ chỉ task mình tạo              | ❌     |
+  | Update status                       | ✅ bất kỳ | ✅ task mình tạo hoặc được assign | ❌     |
+  | Xóa task                            | ✅ bất kỳ | ✅ chỉ task mình tạo              | ❌     |
+
+- ✅ **`updateTaskStatus`** tách thành endpoint riêng `PATCH /:taskId/status` để xử lý permission assignee độc lập với `updateTask`
+- ✅ **Subtask support** — `parentTask` self-reference với validation chống circular dependency + max depth 5
+- ✅ **Cursor-based search** — filter theo `status`, `keyword`, cursor pagination
+
+### Sprint 9 - Task CRUD Frontend ✅ COMPLETED
+
+- ✅ **Types** — thêm vào `types/api.ts`:
+  - `TaskStatus`, `TaskPriority`, `TaskResponse`, `CreateTaskRequest`, `UpdateTaskRequest`
+  - `UpdateTaskStatusRequest` — `{status: TaskStatus}` (dùng cho endpoint `PATCH /:taskId/status`)
+  - `TaskSearchParams` — server-side search params: `status`, `priority`, `assigneeId`, `keyword`, `dueDateFrom`, `dueDateTo`, `page`, `size`
+- ✅ **taskApi** (`features/task/api/taskApi.ts`) — RTK Query với 8 endpoints:
+  - `getTasksByProject(projectId)` — tag `Task:PROJECT_{id}`
+  - `searchTasks({projectId, ...params})` — server-side search với full filters
+  - `getTaskById({projectId, taskId})` — tag `Task:{id}`
+  - `getSubTasks({projectId, taskId})` — tag `Task:SUBTASKS_{id}`
+  - `createTask({projectId, ...body})` — invalidate project + parent subtasks tag
+  - `updateTask({projectId, taskId, ...body})` — full update (title, desc, priority, dates, assignees)
+  - `updateTaskStatus({projectId, taskId, status})` — `PATCH /:taskId/status` (chỉ đổi status, permission rộng hơn updateTask)
+  - `deleteTask({projectId, taskId})` — soft delete
+- ✅ **TaskBoardPage** (`features/task/pages/TaskBoardPage.tsx`):
+  - 2 view modes: **Board** (Kanban 4 cột) + **List** (grouped by status, collapsible)
+  - Drag-and-drop (`@dnd-kit/core`): kéo task giữa các cột → gọi `updateTaskStatus`
+  - **Server-side search**: dùng `useSearchTasksQuery` (không phải `getTasksByProject`) với `size: 200`
+  - **Filter bar**: keyword (debounced 400ms) + status Select
+  - **Advanced filter panel** (collapsible): priority, assignee (từ project members), dueDateFrom, dueDateTo
+  - Badge count trên "Filters" button khi có advanced filter active
+  - Spinner nhỏ trong search box khi `isFetching`
+  - "Clear" button xuất hiện khi có bất kỳ filter nào active
+  - CRUD: New Task sheet, Edit sheet, Delete dialog
+- ✅ **TaskDetailPage** (`features/task/pages/TaskDetailPage.tsx`):
+  - 2-column layout: Left (title + description + subtasks) + Right sidebar (status, priority, dates, assignees, meta)
+  - Inline editing: click-to-edit title, description, dates
+  - Status dropdown → gọi `updateTaskStatus` (không phải `updateTask`)
+  - Priority dropdown → gọi `updateTask`
+  - Assignee management: add/remove từ project members list
+  - Subtask section: progress bar, checkbox toggle (gọi `updateTaskStatus`), quick-add input, full-form sheet
+  - Breadcrumb hỗ trợ parent task navigation
+- ✅ **TaskFormSheet** (`features/task/components/TaskFormSheet.tsx`):
+  - Sheet tạo/sửa task (RHF + Zod)
+  - Hỗ trợ cả create + edit mode (pre-fill khi có `task` prop)
+  - Hỗ trợ `parentTaskId` cho subtask creation
+- ✅ **Endpoint separation (quan trọng)**:
+  - `updateTask` (`PUT /:taskId`) — dùng cho edit đầy đủ (title, desc, priority, dates, assignees)
+  - `updateTaskStatus` (`PATCH /:taskId/status`) — dùng khi chỉ đổi status (drag-and-drop, status dropdown, subtask toggle)
+  - Lý do tách: permission khác nhau — `updateTaskStatus` cho phép assignee đổi status, `updateTask` chỉ cho creator/manager
+- ✅ Cập nhật **store.ts**: đã đăng ký `taskApi` reducer + middleware
+
 ### Sprint 7 - Project CRUD & Member Management ✅ COMPLETED
 
 - ✅ **Types** — thêm vào `types/api.ts`:
@@ -563,30 +644,32 @@ client/
 
 ## 🗺️ Routes hiện tại
 
-| Path                                  | Component                 | Ghi chú                               |
-| ------------------------------------- | ------------------------- | ------------------------------------- |
-| `/`                                   | → `/dashboard`            | redirect                              |
-| `/auth/login`                         | `LoginPage`               | trong `AuthLayout`                    |
-| `/auth/register`                      | `RegisterPage`            |                                       |
-| `/auth/verify-otp`                    | `VerifyOtpPage`           |                                       |
-| `/auth/forgot-password`               | `ForgotPasswordPage`      |                                       |
-| `/auth/reset-password`                | `ResetPasswordPage`       |                                       |
-| `/dashboard`                          | `DashboardPage`           | trong `MainLayout`                    |
-| `/dashboard/edit-profile`             | → `/profile`              | redirect (backward compat)            |
-| `/profile`                            | `ProfilePage`             | 2 tabs: Info + Skills                 |
-| `/workspaces`                         | `WorkspacesPage`          | Pinned / Recent / All                 |
-| `/workspaces/explore`                 | `WorkspaceExplorePage`    | Search public workspaces; **phải đứng trước `/workspaces/invitation` và `/:id`** |
-| `/workspaces/invitation`              | `WorkspaceInvitationPage` | **phải đứng trước `:id`**             |
-| `/workspaces/:id`                     | `WorkspaceDetailPage`     | 3 tabs: Projects / Members / Settings; hỗ trợ `?tab=` query param |
-| `/workspaces/:id/projects/new`        | `CreateProjectPage`       |                                       |
-| `/workspaces/:id/projects/:projectId` | `ProjectDetailPage`       | 4 tabs                                |
-| `/team-templates`                     | `TeamTemplatesPage`       |                                       |
-| `/team-templates/:id`                 | `TeamTemplateDetailPage`  | 2 tabs: Members + Settings            |
-| `/tasks`                              | `PlaceholderPage`         | mock                                  |
-| `/calendar`                           | `PlaceholderPage`         | mock                                  |
-| `/analytics`                          | `PlaceholderPage`         | mock                                  |
-| `/settings`                           | `PlaceholderPage`         | mock                                  |
-| `*`                                   | → `/auth/login`           | catch-all                             |
+| Path                                                | Component                 | Ghi chú                                                                          |
+| --------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------- |
+| `/`                                                 | → `/dashboard`            | redirect                                                                         |
+| `/auth/login`                                       | `LoginPage`               | trong `AuthLayout`                                                               |
+| `/auth/register`                                    | `RegisterPage`            |                                                                                  |
+| `/auth/verify-otp`                                  | `VerifyOtpPage`           |                                                                                  |
+| `/auth/forgot-password`                             | `ForgotPasswordPage`      |                                                                                  |
+| `/auth/reset-password`                              | `ResetPasswordPage`       |                                                                                  |
+| `/dashboard`                                        | `DashboardPage`           | trong `MainLayout`                                                               |
+| `/dashboard/edit-profile`                           | → `/profile`              | redirect (backward compat)                                                       |
+| `/profile`                                          | `ProfilePage`             | 2 tabs: Info + Skills                                                            |
+| `/workspaces`                                       | `WorkspacesPage`          | Pinned / Recent / All                                                            |
+| `/workspaces/explore`                               | `WorkspaceExplorePage`    | Search public workspaces; **phải đứng trước `/workspaces/invitation` và `/:id`** |
+| `/workspaces/invitation`                            | `WorkspaceInvitationPage` | **phải đứng trước `:id`**                                                        |
+| `/workspaces/:id`                                   | `WorkspaceDetailPage`     | 3 tabs: Projects / Members / Settings; hỗ trợ `?tab=` query param                |
+| `/workspaces/:id/projects/new`                      | `CreateProjectPage`       |                                                                                  |
+| `/workspaces/:id/projects/:projectId`               | `ProjectDetailPage`       | 4 tabs                                                                           |
+| `/workspaces/:id/projects/:projectId/tasks`         | `TaskBoardPage`           | Kanban board + List view; drag-and-drop đổi status                               |
+| `/workspaces/:id/projects/:projectId/tasks/:taskId` | `TaskDetailPage`          | Chi tiết task + inline edit + subtasks                                           |
+| `/team-templates`                                   | `TeamTemplatesPage`       |                                                                                  |
+| `/team-templates/:id`                               | `TeamTemplateDetailPage`  | 2 tabs: Members + Settings                                                       |
+| `/tasks`                                            | `PlaceholderPage`         | mock                                                                             |
+| `/calendar`                                         | `PlaceholderPage`         | mock                                                                             |
+| `/analytics`                                        | `PlaceholderPage`         | mock                                                                             |
+| `/settings`                                         | `PlaceholderPage`         | mock                                                                             |
+| `*`                                                 | → `/auth/login`           | catch-all                                                                        |
 
 ## 📝 Quyết định thiết kế hiện tại
 
@@ -629,6 +712,11 @@ client/
 12. **AddMembersModal (Project)** khác với **BulkInviteModal (Workspace)**:
     - Project: source là workspace members (không search toàn hệ thống), batch add với role per-member.
     - Workspace: source là search hệ thống + direct email + template import, send invite qua email.
+13. **Task permission model**:
+    - `updateTask` (full edit) chỉ dành cho MANAGER hoặc người tạo task (MEMBER).
+    - `updateTaskStatus` là endpoint riêng (`PATCH /:taskId/status`) — cho phép assignee update status mà không cần quyền edit toàn bộ task.
+    - VIEWER không được thực hiện bất kỳ thao tác ghi nào trên task.
+    - Frontend cần gọi đúng endpoint tùy theo action: dùng `PUT /:taskId` cho edit đầy đủ, `PATCH /:taskId/status` khi chỉ đổi status.
 
 ## 🔧 Environment Variables
 
@@ -770,9 +858,27 @@ npm run preview
 - **WebSocket `createdAt` issue**: Backend `NotificationMessage` DTO (WebSocket push) không nhất thiết có `createdAt`. REST API entity luôn có. Fix 2 lớp: (1) fallback `new Date().toISOString()` trong `useNotificationSocket`; (2) IIFE guard `isNaN(d.getTime())` → `"just now"` trong `NotificationItem`.
 - **Optimistic mark-as-read**: Click item → local state update + Redux `markRealtimeItemRead` + `decrementUnreadCount` → gọi `markAsRead` API async. Không chờ API response để cập nhật UI.
 
+### Task Architecture
+
+- **`taskApi`** (RTK Query): tag `'Task'` keyed by `taskId`, `PROJECT_{projectId}`, `SUBTASKS_{taskId}`. 8 endpoints: `getTasksByProject`, `searchTasks`, `getTaskById`, `getSubTasks`, `createTask`, `updateTask`, `updateTaskStatus`, `deleteTask`.
+- **Endpoint separation** (critical):
+  - `updateTask` (`PUT /:taskId`) — full edit: title, description, priority, dates, assignees, position. Permission: MANAGER bất kỳ, MEMBER chỉ task mình tạo.
+  - `updateTaskStatus` (`PATCH /:taskId/status`) — chỉ gửi `{status}`. Permission: MANAGER bất kỳ, MEMBER task mình tạo **hoặc được assign**.
+  - FE gọi `updateTaskStatus` tại: drag-and-drop (TaskBoardPage), status dropdown (TaskDetailPage), subtask checkbox toggle (TaskDetailPage).
+  - FE gọi `updateTask` tại: inline edit title/desc/dates/assignees/priority (TaskDetailPage), TaskFormSheet submit.
+- **`_parentTaskId` pattern**: `updateTaskStatus` mutation nhận optional `_parentTaskId` (prefixed `_` để không gửi lên server) → dùng trong `invalidatesTags` để refresh subtasks list của parent task khi toggle subtask status.
+- **TaskBoardPage** — 2 views:
+  - **Board view**: Kanban 4 cột (`TODO`, `IN_PROGRESS`, `REVIEW`, `DONE`). Drag-and-drop dùng `@dnd-kit/core` (`DndContext`, `useDroppable`, `useDraggable`, `DragOverlay`).
+  - **List view**: Grouped by status, mỗi group collapsible. Rows hiển thị title, priority badge, due date, assignees.
+  - Chỉ hiển thị root tasks (filter `parentTaskId == null`).
+- **TaskDetailPage** — 2-column layout:
+  - Left: title (click-to-edit), description (click-to-edit), subtasks (progress bar + list + quick-add).
+  - Right sidebar: status Select, priority Select, start/end date (click-to-edit input[type=date]), assignees (add from project members, remove per-user), metadata (creator, timestamps).
+  - Subtask toggle: checkbox gọi `updateTaskStatus` với `_parentTaskId` để invalidate parent's subtask list.
+
 ### Việc cần làm tiếp theo
 
-- **Tasks (Sprint tiếp)**: Implement task management (board, list). Route `/workspaces/:id/projects/:projectId` tab Tasks hiện là placeholder.
+- ~~**Tasks (Sprint tiếp)**~~: ✅ Task Board (Kanban + List) + Task Detail đã implement. Route `/workspaces/:id/projects/:projectId/tasks` và `/:taskId`. FE đã tách đúng `updateTask` vs `updateTaskStatus` endpoint theo permission model.
 - **Workspace Join Request — backend alignment**: `WorkspaceJoinRequestResponse.java` cần embed `UserSummaryResponse` (thay vì chỉ `userId: Long`) để FE hiển thị tên/avatar trong Join Requests section của `WorkspaceMembersTab`.
 - **Workspace Join Request UI — từ ProjectDetailPage**: Non-member của project cũng có thể cần thấy "Request to Join" button tương tự pattern workspace; hiện chỉ có FE API hook, chưa có UI trigger.
 - **Notification — Project Join Request deep-link**: `PROJECT_JOIN_REQUEST` notification nên navigate đến tab Join Requests của ProjectDetailPage (đã có pattern với `?tab=` cho workspace, cần làm tương tự cho project).

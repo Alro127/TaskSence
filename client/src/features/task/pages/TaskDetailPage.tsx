@@ -47,6 +47,7 @@ import {
   useGetTaskByIdQuery,
   useGetSubTasksQuery,
   useUpdateTaskMutation,
+  useUpdateTaskStatusMutation,
   useDeleteTaskMutation,
   useCreateTaskMutation,
 } from "../api/taskApi";
@@ -166,6 +167,7 @@ export function TaskDetailPage() {
 
   // ─── Mutations ───────────────────────────────────────────────────────────────
   const [updateTask] = useUpdateTaskMutation();
+  const [updateTaskStatus] = useUpdateTaskStatusMutation();
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
   const [createTask] = useCreateTaskMutation();
 
@@ -214,7 +216,7 @@ export function TaskDetailPage() {
   }
 
   function saveStatus(status: TaskStatus) {
-    updateTask({ projectId, taskId, status })
+    updateTaskStatus({ projectId, taskId, status })
       .unwrap()
       .catch(() => toast.error("Failed to update status"));
   }
@@ -276,7 +278,7 @@ export function TaskDetailPage() {
 
   function toggleSubtaskDone(subtaskId: number, currentStatus: TaskStatus) {
     const status: TaskStatus = currentStatus === "DONE" ? "TODO" : "DONE";
-    updateTask({ projectId, taskId: subtaskId, status, _parentTaskId: taskId })
+    updateTaskStatus({ projectId, taskId: subtaskId, status, _parentTaskId: taskId })
       .unwrap()
       .catch(() => toast.error("Failed to update subtask"));
   }
