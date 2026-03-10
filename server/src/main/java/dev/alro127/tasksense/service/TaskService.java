@@ -8,7 +8,7 @@ import dev.alro127.tasksense.dto.request.UpdateTaskStatusRequest;
 import dev.alro127.tasksense.dto.response.TaskResponse;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
@@ -21,7 +21,7 @@ public interface TaskService {
     List<TaskResponse> getTasksByProject(Long projectId);
 
     List<TaskResponse> searchTasks(Long projectId, TaskStatus status, TaskPriority priority, Long assigneeId,
-            String keyword, LocalDate dueDateFrom, LocalDate dueDateTo, int page, int size);
+            String keyword, OffsetDateTime dueDateFrom, OffsetDateTime dueDateTo, int page, int size);
 
     List<TaskResponse> getSubTasks(Long projectId, Long parentTaskId);
 

@@ -285,16 +285,14 @@ ON CONFLICT DO NOTHING;
 
 -- ==================== NOTIFICATIONS ====================
 INSERT INTO notifications (id, receiver_id, actor_id, type, reference_type, reference_id, payload) VALUES
-    (1,  3, 1, 'TASK_ASSIGNED',       'TASK',      4,  '{"taskTitle": "Build homepage hero section",         "projectName": "Website Redesign"}'),
-    (2,  3, 1, 'TASK_ASSIGNED',       'TASK',      7,  '{"taskTitle": "Contact form with validation",         "projectName": "Website Redesign"}'),
-    (3,  1, 3, 'TASK_STATUS_CHANGED', 'TASK',      7,  '{"taskTitle": "Contact form with validation", "oldStatus": "IN_PROGRESS", "newStatus": "REVIEW"}'),
-    (4,  3, 1, 'COMMENT_ADDED',       'COMMENT',   5,  '{"taskTitle": "Contact form with validation",         "actorName": "Alice Nguyen"}'),
-    (5,  4, 1, 'TASK_ASSIGNED',       'TASK',      8,  '{"taskTitle": "Fix hero image loading perf",          "projectName": "Website Redesign"}'),
-    (6,  4, 2, 'TASK_ASSIGNED',       'TASK',      19, '{"taskTitle": "Payment gateway integration",          "projectName": "MVP Development"}'),
-    (7,  2, 4, 'COMMENT_ADDED',       'COMMENT',   11, '{"taskTitle": "Shopping cart service",                "actorName": "Dave Pham"}'),
-    (8,  3, 1, 'TASK_ASSIGNED',       'TASK',      13, '{"taskTitle": "Implement authentication screens",     "projectName": "Mobile App"}'),
-    (9,  4, 2, 'COMMENT_ADDED',       'COMMENT',   11, '{"taskTitle": "Shopping cart service",                "actorName": "Bob Tran"}'),
-    (10, 5, 1, 'WORKSPACE_INVITE',    'WORKSPACE', 1,  '{"workspaceName": "TechCorp", "role": "VIEWER",      "inviterName": "Alice Nguyen"}')
+    (1,  3, 1, 'TASK_ASSIGNED',    'TASK',      4,  '{"taskTitle": "Build homepage hero section",     "projectName": "Website Redesign"}'),
+    (2,  3, 1, 'TASK_ASSIGNED',    'TASK',      7,  '{"taskTitle": "Contact form with validation",    "projectName": "Website Redesign"}'),
+    (4,  3, 1, 'COMMENT_MENTION',  'COMMENT',   5,  '{"taskTitle": "Contact form with validation",    "actorName": "Alice Nguyen"}'),
+    (5,  4, 1, 'TASK_ASSIGNED',    'TASK',      8,  '{"taskTitle": "Fix hero image loading perf",     "projectName": "Website Redesign"}'),
+    (6,  4, 2, 'TASK_ASSIGNED',    'TASK',      19, '{"taskTitle": "Payment gateway integration",     "projectName": "MVP Development"}'),
+    (8,  3, 1, 'TASK_ASSIGNED',    'TASK',      13, '{"taskTitle": "Implement authentication screens","projectName": "Mobile App"}'),
+    (9,  4, 2, 'COMMENT_MENTION',  'COMMENT',   11, '{"taskTitle": "Shopping cart service",           "actorName": "Bob Tran"}'),
+    (10, 5, 1, 'WORKSPACE_INVITE', 'WORKSPACE', 1,  '{"workspaceName": "TechCorp", "role": "VIEWER", "inviterName": "Alice Nguyen"}')
 ON CONFLICT DO NOTHING;
 
 SELECT setval('notifications_id_seq', (SELECT MAX(id) FROM notifications));

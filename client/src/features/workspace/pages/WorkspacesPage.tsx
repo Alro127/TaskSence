@@ -23,6 +23,8 @@ export function WorkspacesPage() {
   const pinnedIds = useAppSelector((s) => s.workspace.pinnedIds);
   const recentIds = useAppSelector((s) => s.workspace.recentIds);
 
+  const currentUserId = useAppSelector((s) => s.user.currentUser?.id);
+
   const { data, isLoading, isError } = useGetMyWorkspacesQuery();
   const workspaces = data?.data ?? [];
 
@@ -131,6 +133,7 @@ export function WorkspacesPage() {
                   onEdit={setEditTarget}
                   onDelete={setDeleteTarget}
                   variant="pinned"
+                  canManage={ws.ownerId === currentUserId}
                 />
               </div>
             ))}
@@ -156,6 +159,7 @@ export function WorkspacesPage() {
                   onTogglePin={handleTogglePin}
                   onEdit={setEditTarget}
                   onDelete={setDeleteTarget}
+                  canManage={ws.ownerId === currentUserId}
                 />
               </div>
             ))}
@@ -184,6 +188,7 @@ export function WorkspacesPage() {
                   onTogglePin={handleTogglePin}
                   onEdit={setEditTarget}
                   onDelete={setDeleteTarget}
+                  canManage={ws.ownerId === currentUserId}
                 />
               </div>
             ))}

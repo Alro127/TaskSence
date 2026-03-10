@@ -13,7 +13,7 @@ import {
   Settings,
 } from "lucide-react";
 
-import { useAppDispatch } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import {
   useGetWorkspaceByIdQuery,
   useUpdateWorkspaceMutation,
 } from "../api/workspaceApi";
+import { useGetWorkspaceMembersQuery } from "../api/workspaceMemberApi";
 import { DeleteWorkspaceDialog, WorkspaceMembersTab } from "../components";
 import { useGetProjectsByWorkspaceQuery } from "@/features/project/api/projectApi";
 import { ProjectCard, ProjectCardGhost } from "@/features/project/components";
@@ -60,6 +61,17 @@ export function WorkspaceDetailPage() {
   const { data: projectsData, isLoading: isProjectsLoading } =
     useGetProjectsByWorkspaceQuery(workspaceId, { skip: isNaN(workspaceId) });
   const projects = projectsData?.data ?? [];
+
+  // Determine current user's workspace role
+  const currentUserId = useAppSelector((s) => s.user.currentUser?.id);
+  const { data: membersData } = useGetWorkspaceMembersQuery(workspaceId, {
+    skip: isNaN(workspaceId),
+  });
+  const members = membersData?.data ?? [];
+  const myMember = members.find((m) => m.user.id === currentUserId);
+  const myRole = myMember?.role ?? null;
+  const canManage = myRole === "OWNER" || myRole === "MANAGER";
+  const isOwner = myRole === "OWNER";
 
   const [updateWorkspace, { isLoading: isUpdating }] = useUpdateWorkspaceMutation();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -163,10 +175,12 @@ export function WorkspaceDetailPage() {
             <Users className="h-4 w-4" />
             Members
           </TabsTrigger>
-          <TabsTrigger value="settings" className="gap-2">
-            <Settings className="h-4 w-4" />
-            Settings
-          </TabsTrigger>
+          {canManage && (
+            <TabsTrigger value="settings" className="gap-2">
+              <Settings className="h-4 w-4" />
+              Settings
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* ── Projects Tab ── */}
@@ -192,9 +206,11 @@ export function WorkspaceDetailPage() {
                     workspaceName={workspace.name}
                   />
                 ))}
-                <ProjectCardGhost
-                  onClick={() => navigate(`/workspaces/${workspaceId}/projects/new`)}
-                />
+                {canManage && (
+                  <ProjectCardGhost
+                    onClick={() => navigate(`/workspaces/${workspaceId}/projects/new`)}
+                  />
+                )}
               </div>
             </>
           )}
@@ -205,115 +221,121 @@ export function WorkspaceDetailPage() {
           <WorkspaceMembersTab workspaceId={workspaceId} />
         </TabsContent>
 
-        {/* ── Settings Tab ── */}
-        <TabsContent value="settings" className="mt-6 max-w-xl space-y-8">
-          {/* General settings */}
-          <section className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold">General</h3>
-              <p className="text-sm text-muted-foreground">
-                Update workspace name and description.
-              </p>
-            </div>
-            <form onSubmit={handleSubmit(onSettingsSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="settings-name">Workspace name</Label>
-                <Input
-                  id="settings-name"
-                  placeholder="e.g. Product Team"
-                  {...register("name")}
-                />
-                {errors.name && (
-                  <p className="text-sm text-destructive">{errors.name.message}</p>
-                )}
+        {/* ── Settings Tab (OWNER / MANAGER only) ── */}
+        {canManage && (
+          <TabsContent value="settings" className="mt-6 max-w-xl space-y-8">
+            {/* General settings */}
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">General</h3>
+                <p className="text-sm text-muted-foreground">
+                  Update workspace name and description.
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="settings-desc">
-                  Description{" "}
-                  <span className="font-normal text-muted-foreground">(optional)</span>
-                </Label>
-                <textarea
-                  id="settings-desc"
-                  rows={3}
-                  placeholder="What is this workspace for?"
-                  className="w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
-                  {...register("description")}
-                />
-                {errors.description && (
-                  <p className="text-sm text-destructive">
-                    {errors.description.message}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="settings-public"
-                  className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  {...register("isPublic")}
-                />
-                <Label htmlFor="settings-public" className="cursor-pointer font-normal">
-                  Make this workspace public
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    (Anyone can view it)
-                  </span>
-                </Label>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button type="submit" disabled={!isDirty || isUpdating}>
-                  {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save changes
-                </Button>
-                {isDirty && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() =>
-                      reset({
-                        name: workspace.name,
-                        description: workspace.description ?? "",
-                        isPublic: workspace.isPublic ?? false,
-                      })
-                    }
-                  >
-                    Reset
-                  </Button>
-                )}
-              </div>
-            </form>
-          </section>
-
-          <Separator />
-
-          {/* Danger Zone */}
-          <section className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold text-destructive">
-                Danger Zone
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Irreversible and destructive actions.
-              </p>
-            </div>
-            <div className="rounded-lg border border-destructive/30 p-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium">Delete this workspace</p>
-                  <p className="text-xs text-muted-foreground">
-                    Once deleted, all projects and data cannot be recovered.
-                  </p>
+              <form onSubmit={handleSubmit(onSettingsSubmit)} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="settings-name">Workspace name</Label>
+                  <Input
+                    id="settings-name"
+                    placeholder="e.g. Product Team"
+                    {...register("name")}
+                  />
+                  {errors.name && (
+                    <p className="text-sm text-destructive">{errors.name.message}</p>
+                  )}
                 </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setIsDeleteOpen(true)}
-                >
-                  Delete workspace
-                </Button>
-              </div>
-            </div>
-          </section>
-        </TabsContent>
+                <div className="space-y-2">
+                  <Label htmlFor="settings-desc">
+                    Description{" "}
+                    <span className="font-normal text-muted-foreground">(optional)</span>
+                  </Label>
+                  <textarea
+                    id="settings-desc"
+                    rows={3}
+                    placeholder="What is this workspace for?"
+                    className="w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
+                    {...register("description")}
+                  />
+                  {errors.description && (
+                    <p className="text-sm text-destructive">
+                      {errors.description.message}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="settings-public"
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    {...register("isPublic")}
+                  />
+                  <Label htmlFor="settings-public" className="cursor-pointer font-normal">
+                    Make this workspace public
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      (Anyone can view it)
+                    </span>
+                  </Label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button type="submit" disabled={!isDirty || isUpdating}>
+                    {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save changes
+                  </Button>
+                  {isDirty && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() =>
+                        reset({
+                          name: workspace.name,
+                          description: workspace.description ?? "",
+                          isPublic: workspace.isPublic ?? false,
+                        })
+                      }
+                    >
+                      Reset
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </section>
+
+            {/* Danger Zone — OWNER only */}
+            {isOwner && (
+              <>
+                <Separator />
+
+                <section className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-destructive">
+                      Danger Zone
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Irreversible and destructive actions.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-destructive/30 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium">Delete this workspace</p>
+                        <p className="text-xs text-muted-foreground">
+                          Once deleted, all projects and data cannot be recovered.
+                        </p>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setIsDeleteOpen(true)}
+                      >
+                        Delete workspace
+                      </Button>
+                    </div>
+                  </div>
+                </section>
+              </>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* ── Delete Dialog ── */}
