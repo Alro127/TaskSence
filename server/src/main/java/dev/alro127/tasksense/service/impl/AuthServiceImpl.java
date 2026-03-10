@@ -80,6 +80,9 @@ public class AuthServiceImpl implements AuthService {
                 .isActive(false)
                 .build();
 
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new BadRequestException("Email already exists");
+        }
         userRepository.save(user);
 
         sendOtp(user.getEmail());

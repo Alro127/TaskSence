@@ -16,19 +16,20 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     Optional<UserEntity> findByEmail(String email);
 
+    boolean existsByEmail(String email);
+
     @Query("""
-    SELECT u FROM UserEntity u
-    WHERE (:cursor IS NULL OR u.id < :cursor)
-      AND (
-            :keyword IS NULL OR
-            LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
-            LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
-          )
-    ORDER BY u.id DESC
-""")
+                SELECT u FROM UserEntity u
+                WHERE (:cursor IS NULL OR u.id < :cursor)
+                  AND (
+                        :keyword IS NULL OR
+                        LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+                        LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                      )
+                ORDER BY u.id DESC
+            """)
     List<UserEntity> searchUsers(
             @Param("keyword") String keyword,
             @Param("cursor") Long cursor,
-            Pageable pageable
-    );
+            Pageable pageable);
 }
