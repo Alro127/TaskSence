@@ -26,7 +26,7 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
 
   Optional<TaskEntity> findByIdAndProjectId(Long id, Long projectId);
 
-  @Query(value = """
+    @Query(value = """
           SELECT DISTINCT t.* FROM tasks t
           LEFT JOIN task_assignees ta ON t.id = ta.task_id
           LEFT JOIN users u ON u.id = ta.user_id AND u.deleted_at IS NULL
@@ -38,42 +38,32 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
             AND (CAST(:keyword AS VARCHAR) IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS VARCHAR), '%')))
             AND (CAST(:dueDateFrom AS TIMESTAMPTZ) IS NULL OR t.due_date >= CAST(:dueDateFrom AS TIMESTAMPTZ))
             AND (CAST(:dueDateTo AS TIMESTAMPTZ) IS NULL OR t.due_date <= CAST(:dueDateTo AS TIMESTAMPTZ))
-  @Query("""
-  SELECT t
-  FROM TaskEntity t
-  LEFT JOIN FETCH t.assignees
-  WHERE t.id = :id
-  """)
-  Optional<TaskEntity> findWithAssignees(Long id);
-
-  @Query("""
-          SELECT DISTINCT t FROM TaskEntity t
-          LEFT JOIN t.assignees a
-          WHERE t.project.id = :projectId
-            AND (:status IS NULL OR t.status = :status)
-            AND (:priority IS NULL OR t.priority = :priority)
-            AND (:assigneeId IS NULL OR a.id = :assigneeId)
-            AND (:keyword IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))
-            AND (:dueDateFrom IS NULL OR t.dueDate >= :dueDateFrom)
-            AND (:dueDateTo IS NULL OR t.dueDate <= :dueDateTo)
           ORDER BY t.position ASC, t.id DESC
       """, nativeQuery = true)
-  List<TaskEntity> searchTasks(
-      @Param("projectId") Long projectId,
-      @Param("status") String status,
-      @Param("priority") String priority,
-      @Param("assigneeId") Long assigneeId,
-      @Param("keyword") String keyword,
-      @Param("dueDateFrom") OffsetDateTime dueDateFrom,
-      @Param("dueDateTo") OffsetDateTime dueDateTo,
-      Pageable pageable);
+    List<TaskEntity> searchTasks(
+            @Param("projectId") Long projectId,
+            @Param("status") String status,
+            @Param("priority") String priority,
+            @Param("assigneeId") Long assigneeId,
+            @Param("keyword") String keyword,
+            @Param("dueDateFrom") OffsetDateTime dueDateFrom,
+            @Param("dueDateTo") OffsetDateTime dueDateTo,
+            Pageable pageable);
 
   @Query("""
     SELECT t
     FROM TaskEntity t
-    WHERE t.due_date BETWEEN :now AND :window
+    WHERE t.dueDate BETWEEN :now AND :window
     """)
   List<TaskEntity> findTasksWithReminderBetween(
           OffsetDateTime now,
           OffsetDateTime window);
+
+  @Query("""
+    SELECT t
+    FROM TaskEntity t
+    LEFT JOIN FETCH t.assignees
+    WHERE t.id = :id
+  """)
+  Optional<TaskEntity> findWithAssignees(Long id);
 }
