@@ -1,4 +1,3 @@
-
 networks:
   tasksense_net:
 
@@ -18,7 +17,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -37,6 +36,20 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - tasksense_net
+
+  seed:
+    image: postgres:16
+    container_name: task_seed
+    environment:
+      PGPASSWORD: postgres
+    volumes:
+      - ./src/main/resources/db/seed:/seed
+    command: psql -h postgres -U postgres -d taskdb -f /seed/seed_data.sql
+    depends_on:
+      flyway:
+        condition: service_completed_successfully
     networks:
       - tasksense_net
 
@@ -68,7 +81,7 @@ services:
       redis-server
       --appendonly yes
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5

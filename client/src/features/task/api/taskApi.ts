@@ -5,6 +5,7 @@ import type {
   TaskResponse,
   CreateTaskRequest,
   UpdateTaskRequest,
+  UpdateTaskStatusRequest,
   TaskSearchParams,
 } from "@/types/api";
 
@@ -103,6 +104,24 @@ export const taskApi = createApi({
       ],
     }),
 
+    updateTaskStatus: builder.mutation<
+      ApiResponse<TaskResponse>,
+      { projectId: number; taskId: number; _parentTaskId?: number } & UpdateTaskStatusRequest
+    >({
+      query: ({ projectId, taskId, _parentTaskId, ...body }) => ({
+        url: `/projects/${projectId}/tasks/${taskId}/status`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { projectId, taskId, _parentTaskId }) => [
+        { type: "Task", id: taskId },
+        { type: "Task", id: `PROJECT_${projectId}` },
+        ...(_parentTaskId != null
+          ? [{ type: "Task" as const, id: `SUBTASKS_${_parentTaskId}` }]
+          : []),
+      ],
+    }),
+
     deleteTask: builder.mutation<
       ApiResponse<void>,
       { projectId: number; taskId: number }
@@ -126,5 +145,6 @@ export const {
   useGetSubTasksQuery,
   useCreateTaskMutation,
   useUpdateTaskMutation,
+  useUpdateTaskStatusMutation,
   useDeleteTaskMutation,
 } = taskApi;

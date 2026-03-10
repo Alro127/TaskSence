@@ -1,12 +1,14 @@
 package dev.alro127.tasksense.service;
 
 import dev.alro127.tasksense.dto.request.CreateTaskRequest;
-import dev.alro127.tasksense.dto.request.TaskSearchRequest;
+import dev.alro127.tasksense.domain.enums.TaskPriority;
+import dev.alro127.tasksense.domain.enums.TaskStatus;
 import dev.alro127.tasksense.dto.request.UpdateTaskRequest;
 import dev.alro127.tasksense.dto.request.UpdateTaskStatusRequest;
 import dev.alro127.tasksense.dto.response.TaskResponse;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -18,7 +20,8 @@ public interface TaskService {
 
     List<TaskResponse> getTasksByProject(Long projectId);
 
-    List<TaskResponse> searchTasks(Long projectId, TaskSearchRequest request);
+    List<TaskResponse> searchTasks(Long projectId, TaskStatus status, TaskPriority priority, Long assigneeId,
+            String keyword, LocalDate dueDateFrom, LocalDate dueDateTo, int page, int size);
 
     List<TaskResponse> getSubTasks(Long projectId, Long parentTaskId);
 

@@ -419,9 +419,17 @@ export interface UpdateTaskRequest {
   removeParent?: boolean;
 }
 
+export interface UpdateTaskStatusRequest {
+  status: TaskStatus;
+}
+
 export interface TaskSearchParams {
   status?: TaskStatus;
+  priority?: TaskPriority;
+  assigneeId?: number;
   keyword?: string;
-  cursor?: number;
+  dueDateFrom?: string;
+  dueDateTo?: string;
+  page?: number;
   size?: number;
 }

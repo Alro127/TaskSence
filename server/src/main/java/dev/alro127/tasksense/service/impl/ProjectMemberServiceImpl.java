@@ -13,7 +13,6 @@ import dev.alro127.tasksense.dto.response.AddProjectMemberResultItem;
 import dev.alro127.tasksense.dto.response.ProjectMemberResponse;
 import dev.alro127.tasksense.exception.BadRequestException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
-import dev.alro127.tasksense.exception.UnauthorizedException;
 import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
@@ -24,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -44,13 +42,10 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         @Override
         @Transactional
         public List<AddProjectMemberResultItem> addMembers(Long projectId, AddProjectMemberRequest request) {
-                UserEntity currentUser = securityService.getCurrentUser();
+                // @PreAuthorize đã kiểm tra MANAGE_MEMBERS permission
 
                 ProjectEntity project = projectRepository.findById(projectId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-
-                validateProjectManagerAccess(project, currentUser.getId());
-                validateWorkspaceMemberAccess(project, currentUser.getId());
 
                 List<ProjectMemberItem> items = request.getMembers();
                 List<Long> userIds = items.stream().map(ProjectMemberItem::getUserId).toList();
@@ -131,13 +126,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
         @Override
         public List<ProjectMemberResponse> getMembers(Long projectId) {
-                UserEntity currentUser = securityService.getCurrentUser();
-
-                ProjectEntity project = projectRepository.findById(projectId)
-                                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-
-                validateWorkspaceMemberAccess(project, currentUser.getId());
-                validateProjectAccess(project, currentUser.getId());
+                // @PreAuthorize đã kiểm tra VIEW_MEMBERS permission
 
                 return projectMemberRepository.findAllByProjectId(projectId)
                                 .stream()
@@ -148,13 +137,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         @Override
         public ProjectMemberResponse updateMemberRole(Long projectId, Long userId,
                         UpdateProjectMemberRoleRequest request) {
-                UserEntity currentUser = securityService.getCurrentUser();
-
-                ProjectEntity project = projectRepository.findById(projectId)
-                                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-
-                validateWorkspaceMemberAccess(project, currentUser.getId());
-                validateProjectManagerAccess(project, currentUser.getId());
+                // @PreAuthorize đã kiểm tra MANAGE_MEMBERS permission
 
                 ProjectMemberEntity member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project member not found"));
@@ -168,14 +151,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         @Override
         @Transactional
         public void removeMember(Long projectId, Long userId) {
-                UserEntity currentUser = securityService.getCurrentUser();
-
-                ProjectEntity project = projectRepository.findById(projectId)
-                                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-
-                validateWorkspaceMemberAccess(project, currentUser.getId());
-                validateProjectManagerAccess(project, currentUser.getId());
-                validateWorkspaceMemberAccess(project, userId);
+                // @PreAuthorize đã kiểm tra MANAGE_MEMBERS permission
 
                 ProjectMemberEntity member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project member not found"));
@@ -191,43 +167,11 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         public String getCurrentUserRole(Long projectId) {
                 UserEntity currentUser = securityService.getCurrentUser();
 
-                ProjectEntity project = projectRepository.findById(projectId)
-                                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-
-                validateWorkspaceMemberAccess(project, currentUser.getId());
-
                 ProjectMemberEntity member = projectMemberRepository
                                 .findByProjectIdAndUserId(projectId, currentUser.getId())
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "You are not a member of this project"));
 
                 return member.getRole().name();
-        }
-
-        // ---- helpers ----
-
-        private void validateProjectAccess(ProjectEntity project, Long userId) {
-                boolean isMember = projectMemberRepository.existsByProjectIdAndUserId(project.getId(), userId);
-                if (!isMember) {
-                        throw new UnauthorizedException("Access denied");
-                }
-        }
-
-        private void validateProjectManagerAccess(ProjectEntity project, Long userId) {
-                boolean isProjectManager = projectMemberRepository.existsByProjectIdAndUserIdAndRole(
-                                project.getId(), userId, ProjectMemberRole.MANAGER);
-                if (!isProjectManager) {
-                        throw new UnauthorizedException("Access denied");
-                }
-        }
-
-        private void validateWorkspaceMemberAccess(ProjectEntity project, Long userId) {
-                Long workspaceId = project.getWorkspace().getId();
-
-                boolean isWorkspaceMember = workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userId);
-
-                if (!isWorkspaceMember) {
-                        throw new UnauthorizedException("You are not a member of this workspace");
-                }
         }
 }

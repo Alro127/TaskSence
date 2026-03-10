@@ -9,10 +9,8 @@ import dev.alro127.tasksense.dto.request.CreateProjectRequest;
 import dev.alro127.tasksense.dto.request.UpdateProjectRequest;
 import dev.alro127.tasksense.dto.response.ProjectResponse;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
-import dev.alro127.tasksense.exception.UnauthorizedException;
 import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
-import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
 import dev.alro127.tasksense.service.ProjectService;
 import dev.alro127.tasksense.service.SecurityService;
@@ -29,7 +27,6 @@ public class ProjectServiceImpl implements ProjectService {
 
     private final ProjectRepository projectRepository;
     private final WorkspaceRepository workspaceRepository;
-    private final WorkspaceMemberRepository workspaceMemberRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final SecurityService securityService;
 
@@ -37,11 +34,10 @@ public class ProjectServiceImpl implements ProjectService {
     @Transactional
     public ProjectResponse createProject(Long workspaceId, CreateProjectRequest request) {
         UserEntity currentUser = securityService.getCurrentUser();
+        // @PreAuthorize đã kiểm tra CREATE_PROJECT permission (chỉ OWNER)
 
         WorkspaceEntity workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
-
-        validateWorkspaceOwnership(workspace, currentUser.getId());
 
         ProjectEntity project = ProjectEntity.builder()
                 .workspace(workspace)
@@ -67,17 +63,12 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public ProjectResponse getProjectById(Long workspaceId, Long projectId) {
-        UserEntity currentUser = securityService.getCurrentUser();
-
-        WorkspaceEntity workspace = workspaceRepository.findById(workspaceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+        // @PreAuthorize đã kiểm tra project VIEW permission
 
         ProjectEntity project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-        validateWorkspaceMemberAccess(workspaceId, currentUser.getId());
         validateProjectBelongsToWorkspace(project, workspaceId);
-        validateProjectAccess(workspace, project, currentUser.getId());
 
         return ProjectResponse.mapToResponse(project);
     }
@@ -85,11 +76,10 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public List<ProjectResponse> getProjectsByWorkspace(Long workspaceId) {
         UserEntity currentUser = securityService.getCurrentUser();
+        // @PreAuthorize đã kiểm tra workspace VIEW permission
 
         workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
-
-        validateWorkspaceMemberAccess(workspaceId, currentUser.getId());
 
         return projectRepository.findAllByWorkspaceIdAndMemberId(workspaceId, currentUser.getId())
                 .stream()
@@ -99,16 +89,12 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public ProjectResponse updateProject(Long workspaceId, Long projectId, UpdateProjectRequest request) {
-        UserEntity currentUser = securityService.getCurrentUser();
-
-        WorkspaceEntity workspace = workspaceRepository.findById(workspaceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+        // @PreAuthorize đã kiểm tra project UPDATE permission (MANAGER hoặc WS OWNER)
 
         ProjectEntity project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
         validateProjectBelongsToWorkspace(project, workspaceId);
-        validateProjectManagerAccess(workspace, project, currentUser.getId());
 
         if (request.getName() != null) {
             project.setName(request.getName().trim());
@@ -133,16 +119,12 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public void deleteProject(Long workspaceId, Long projectId) {
-        UserEntity currentUser = securityService.getCurrentUser();
-
-        WorkspaceEntity workspace = workspaceRepository.findById(workspaceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+        // @PreAuthorize đã kiểm tra project DELETE permission (MANAGER hoặc WS OWNER)
 
         ProjectEntity project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
         validateProjectBelongsToWorkspace(project, workspaceId);
-        validateProjectManagerAccess(workspace, project, currentUser.getId());
 
         project.setDeletedAt(OffsetDateTime.now());
 
@@ -154,39 +136,6 @@ public class ProjectServiceImpl implements ProjectService {
     private void validateProjectBelongsToWorkspace(ProjectEntity project, Long workspaceId) {
         if (!project.getWorkspace().getId().equals(workspaceId)) {
             throw new ResourceNotFoundException("Project not found");
-        }
-    }
-
-    private void validateWorkspaceOwnership(WorkspaceEntity workspace, Long userId) {
-        if (!workspace.getOwner().getId().equals(userId)) {
-            throw new UnauthorizedException("Access denied");
-        }
-    }
-
-    private void validateWorkspaceMemberAccess(Long workspaceId, Long userId) {
-        boolean isWorkspaceMember = workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userId);
-
-        if (!isWorkspaceMember) {
-            throw new UnauthorizedException("You are not a member of this workspace");
-        }
-    }
-
-    private void validateProjectAccess(WorkspaceEntity workspace, ProjectEntity project, Long userId) {
-        boolean isWorkspaceOwner = workspace.getOwner().getId().equals(userId);
-        boolean isProjectMember = projectMemberRepository.existsByProjectIdAndUserId(project.getId(), userId);
-
-        if (!isWorkspaceOwner && !isProjectMember) {
-            throw new UnauthorizedException("Access denied");
-        }
-    }
-
-    private void validateProjectManagerAccess(WorkspaceEntity workspace, ProjectEntity project, Long userId) {
-        boolean isWorkspaceOwner = workspace.getOwner().getId().equals(userId);
-        boolean isProjectManager = projectMemberRepository.existsByProjectIdAndUserIdAndRole(
-                project.getId(), userId, ProjectMemberRole.MANAGER);
-
-        if (!isWorkspaceOwner && !isProjectManager) {
-            throw new UnauthorizedException("Access denied");
         }
     }
 }
