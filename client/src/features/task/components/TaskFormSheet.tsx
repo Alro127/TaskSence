@@ -101,6 +101,11 @@ export function TaskFormSheet({
     e.preventDefault();
     if (!title.trim()) return;
 
+    if (startDate && dueDate && new Date(dueDate) < new Date(startDate)) {
+      toast.error("Due date must be on or after the start date");
+      return;
+    }
+
     const payload = {
       title: title.trim(),
       description: description.trim() || undefined,

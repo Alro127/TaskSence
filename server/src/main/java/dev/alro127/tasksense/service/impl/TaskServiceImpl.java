@@ -24,7 +24,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -133,9 +132,12 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public List<TaskResponse> searchTasks(Long projectId, TaskStatus status, TaskPriority priority, Long assigneeId,
-            String keyword, LocalDate dueDateFrom, LocalDate dueDateTo, int page, int size) {
+            String keyword, OffsetDateTime dueDateFrom, OffsetDateTime dueDateTo, int page, int size) {
         // @PreAuthorize đã kiểm tra VIEW_TASKS permission
-        return taskRepository.searchTasks(projectId, status, priority, assigneeId, keyword, dueDateFrom, dueDateTo,
+        return taskRepository.searchTasks(projectId,
+                status != null ? status.name() : null,
+                priority != null ? priority.name() : null,
+                assigneeId, keyword, dueDateFrom, dueDateTo,
                 PageRequest.of(page - 1, size))
                 .stream().map(TaskResponse::mapToResponse).toList();
     }
