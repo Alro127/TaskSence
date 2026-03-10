@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   ChevronDown,
   ChevronRight,
+  Filter,
   GripVertical,
   LayoutGrid,
   List,
@@ -13,6 +14,7 @@ import {
   Plus,
   Search,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   DndContext,
@@ -55,10 +57,11 @@ import {
 import { cn } from "@/lib/utils";
 import type { TaskPriority, TaskResponse, TaskStatus } from "@/types/api";
 
-import { useGetTasksByProjectQuery, useDeleteTaskMutation, useUpdateTaskStatusMutation } from "../api/taskApi";
+import { useSearchTasksQuery, useDeleteTaskMutation, useUpdateTaskStatusMutation } from "../api/taskApi";
 import { TaskFormSheet } from "../components/TaskFormSheet";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
 import { useGetProjectByIdQuery } from "@/features/project/api/projectApi";
+import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
 
 // ─── Config ──────────────────────────────────────────────────────────────────────
 const STATUS_COLUMNS: {
@@ -450,8 +453,73 @@ export function TaskBoardPage() {
   const workspaceId = Number(workspaceIdStr);
   const projectId = Number(projectIdStr);
 
+  // ─── Filter state ────────────────────────────────────────────────────────────
+  type ViewMode = "list" | "board";
+  const [viewMode, setViewMode] = useState<ViewMode>("board");
+  const [filterStatus, setFilterStatus] = useState<TaskStatus | "ALL">("ALL");
+  const [filterPriority, setFilterPriority] = useState<TaskPriority | "ALL">("ALL");
+  const [filterAssigneeId, setFilterAssigneeId] = useState<number | "ALL">("ALL");
+  const [filterDueDateFrom, setFilterDueDateFrom] = useState("");
+  const [filterDueDateTo, setFilterDueDateTo] = useState("");
+  const [keywordInput, setKeywordInput] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  // Debounce keyword 400ms
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedKeyword(keywordInput), 400);
+    return () => clearTimeout(timer);
+  }, [keywordInput]);
+
+  // Count active advanced filters for badge
+  const advancedFilterCount = [
+    filterPriority !== "ALL",
+    filterAssigneeId !== "ALL",
+    !!filterDueDateFrom,
+    !!filterDueDateTo,
+  ].filter(Boolean).length;
+
+  const hasAnyFilter =
+    filterStatus !== "ALL" ||
+    advancedFilterCount > 0 ||
+    !!debouncedKeyword.trim();
+
+  const clearAllFilters = useCallback(() => {
+    setFilterStatus("ALL");
+    setFilterPriority("ALL");
+    setFilterAssigneeId("ALL");
+    setFilterDueDateFrom("");
+    setFilterDueDateTo("");
+    setKeywordInput("");
+    setDebouncedKeyword("");
+  }, []);
+
+  // ─── Build search query args ─────────────────────────────────────────────────
+  const searchArgs = useMemo(
+    () => ({
+      projectId,
+      ...(filterStatus !== "ALL" && { status: filterStatus }),
+      ...(filterPriority !== "ALL" && { priority: filterPriority }),
+      ...(filterAssigneeId !== "ALL" && { assigneeId: filterAssigneeId }),
+      ...(debouncedKeyword.trim() && { keyword: debouncedKeyword.trim() }),
+      ...(filterDueDateFrom && { dueDateFrom: filterDueDateFrom }),
+      ...(filterDueDateTo && { dueDateTo: filterDueDateTo }),
+      page: 1,
+      size: 200,
+    }),
+    [
+      projectId,
+      filterStatus,
+      filterPriority,
+      filterAssigneeId,
+      debouncedKeyword,
+      filterDueDateFrom,
+      filterDueDateTo,
+    ],
+  );
+
   // ─── Data ───────────────────────────────────────────────────────────────────
-  const { data: tasksData, isLoading } = useGetTasksByProjectQuery(projectId, {
+  const { data: tasksData, isLoading, isFetching } = useSearchTasksQuery(searchArgs, {
     skip: isNaN(projectId),
   });
   // Only show root tasks on the board — subtasks are managed inside TaskDetailPage
@@ -467,15 +535,16 @@ export function TaskBoardPage() {
   const workspaceName = workspaceData?.data?.name ?? "Workspace";
   const projectName = projectData?.data?.name ?? "Project";
 
+  // ─── Project members for assignee filter ────────────────────────────────────
+  const { data: membersData } = useGetMembersQuery(projectId, {
+    skip: isNaN(projectId),
+  });
+  const members = membersData?.data ?? [];
+
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
 
   // ─── UI state ───────────────────────────────────────────────────────────────
-  type ViewMode = "list" | "board";
-  const [viewMode, setViewMode] = useState<ViewMode>("board");
-  const [filterStatus, setFilterStatus] = useState<TaskStatus | "ALL">("ALL");
-  const [keyword, setKeyword] = useState("");
-
   const [collapsedGroups, setCollapsedGroups] = useState<Set<TaskStatus>>(new Set());
 
   // Sheet state
@@ -493,26 +562,15 @@ export function TaskBoardPage() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  // ─── Filtered tasks ──────────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    return tasks.filter((t) => {
-      if (filterStatus !== "ALL" && t.status !== filterStatus) return false;
-      if (keyword.trim()) {
-        const q = keyword.toLowerCase();
-        if (!t.title.toLowerCase().includes(q)) return false;
-      }
-      return true;
-    });
-  }, [tasks, filterStatus, keyword]);
-
+  // ─── Group tasks by status ───────────────────────────────────────────────────
   const grouped = useMemo(() => {
     const map = new Map<TaskStatus, TaskResponse[]>();
     STATUS_COLUMNS.forEach((col) => map.set(col.value, []));
-    filtered.forEach((t) => {
+    tasks.forEach((t) => {
       map.get(t.status)?.push(t);
     });
     return map;
-  }, [filtered]);
+  }, [tasks]);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const handleOpenCreate = useCallback(() => {
@@ -620,70 +678,191 @@ export function TaskBoardPage() {
       </nav>
 
       {/* ── Filter bar ── */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
-          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-9 h-9 text-sm"
-            placeholder="Search tasks..."
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            {isFetching && !isLoading && (
+              <Loader2 className="absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 animate-spin text-muted-foreground" />
+            )}
+            <Input
+              className="pl-9 h-9 text-sm"
+              placeholder="Search tasks..."
+              value={keywordInput}
+              onChange={(e) => setKeywordInput(e.target.value)}
+            />
+          </div>
+
+          {/* Status filter */}
+          <Select
+            value={filterStatus}
+            onValueChange={(v) => setFilterStatus(v as TaskStatus | "ALL")}
+          >
+            <SelectTrigger className="h-9 w-36 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All statuses</SelectItem>
+              {STATUS_COLUMNS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* More filters toggle */}
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn("h-9 gap-2", showAdvancedFilters && "bg-muted")}
+            onClick={() => setShowAdvancedFilters((v) => !v)}
+          >
+            <Filter className="h-3.5 w-3.5" />
+            Filters
+            {advancedFilterCount > 0 && (
+              <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {advancedFilterCount}
+              </span>
+            )}
+          </Button>
+
+          {/* Clear all */}
+          {hasAnyFilter && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+              onClick={clearAllFilters}
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear
+            </Button>
+          )}
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* View toggle */}
+          <div className="flex rounded-md border bg-muted p-0.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "h-7 px-2.5",
+                viewMode === "list" && "bg-background shadow-sm",
+              )}
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "h-7 px-2.5",
+                viewMode === "board" && "bg-background shadow-sm",
+              )}
+              onClick={() => setViewMode("board")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* New task */}
+          <Button size="sm" onClick={handleOpenCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Task
+          </Button>
         </div>
 
-        {/* Status filter */}
-        <Select
-          value={filterStatus}
-          onValueChange={(v) => setFilterStatus(v as TaskStatus | "ALL")}
-        >
-          <SelectTrigger className="h-9 w-36 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All statuses</SelectItem>
-            {STATUS_COLUMNS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Advanced filter panel */}
+        {showAdvancedFilters && (
+          <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-muted/30 px-4 py-3">
+            {/* Priority */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Priority</label>
+              <Select
+                value={filterPriority}
+                onValueChange={(v) => setFilterPriority(v as TaskPriority | "ALL")}
+              >
+                <SelectTrigger className="h-8 w-36 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Any priority</SelectItem>
+                  <SelectItem value="LOW">Low</SelectItem>
+                  <SelectItem value="MEDIUM">Medium</SelectItem>
+                  <SelectItem value="HIGH">High</SelectItem>
+                  <SelectItem value="URGENT">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Spacer */}
-        <div className="flex-1" />
+            {/* Assignee */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Assignee</label>
+              <Select
+                value={filterAssigneeId === "ALL" ? "ALL" : String(filterAssigneeId)}
+                onValueChange={(v) =>
+                  setFilterAssigneeId(v === "ALL" ? "ALL" : Number(v))
+                }
+              >
+                <SelectTrigger className="h-8 w-44 text-sm">
+                  <SelectValue placeholder="Anyone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Anyone</SelectItem>
+                  {members.map((m) => (
+                    <SelectItem key={m.user.id} value={String(m.user.id)}>
+                      {m.user.fullName ?? m.user.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* View toggle */}
-        <div className="flex rounded-md border bg-muted p-0.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "h-7 px-2.5",
-              viewMode === "list" && "bg-background shadow-sm",
+            {/* Due date from */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Due after</label>
+              <Input
+                type="date"
+                className="h-8 w-40 text-sm"
+                value={filterDueDateFrom}
+                onChange={(e) => setFilterDueDateFrom(e.target.value)}
+              />
+            </div>
+
+            {/* Due date to */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Due before</label>
+              <Input
+                type="date"
+                className="h-8 w-40 text-sm"
+                value={filterDueDateTo}
+                onChange={(e) => setFilterDueDateTo(e.target.value)}
+              />
+            </div>
+
+            {advancedFilterCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs text-muted-foreground hover:text-foreground self-end"
+                onClick={() => {
+                  setFilterPriority("ALL");
+                  setFilterAssigneeId("ALL");
+                  setFilterDueDateFrom("");
+                  setFilterDueDateTo("");
+                }}
+              >
+                <X className="mr-1 h-3 w-3" />
+                Clear filters
+              </Button>
             )}
-            onClick={() => setViewMode("list")}
-          >
-            <List className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "h-7 px-2.5",
-              viewMode === "board" && "bg-background shadow-sm",
-            )}
-            onClick={() => setViewMode("board")}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* New task */}
-        <Button size="sm" onClick={handleOpenCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Task
-        </Button>
+          </div>
+        )}
       </div>
 
       {/* ── Loading ── */}
@@ -693,8 +872,8 @@ export function TaskBoardPage() {
         </div>
       )}
 
-      {/* ── Empty state ── */}
-      {!isLoading && tasks.length === 0 && (
+      {/* ── Empty state (no tasks in project at all) ── */}
+      {!isLoading && tasks.length === 0 && !hasAnyFilter && (
         <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/30 text-center">
           <p className="text-sm font-medium">No tasks yet</p>
           <p className="text-xs text-muted-foreground">
@@ -825,16 +1004,13 @@ export function TaskBoardPage() {
       )}
 
       {/* ── No results from filter ── */}
-      {!isLoading && tasks.length > 0 && filtered.length === 0 && (
+      {!isLoading && tasks.length === 0 && hasAnyFilter && (
         <div className="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/30 text-center">
-          <p className="text-sm font-medium">No tasks match your filter</p>
+          <p className="text-sm font-medium">No tasks match your filters</p>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              setFilterStatus("ALL");
-              setKeyword("");
-            }}
+            onClick={clearAllFilters}
           >
             Clear filters
           </Button>

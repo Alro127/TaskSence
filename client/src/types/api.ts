@@ -425,7 +425,11 @@ export interface UpdateTaskStatusRequest {
 
 export interface TaskSearchParams {
   status?: TaskStatus;
+  priority?: TaskPriority;
+  assigneeId?: number;
   keyword?: string;
-  cursor?: number;
+  dueDateFrom?: string;
+  dueDateTo?: string;
+  page?: number;
   size?: number;
 }

@@ -487,10 +487,10 @@ client/
 - ✅ **Types** — thêm vào `types/api.ts`:
   - `TaskStatus`, `TaskPriority`, `TaskResponse`, `CreateTaskRequest`, `UpdateTaskRequest`
   - `UpdateTaskStatusRequest` — `{status: TaskStatus}` (dùng cho endpoint `PATCH /:taskId/status`)
-  - `TaskSearchParams` — cursor-based search params
+  - `TaskSearchParams` — server-side search params: `status`, `priority`, `assigneeId`, `keyword`, `dueDateFrom`, `dueDateTo`, `page`, `size`
 - ✅ **taskApi** (`features/task/api/taskApi.ts`) — RTK Query với 8 endpoints:
   - `getTasksByProject(projectId)` — tag `Task:PROJECT_{id}`
-  - `searchTasks({projectId, ...params})` — cursor-based search
+  - `searchTasks({projectId, ...params})` — server-side search với full filters
   - `getTaskById({projectId, taskId})` — tag `Task:{id}`
   - `getSubTasks({projectId, taskId})` — tag `Task:SUBTASKS_{id}`
   - `createTask({projectId, ...body})` — invalidate project + parent subtasks tag
@@ -499,10 +499,14 @@ client/
   - `deleteTask({projectId, taskId})` — soft delete
 - ✅ **TaskBoardPage** (`features/task/pages/TaskBoardPage.tsx`):
   - 2 view modes: **Board** (Kanban 4 cột) + **List** (grouped by status, collapsible)
-  - Drag-and-drop (`@dnd-kit/core`): kéo task giữa các cột → gọi `updateTaskStatus` (không phải `updateTask`)
-  - Filter: search keyword + status filter
-  - CRUD: New Task sheet, Edit sheet, Delete dialog (type-to-confirm)
-  - DragOverlay ghost card khi đang kéo
+  - Drag-and-drop (`@dnd-kit/core`): kéo task giữa các cột → gọi `updateTaskStatus`
+  - **Server-side search**: dùng `useSearchTasksQuery` (không phải `getTasksByProject`) với `size: 200`
+  - **Filter bar**: keyword (debounced 400ms) + status Select
+  - **Advanced filter panel** (collapsible): priority, assignee (từ project members), dueDateFrom, dueDateTo
+  - Badge count trên "Filters" button khi có advanced filter active
+  - Spinner nhỏ trong search box khi `isFetching`
+  - "Clear" button xuất hiện khi có bất kỳ filter nào active
+  - CRUD: New Task sheet, Edit sheet, Delete dialog
 - ✅ **TaskDetailPage** (`features/task/pages/TaskDetailPage.tsx`):
   - 2-column layout: Left (title + description + subtasks) + Right sidebar (status, priority, dates, assignees, meta)
   - Inline editing: click-to-edit title, description, dates
@@ -640,32 +644,32 @@ client/
 
 ## 🗺️ Routes hiện tại
 
-| Path                                  | Component                 | Ghi chú                                                                          |
-| ------------------------------------- | ------------------------- | -------------------------------------------------------------------------------- |
-| `/`                                   | → `/dashboard`            | redirect                                                                         |
-| `/auth/login`                         | `LoginPage`               | trong `AuthLayout`                                                               |
-| `/auth/register`                      | `RegisterPage`            |                                                                                  |
-| `/auth/verify-otp`                    | `VerifyOtpPage`           |                                                                                  |
-| `/auth/forgot-password`               | `ForgotPasswordPage`      |                                                                                  |
-| `/auth/reset-password`                | `ResetPasswordPage`       |                                                                                  |
-| `/dashboard`                          | `DashboardPage`           | trong `MainLayout`                                                               |
-| `/dashboard/edit-profile`             | → `/profile`              | redirect (backward compat)                                                       |
-| `/profile`                            | `ProfilePage`             | 2 tabs: Info + Skills                                                            |
-| `/workspaces`                         | `WorkspacesPage`          | Pinned / Recent / All                                                            |
-| `/workspaces/explore`                 | `WorkspaceExplorePage`    | Search public workspaces; **phải đứng trước `/workspaces/invitation` và `/:id`** |
-| `/workspaces/invitation`              | `WorkspaceInvitationPage` | **phải đứng trước `:id`**                                                        |
-| `/workspaces/:id`                     | `WorkspaceDetailPage`     | 3 tabs: Projects / Members / Settings; hỗ trợ `?tab=` query param                |
-| `/workspaces/:id/projects/new`        | `CreateProjectPage`       |                                                                                  |
-| `/workspaces/:id/projects/:projectId` | `ProjectDetailPage`       | 4 tabs                                                                           |
-| `/workspaces/:id/projects/:projectId/tasks` | `TaskBoardPage`    | Kanban board + List view; drag-and-drop đổi status                               |
-| `/workspaces/:id/projects/:projectId/tasks/:taskId` | `TaskDetailPage` | Chi tiết task + inline edit + subtasks                                     |
-| `/team-templates`                     | `TeamTemplatesPage`       |                                                                                  |
-| `/team-templates/:id`                 | `TeamTemplateDetailPage`  | 2 tabs: Members + Settings                                                       |
-| `/tasks`                              | `PlaceholderPage`         | mock                                                                             |
-| `/calendar`                           | `PlaceholderPage`         | mock                                                                             |
-| `/analytics`                          | `PlaceholderPage`         | mock                                                                             |
-| `/settings`                           | `PlaceholderPage`         | mock                                                                             |
-| `*`                                   | → `/auth/login`           | catch-all                                                                        |
+| Path                                                | Component                 | Ghi chú                                                                          |
+| --------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------- |
+| `/`                                                 | → `/dashboard`            | redirect                                                                         |
+| `/auth/login`                                       | `LoginPage`               | trong `AuthLayout`                                                               |
+| `/auth/register`                                    | `RegisterPage`            |                                                                                  |
+| `/auth/verify-otp`                                  | `VerifyOtpPage`           |                                                                                  |
+| `/auth/forgot-password`                             | `ForgotPasswordPage`      |                                                                                  |
+| `/auth/reset-password`                              | `ResetPasswordPage`       |                                                                                  |
+| `/dashboard`                                        | `DashboardPage`           | trong `MainLayout`                                                               |
+| `/dashboard/edit-profile`                           | → `/profile`              | redirect (backward compat)                                                       |
+| `/profile`                                          | `ProfilePage`             | 2 tabs: Info + Skills                                                            |
+| `/workspaces`                                       | `WorkspacesPage`          | Pinned / Recent / All                                                            |
+| `/workspaces/explore`                               | `WorkspaceExplorePage`    | Search public workspaces; **phải đứng trước `/workspaces/invitation` và `/:id`** |
+| `/workspaces/invitation`                            | `WorkspaceInvitationPage` | **phải đứng trước `:id`**                                                        |
+| `/workspaces/:id`                                   | `WorkspaceDetailPage`     | 3 tabs: Projects / Members / Settings; hỗ trợ `?tab=` query param                |
+| `/workspaces/:id/projects/new`                      | `CreateProjectPage`       |                                                                                  |
+| `/workspaces/:id/projects/:projectId`               | `ProjectDetailPage`       | 4 tabs                                                                           |
+| `/workspaces/:id/projects/:projectId/tasks`         | `TaskBoardPage`           | Kanban board + List view; drag-and-drop đổi status                               |
+| `/workspaces/:id/projects/:projectId/tasks/:taskId` | `TaskDetailPage`          | Chi tiết task + inline edit + subtasks                                           |
+| `/team-templates`                                   | `TeamTemplatesPage`       |                                                                                  |
+| `/team-templates/:id`                               | `TeamTemplateDetailPage`  | 2 tabs: Members + Settings                                                       |
+| `/tasks`                                            | `PlaceholderPage`         | mock                                                                             |
+| `/calendar`                                         | `PlaceholderPage`         | mock                                                                             |
+| `/analytics`                                        | `PlaceholderPage`         | mock                                                                             |
+| `/settings`                                         | `PlaceholderPage`         | mock                                                                             |
+| `*`                                                 | → `/auth/login`           | catch-all                                                                        |
 
 ## 📝 Quyết định thiết kế hiện tại
 
