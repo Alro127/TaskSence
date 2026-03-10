@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Data
@@ -19,9 +19,9 @@ public class CreateTaskRequest {
 
     private TaskPriority priority;
 
-    private LocalDate startDate;
+    private OffsetDateTime startDate;
 
-    private LocalDate dueDate;
+    private OffsetDateTime dueDate;
 
     private Long parentTaskId;
 

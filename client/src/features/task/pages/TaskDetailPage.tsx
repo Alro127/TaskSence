@@ -57,6 +57,12 @@ import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi"
 import { useGetProjectByIdQuery } from "@/features/project/api/projectApi";
 
 // ─── Config ──────────────────────────────────────────────────────────────────────
+function toDatetimeLocal(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 const STATUS_OPTIONS: { value: TaskStatus; label: string; badgeClass: string }[] = [
   { value: "TODO", label: "Todo", badgeClass: "text-slate-600 bg-slate-100 border-slate-200" },
   {
@@ -229,7 +235,7 @@ export function TaskDetailPage() {
 
   async function saveStartDate(value: string) {
     try {
-      await updateTask({ projectId, taskId, startDate: value || undefined }).unwrap();
+      await updateTask({ projectId, taskId, startDate: value ? new Date(value).toISOString() : undefined }).unwrap();
     } catch {
       toast.error("Failed to update start date");
     }
@@ -238,7 +244,7 @@ export function TaskDetailPage() {
 
   async function saveDueDate(value: string) {
     try {
-      await updateTask({ projectId, taskId, dueDate: value || undefined }).unwrap();
+      await updateTask({ projectId, taskId, dueDate: value ? new Date(value).toISOString() : undefined }).unwrap();
     } catch {
       toast.error("Failed to update due date");
     }
@@ -666,8 +672,8 @@ export function TaskDetailPage() {
                 {editingStartDate ? (
                   <input
                     autoFocus
-                    type="date"
-                    defaultValue={task.startDate ?? ""}
+                    type="datetime-local"
+                    defaultValue={task.startDate ? toDatetimeLocal(task.startDate) : ""}
                     onBlur={(e) => saveStartDate(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Escape") setEditingStartDate(false);
@@ -680,7 +686,7 @@ export function TaskDetailPage() {
                     className="-mx-2 w-full rounded-md px-2 py-1 text-left text-sm transition-colors hover:bg-muted/50"
                   >
                     {task.startDate ? (
-                      format(new Date(task.startDate), "MMM d, yyyy")
+                      format(new Date(task.startDate), "MMM d, yyyy · HH:mm")
                     ) : (
                       <span className="italic text-muted-foreground">Not set</span>
                     )}
@@ -696,8 +702,8 @@ export function TaskDetailPage() {
                 {editingDueDate ? (
                   <input
                     autoFocus
-                    type="date"
-                    defaultValue={task.dueDate ?? ""}
+                    type="datetime-local"
+                    defaultValue={task.dueDate ? toDatetimeLocal(task.dueDate) : ""}
                     onBlur={(e) => saveDueDate(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Escape") setEditingDueDate(false);
@@ -717,7 +723,7 @@ export function TaskDetailPage() {
                             : "",
                         )}
                       >
-                        {format(new Date(task.dueDate), "MMM d, yyyy")}
+                        {format(new Date(task.dueDate), "MMM d, yyyy · HH:mm")}
                       </span>
                     ) : (
                       <span className="italic text-muted-foreground">Not set</span>

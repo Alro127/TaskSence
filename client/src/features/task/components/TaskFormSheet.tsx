@@ -22,6 +22,12 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import type { TaskPriority, TaskResponse } from "@/types/api";
+
+function toDatetimeLocal(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 import { useCreateTaskMutation, useUpdateTaskMutation } from "../api/taskApi";
 import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
 
@@ -72,8 +78,8 @@ export function TaskFormSheet({
       setTitle(task.title);
       setDescription(task.description ?? "");
       setPriority(task.priority ?? "none");
-      setStartDate(task.startDate ?? "");
-      setDueDate(task.dueDate ?? "");
+      setStartDate(task.startDate ? toDatetimeLocal(task.startDate) : "");
+      setDueDate(task.dueDate ? toDatetimeLocal(task.dueDate) : "");
       setAssigneeIds(task.assignees.map((a) => a.id));
     } else if (open && !task) {
       setTitle("");
@@ -99,8 +105,8 @@ export function TaskFormSheet({
       title: title.trim(),
       description: description.trim() || undefined,
       priority: priority !== "none" ? priority : undefined,
-      startDate: startDate || undefined,
-      dueDate: dueDate || undefined,
+      startDate: startDate ? new Date(startDate).toISOString() : undefined,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
       assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
     };
 
@@ -194,7 +200,7 @@ export function TaskFormSheet({
               <Label htmlFor="start-date">Start Date</Label>
               <input
                 id="start-date"
-                type="date"
+                type="datetime-local"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -204,7 +210,7 @@ export function TaskFormSheet({
               <Label htmlFor="due-date">Due Date</Label>
               <input
                 id="due-date"
-                type="date"
+                type="datetime-local"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
