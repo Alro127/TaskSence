@@ -3,7 +3,6 @@ package dev.alro127.tasksense.controller;
 import dev.alro127.tasksense.dto.common.ApiResponse;
 import dev.alro127.tasksense.dto.common.NotificationResponse;
 import dev.alro127.tasksense.dto.request.DeleteNotificationsRequest;
-import dev.alro127.tasksense.dto.request.NotificationMessage;
 import dev.alro127.tasksense.service.NotificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -121,12 +120,6 @@ public class NotificationController {
         );
 
         return ResponseEntity.ok(response);
-    }
-    
-    @MessageMapping("/notify")
-    public void send(NotificationMessage message, Principal principal) {
-
-        System.out.println("User: " + principal.getName());
     }
 
 }

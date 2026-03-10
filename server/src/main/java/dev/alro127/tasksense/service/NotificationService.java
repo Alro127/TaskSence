@@ -23,5 +23,5 @@ public interface NotificationService {
     int deleteNotifications(List<Long> ids);
 
     @Transactional
-    void saveAndPublic(NotificationMessage message);
+    void saveAndPublish(NotificationMessage message);
 }

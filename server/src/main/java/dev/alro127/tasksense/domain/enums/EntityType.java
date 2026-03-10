@@ -5,5 +5,6 @@ public enum EntityType {
     PROJECT,
     TASK,
     INVITATION,
-    COMMENT
+    COMMENT,
+    NOTIFICATION
 }
