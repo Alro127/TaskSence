@@ -2,7 +2,7 @@ spring:
   application:
     name: TaskSense
     backend-url: http://localhost:8080
-    frontend-url: http:/localhost:5173
+    frontend-url: http://localhost:5173
 
   datasource:
     url: jdbc:postgresql://localhost:5432/taskdb?options=-c%20TimeZone=Asia/Ho_Chi_Minh

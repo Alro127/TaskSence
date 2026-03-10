@@ -5,7 +5,7 @@ import dev.alro127.tasksense.domain.enums.DeliveryStatus;
 import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.repository.jpa.OutboxEventRepository;
 import dev.alro127.tasksense.service.publisher.NotificationPublisher;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,11 +29,9 @@ public class OutboxEventProcessor {
 
             System.out.println("process event");
 
-            NotificationMessage message =
-                    objectMapper.readValue(
-                            event.getPayload().toString(),
-                            NotificationMessage.class
-                    );
+            NotificationMessage message = objectMapper.readValue(
+                    event.getPayload().toString(),
+                    NotificationMessage.class);
 
             notificationPublisher.publish(message);
 

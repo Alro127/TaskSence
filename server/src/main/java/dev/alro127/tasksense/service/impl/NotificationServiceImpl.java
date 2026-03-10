@@ -13,7 +13,7 @@ import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.publisher.NotificationPublisher;
 import dev.alro127.tasksense.util.redis.RedisKeys;
 import dev.alro127.tasksense.repository.jpa.NotificationRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -44,18 +44,16 @@ public class NotificationServiceImpl implements NotificationService {
 
             String cacheKey = RedisKeys.recent(userId);
 
-            List<NotificationResponse> cached =
-                    (List<NotificationResponse>) redisTemplate.opsForValue().get(cacheKey);
+            List<NotificationResponse> cached = (List<NotificationResponse>) redisTemplate.opsForValue().get(cacheKey);
 
             if (cached != null) {
                 return cached;
             }
 
-            List<NotificationResponse> notifications =
-                    repository.findTop20ByReceiverIdOrderByIdDesc(userId)
-                            .stream()
-                            .map(NotificationResponse::mapToResponse)
-                            .toList();
+            List<NotificationResponse> notifications = repository.findTop20ByReceiverIdOrderByIdDesc(userId)
+                    .stream()
+                    .map(NotificationResponse::mapToResponse)
+                    .toList();
 
             redisTemplate.opsForValue()
                     .set(cacheKey, notifications, 30, TimeUnit.SECONDS);
@@ -64,10 +62,9 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         return repository.findNotifications(
-                        userId,
-                        cursor,
-                        PageRequest.of(0, limit)
-                )
+                userId,
+                cursor,
+                PageRequest.of(0, limit))
                 .stream()
                 .map(NotificationResponse::mapToResponse)
                 .toList();
@@ -99,9 +96,8 @@ public class NotificationServiceImpl implements NotificationService {
 
         Long userId = securityService.getCurrentUserId();
 
-        NotificationEntity notification =
-                repository.findById(notificationId)
-                        .orElseThrow();
+        NotificationEntity notification = repository.findById(notificationId)
+                .orElseThrow();
 
         if (notification.getReadAt() == null) {
             notification.setReadAt(OffsetDateTime.now());
@@ -124,8 +120,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         redisTemplate.opsForValue().set(
                 RedisKeys.unreadCount(userId),
-                0
-        );
+                0);
 
         return updated;
     }
@@ -183,8 +178,7 @@ public class NotificationServiceImpl implements NotificationService {
                 OutboxEventType.NOTIFICATION,
                 EntityType.NOTIFICATION,
                 saved.getId(),
-                message
-        );
+                message);
 
         try {
 

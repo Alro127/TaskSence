@@ -6,7 +6,7 @@ import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.OutboxEventType;
 import dev.alro127.tasksense.repository.jpa.OutboxEventRepository;
 import dev.alro127.tasksense.service.OutboxEventService;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
@@ -26,8 +26,7 @@ public class OutboxEventServiceImpl implements OutboxEventService {
             OutboxEventType eventType,
             EntityType entityType,
             Long entityId,
-            Object payload
-    ) {
+            Object payload) {
 
         String payloadJson;
 
@@ -56,7 +55,6 @@ public class OutboxEventServiceImpl implements OutboxEventService {
         repository.updateStatus(
                 id,
                 DeliveryStatus.SUCCESS,
-                OffsetDateTime.now()
-        );
+                OffsetDateTime.now());
     }
 }

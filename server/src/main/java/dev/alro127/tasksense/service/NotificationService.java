@@ -2,7 +2,7 @@ package dev.alro127.tasksense.service;
 
 import dev.alro127.tasksense.dto.common.NotificationResponse;
 import dev.alro127.tasksense.dto.message.NotificationMessage;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
