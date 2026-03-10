@@ -822,9 +822,9 @@ export function TaskBoardPage() {
 
         {/* Advanced filter panel */}
         {showAdvancedFilters && (
-          <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-muted/30 px-4 py-3">
+          <div className="flex flex-wrap items-start gap-3 rounded-lg border bg-muted/30 px-4 py-3">
             {/* Priority */}
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">Priority</label>
               <Select
                 value={filterPriority}
@@ -844,7 +844,7 @@ export function TaskBoardPage() {
             </div>
 
             {/* Assignee */}
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">Assignee</label>
               <Select
                 value={filterAssigneeId === "ALL" ? "ALL" : String(filterAssigneeId)}
@@ -867,7 +867,7 @@ export function TaskBoardPage() {
             </div>
 
             {/* Due date from */}
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">Due after</label>
               <Input
                 type="date"
@@ -878,7 +878,7 @@ export function TaskBoardPage() {
             </div>
 
             {/* Due date to */}
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">Due before</label>
               <Input
                 type="date"
@@ -892,7 +892,7 @@ export function TaskBoardPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 text-xs text-muted-foreground hover:text-foreground self-end"
+                className="h-8 text-xs text-muted-foreground hover:text-foreground mt-5"
                 onClick={() => {
                   setFilterPriority("ALL");
                   setFilterAssigneeId("ALL");
