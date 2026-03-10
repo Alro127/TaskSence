@@ -464,12 +464,22 @@ export function TaskBoardPage() {
   const [keywordInput, setKeywordInput] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  // Board-only: which columns are hidden (client-side)
+  const [hiddenColumns, setHiddenColumns] = useState<Set<TaskStatus>>(new Set());
 
   // Debounce keyword 400ms
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedKeyword(keywordInput), 400);
     return () => clearTimeout(timer);
   }, [keywordInput]);
+
+  const toggleColumn = useCallback((status: TaskStatus) => {
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      next.has(status) ? next.delete(status) : next.add(status);
+      return next;
+    });
+  }, []);
 
   // Count active advanced filters for badge
   const advancedFilterCount = [
@@ -479,8 +489,9 @@ export function TaskBoardPage() {
     !!filterDueDateTo,
   ].filter(Boolean).length;
 
+  // status filter only counts toward "hasAnyFilter" in list view
   const hasAnyFilter =
-    filterStatus !== "ALL" ||
+    (viewMode === "list" && filterStatus !== "ALL") ||
     advancedFilterCount > 0 ||
     !!debouncedKeyword.trim();
 
@@ -492,13 +503,16 @@ export function TaskBoardPage() {
     setFilterDueDateTo("");
     setKeywordInput("");
     setDebouncedKeyword("");
+    setHiddenColumns(new Set());
   }, []);
 
   // ─── Build search query args ─────────────────────────────────────────────────
+  // Board view: status is NEVER sent — all columns must always be fetchable for DnD
+  // List view: status sent when a specific status is selected
   const searchArgs = useMemo(
     () => ({
       projectId,
-      ...(filterStatus !== "ALL" && { status: filterStatus }),
+      ...(viewMode === "list" && filterStatus !== "ALL" && { status: filterStatus }),
       ...(filterPriority !== "ALL" && { priority: filterPriority }),
       ...(filterAssigneeId !== "ALL" && { assigneeId: filterAssigneeId }),
       ...(debouncedKeyword.trim() && { keyword: debouncedKeyword.trim() }),
@@ -508,6 +522,7 @@ export function TaskBoardPage() {
       size: 200,
     }),
     [
+      viewMode,
       projectId,
       filterStatus,
       filterPriority,
@@ -694,23 +709,51 @@ export function TaskBoardPage() {
             />
           </div>
 
-          {/* Status filter */}
-          <Select
-            value={filterStatus}
-            onValueChange={(v) => setFilterStatus(v as TaskStatus | "ALL")}
-          >
-            <SelectTrigger className="h-9 w-36 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All statuses</SelectItem>
-              {STATUS_COLUMNS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Status filter — List view only */}
+          {viewMode === "list" && (
+            <Select
+              value={filterStatus}
+              onValueChange={(v) => setFilterStatus(v as TaskStatus | "ALL")}
+            >
+              <SelectTrigger className="h-9 w-36 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All statuses</SelectItem>
+                {STATUS_COLUMNS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Column toggles — Board view only */}
+          {viewMode === "board" && (
+            <div className="flex flex-wrap gap-1.5">
+              {STATUS_COLUMNS.map((col) => {
+                const isVisible = !hiddenColumns.has(col.value);
+                return (
+                  <button
+                    key={col.value}
+                    onClick={() => toggleColumn(col.value)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all",
+                      isVisible
+                        ? col.badgeClass
+                        : "border-border bg-background text-muted-foreground opacity-40",
+                    )}
+                  >
+                    {col.label}
+                    <span className={cn("text-[10px]", !isVisible && "opacity-60")}>
+                      {grouped.get(col.value)?.length ?? 0}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* More filters toggle */}
           <Button
@@ -969,7 +1012,7 @@ export function TaskBoardPage() {
           onDragEnd={handleDragEnd}
         >
           <div className="grid min-h-[400px] grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {STATUS_COLUMNS.map((col) => {
+            {STATUS_COLUMNS.filter((col) => !hiddenColumns.has(col.value)).map((col) => {
               const colTasks = grouped.get(col.value) ?? [];
               return (
                 <KanbanColumn
