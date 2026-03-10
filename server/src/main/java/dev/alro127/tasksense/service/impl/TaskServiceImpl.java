@@ -4,9 +4,9 @@ import dev.alro127.tasksense.domain.entity.ProjectEntity;
 import dev.alro127.tasksense.domain.entity.TaskEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
+import dev.alro127.tasksense.domain.enums.TaskPriority;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
 import dev.alro127.tasksense.dto.request.CreateTaskRequest;
-import dev.alro127.tasksense.dto.request.TaskSearchRequest;
 import dev.alro127.tasksense.dto.request.UpdateTaskRequest;
 import dev.alro127.tasksense.dto.request.UpdateTaskStatusRequest;
 import dev.alro127.tasksense.dto.response.TaskResponse;
@@ -24,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -61,7 +62,8 @@ public class TaskServiceImpl implements TaskService {
      */
     private void requireNotViewer(Long projectId, Long userId) {
         if (!isManager(projectId, userId) &&
-                !projectMemberRepository.existsByProjectIdAndUserIdAndRole(projectId, userId, ProjectMemberRole.MEMBER)) {
+                !projectMemberRepository.existsByProjectIdAndUserIdAndRole(projectId, userId,
+                        ProjectMemberRole.MEMBER)) {
             throw new UnauthorizedException("Viewers are not allowed to perform this action");
         }
     }
@@ -71,7 +73,8 @@ public class TaskServiceImpl implements TaskService {
      * MEMBER: can only modify tasks they created.
      */
     private void requireTaskEditPermission(Long projectId, Long userId, TaskEntity task) {
-        if (isManager(projectId, userId)) return;
+        if (isManager(projectId, userId))
+            return;
         if (!task.getCreatedBy().getId().equals(userId)) {
             throw new UnauthorizedException("You do not have permission to modify this task");
         }
@@ -82,7 +85,8 @@ public class TaskServiceImpl implements TaskService {
      * MEMBER: can update status of tasks they created or are assigned to.
      */
     private void requireTaskStatusPermission(Long projectId, Long userId, TaskEntity task) {
-        if (isManager(projectId, userId)) return;
+        if (isManager(projectId, userId))
+            return;
         boolean isCreator = task.getCreatedBy().getId().equals(userId);
         boolean isAssignee = task.getAssignees().stream().anyMatch(u -> u.getId().equals(userId));
         if (!isCreator && !isAssignee) {
@@ -182,16 +186,14 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<TaskResponse> searchTasks(Long projectId, TaskSearchRequest request) {
+    public List<TaskResponse> searchTasks(Long projectId, TaskStatus status, TaskPriority priority, Long assigneeId,
+            String keyword, LocalDate dueDateFrom, LocalDate dueDateTo, Long cursor, int size) {
         UserEntity currentUser = securityService.getCurrentUser();
         requireProjectMember(projectId, currentUser.getId());
 
-        return taskRepository.searchTasks(
-                projectId,
-                request.getStatus(),
-                request.getKeyword(),
-                request.getCursor(),
-                PageRequest.of(0, request.getSize())).stream().map(TaskResponse::mapToResponse).toList();
+        return taskRepository.searchTasks(projectId, status, priority, assigneeId, keyword, dueDateFrom, dueDateTo,
+                cursor, size)
+                .stream().map(TaskResponse::mapToResponse).toList();
     }
 
     @Override
