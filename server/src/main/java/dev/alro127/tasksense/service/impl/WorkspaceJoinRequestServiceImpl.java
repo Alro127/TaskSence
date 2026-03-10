@@ -99,7 +99,7 @@ public class WorkspaceJoinRequestServiceImpl implements WorkspaceJoinRequestServ
 
         joinRequestRepository.save(entity);
 
-        notificationService.saveAndPublic(NotificationMessage.builder()
+        notificationService.saveAndPublish(NotificationMessage.builder()
                 .receiverId(workspace.getOwner().getId())
                 .actorId(securityService.getCurrentUserId())
                 .type(NotificationType.WORKSPACE_JOIN_REQUEST)
@@ -179,7 +179,7 @@ public class WorkspaceJoinRequestServiceImpl implements WorkspaceJoinRequestServ
             message.setReferenceId(entity.getWorkspace().getId());
         }
 
-        notificationService.saveAndPublic(message);
+        notificationService.saveAndPublish(message);
 
         return WorkspaceJoinRequestResponse.mapToResponse(entity);
     }
