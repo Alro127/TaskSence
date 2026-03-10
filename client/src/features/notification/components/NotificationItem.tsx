@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Bell,
   ClipboardCheck,
+  Clock,
 } from "lucide-react";
 import type { NotificationResponse, NotificationType } from "@/types/api";
 import { getNotificationText } from "../utils/notificationUtils";
@@ -31,6 +32,7 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   WORKSPACE_ROLE_CHANGE: <ShieldCheck className="h-4 w-4 text-amber-500" />,
   PROJECT_JOIN_REQUEST: <FolderPlus className="h-4 w-4 text-cyan-500" />,
   COMMENT_MENTION: <MessageSquare className="h-4 w-4 text-amber-500" />,
+  TASK_REMINDER: <Clock className="h-4 w-4 text-orange-500" />,
   PROJECT_ROLE_UPDATED: <ShieldCheck className="h-4 w-4 text-purple-500" />,
 };
 
