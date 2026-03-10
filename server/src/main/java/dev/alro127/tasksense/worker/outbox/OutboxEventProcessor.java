@@ -1,4 +1,4 @@
-package dev.alro127.tasksense.worker;
+package dev.alro127.tasksense.worker.outbox;
 
 import dev.alro127.tasksense.domain.entity.OutboxEventEntity;
 import dev.alro127.tasksense.domain.enums.DeliveryStatus;

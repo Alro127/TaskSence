@@ -343,6 +343,7 @@ export type NotificationType =
   | "WORKSPACE_ROLE_CHANGE"
   | "PROJECT_JOIN_REQUEST"
   | "COMMENT_MENTION"
+  | "TASK_REMINDER"
   | "PROJECT_ROLE_UPDATED";
 
 export interface NotificationResponse {

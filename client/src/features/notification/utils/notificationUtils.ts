@@ -68,6 +68,10 @@ export function getNotificationText(
       title: "You were mentioned",
       description: `${actorName} mentioned you: "${commentText}"`,
     },
+    TASK_REMINDER: {
+      title: "Task reminder",
+      description: `Reminder: "${taskName}" is due soon`,
+    },
     PROJECT_ROLE_UPDATED: {
       title: "Role updated",
       description: `Your role in "${projectName}" was changed to ${newRole}`,
@@ -126,6 +130,10 @@ export function getNotificationTarget(notification: NotificationResponse): strin
     }
     case "COMMENT_MENTION": {
       return "/tasks";
+    }
+    case "TASK_REMINDER": {
+      const taskId = notification.referenceId;
+      return taskId ? `/tasks` : "/tasks";
     }
     case "PROJECT_ROLE_UPDATED": {
       const workspaceId = payload.workspaceId as number | undefined;
