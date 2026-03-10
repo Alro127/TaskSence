@@ -4,6 +4,8 @@ import {
   type RouteObject,
 } from "react-router-dom";
 
+import { NotFoundPage } from "@/pages/NotFoundPage";
+
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { MainLayout } from "@/layouts/MainLayout";
 import {
@@ -142,7 +144,7 @@ const routes: RouteObject[] = [
   },
   {
     path: "*",
-    element: <Navigate to="/auth/login" replace />,
+    element: <NotFoundPage />,
   },
 ];
 
