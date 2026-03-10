@@ -14,9 +14,10 @@ import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
 import dev.alro127.tasksense.service.ProjectService;
 import dev.alro127.tasksense.service.SecurityService;
-import jakarta.transaction.Transactional;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;

@@ -23,9 +23,9 @@ public class EmailService {
 
         String htmlContent = """
                 <div style="font-family: Arial, sans-serif;">
-                    <h2>Password Reset Request</h2>
-                    <p>We received a request to reset your password.</p>
-                    <p>Click the button below to reset it:</p>
+                    <h2>Workspace Invitation</h2>
+                    <p>You have been invited to join a workspace.</p>
+                    <p>Click the button below to accept the invitation:</p>
 
                     <div style="text-align:center; margin:20px 0;">
                         <a href="%s"
@@ -37,7 +37,7 @@ public class EmailService {
                              border-radius:6px;
                              display:inline-block;
                              font-weight:bold;">
-                           Join our workspace
+                           Join Workspace
                         </a>
                     </div>
 
