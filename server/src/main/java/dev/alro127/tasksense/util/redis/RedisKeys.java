@@ -4,6 +4,7 @@ public class RedisKeys {
 
     public static final String NOTIFICATION_CHANNEL = "notification-channel";
     public static final String AUTH_EMAIL_CHANNEL = "auth-email-channel";
+    public static final String REMINDER_KEY = "task:reminders";
 
     public static String unreadCount(Long userId) {
         return "notification:unread:" + userId;

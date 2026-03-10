@@ -113,6 +113,7 @@ public class TaskServiceImpl implements TaskService {
         }
 
         TaskEntity saved = taskRepository.save(builder.build());
+
         return TaskResponse.mapToResponse(saved);
     }
 
