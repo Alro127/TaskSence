@@ -31,6 +31,8 @@ public class ReminderWorker {
     @Scheduled(cron = "0 0 0 * * *")
     public void syncReminders(){
 
+        System.out.println("Sync Reminder worker is running");
+
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime window = now.plusHours(24);
 
@@ -48,6 +50,8 @@ public class ReminderWorker {
 
     @Scheduled(fixedDelay = 30000)
     public void processReminders(){
+
+        System.out.println("Reminder worker is running");
 
         long now = Instant.now().toEpochMilli();
 

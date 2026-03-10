@@ -17,6 +17,7 @@ import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.TaskRepository;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
 import dev.alro127.tasksense.security.permission.PermissionChecker;
+import dev.alro127.tasksense.service.ReminderService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.TaskService;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class TaskServiceImpl implements TaskService {
     private final ProjectMemberRepository projectMemberRepository;
     private final SecurityService securityService;
     private final PermissionChecker permissionChecker;
+    private final ReminderService reminderService;
 
     // ===== Helpers =====
 
@@ -112,6 +114,13 @@ public class TaskServiceImpl implements TaskService {
         }
 
         TaskEntity saved = taskRepository.save(builder.build());
+
+        if (saved.getDueDate() != null) {
+            OffsetDateTime reminderTime =
+                    saved.getDueDate().minusMinutes(15);
+
+            reminderService.scheduleReminder(saved.getId(), reminderTime);
+        }
 
         return TaskResponse.mapToResponse(saved);
     }
@@ -195,7 +204,16 @@ public class TaskServiceImpl implements TaskService {
             }
         }
 
-        taskRepository.save(task);
+        TaskEntity saved = taskRepository.save(task);
+
+        reminderService.removeReminder(taskId);
+
+        if (saved.getDueDate() != null) {
+            OffsetDateTime reminderTime =
+                    saved.getDueDate().minusMinutes(15);
+
+            reminderService.scheduleReminder(saved.getId(), reminderTime);
+        }
         return TaskResponse.mapToResponse(task);
     }
 
