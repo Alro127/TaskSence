@@ -5,6 +5,7 @@ import dev.alro127.tasksense.domain.enums.TaskPriority;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -66,4 +67,16 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
     WHERE t.id = :id
   """)
   Optional<TaskEntity> findWithAssignees(Long id);
+
+  @Modifying
+  @Query("UPDATE TaskEntity t SET t.deletedAt = :now WHERE t.project.id = :projectId AND t.deletedAt IS NULL")
+  int softDeleteByProjectId(@Param("projectId") Long projectId, @Param("now") OffsetDateTime now);
+
+  @Modifying
+  @Query("UPDATE TaskEntity t SET t.deletedAt = :now WHERE t.project.id IN :projectIds AND t.deletedAt IS NULL")
+  int softDeleteByProjectIds(@Param("projectIds") List<Long> projectIds, @Param("now") OffsetDateTime now);
+
+  @Modifying
+  @Query("UPDATE TaskEntity t SET t.deletedAt = :now WHERE t.parentTask.id = :parentTaskId AND t.deletedAt IS NULL")
+  int softDeleteByParentTaskId(@Param("parentTaskId") Long parentTaskId, @Param("now") OffsetDateTime now);
 }
