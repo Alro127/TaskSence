@@ -6,6 +6,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,12 +81,9 @@ export function RegisterPage() {
       });
 
       navigate("/auth/verify-otp");
-    } catch (error: unknown) {
-      const err = error as { data?: { message?: string }; status?: number };
+    } catch (error) {
       toast.error("Registration failed", {
-        description:
-          err?.data?.message ||
-          "Something went wrong. Please try again.",
+        description: getApiErrorMessage(error, "Something went wrong. Please try again."),
       });
     }
   };
@@ -111,12 +109,9 @@ export function RegisterPage() {
           description: "Your Google account is ready to use TaskSense.",
         });
         navigate("/dashboard");
-      } catch (error: unknown) {
-        const err = error as { data?: { message?: string } };
+      } catch (error) {
         toast.error("Google sign up failed", {
-          description:
-            err?.data?.message ||
-            "Unable to complete Google sign up. Please try again.",
+          description: getApiErrorMessage(error, "Unable to complete Google sign up. Please try again."),
         });
       } finally {
         setGoogleLoading(false);

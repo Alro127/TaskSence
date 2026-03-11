@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 import type {
   AddProjectMemberResultItem,
   ProjectMemberRole,
@@ -163,8 +163,8 @@ export function AddMembersModal({
         toast.success(`${addedCount} member${addedCount > 1 ? "s" : ""} added successfully!`);
         onMembersAdded?.();
       }
-    } catch {
-      toast.error("Failed to add members. Please try again.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to add members. Please try again."));
     }
   };
 

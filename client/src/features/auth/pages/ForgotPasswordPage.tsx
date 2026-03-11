@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2, ArrowLeft, Mail, CheckCircle } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,11 +48,9 @@ export function ForgotPasswordPage() {
           response.message ||
           "Please check your email for password reset instructions.",
       });
-    } catch (error: unknown) {
-      const err = error as { data?: { message?: string } };
+    } catch (error) {
       toast.error("Failed to send reset link", {
-        description:
-          err?.data?.message || "Something went wrong. Please try again later.",
+        description: getApiErrorMessage(error, "Something went wrong. Please try again later."),
       });
     }
   };

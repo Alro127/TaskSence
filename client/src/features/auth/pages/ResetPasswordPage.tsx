@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2, ArrowLeft, CheckCircle } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -77,12 +78,9 @@ export function ResetPasswordPage() {
       setTimeout(() => {
         navigate("/auth/login", { replace: true });
       }, 3000);
-    } catch (error: unknown) {
-      const err = error as { data?: { message?: string } };
+    } catch (error) {
       toast.error("Failed to reset password", {
-        description:
-          err?.data?.message ||
-          "The reset link may have expired. Please request a new one.",
+        description: getApiErrorMessage(error, "The reset link may have expired. Please request a new one."),
       });
     }
   };

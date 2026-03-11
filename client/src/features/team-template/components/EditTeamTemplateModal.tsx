@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -77,8 +78,8 @@ export function EditTeamTemplateModal({
       }).unwrap();
       toast.success("Team template updated successfully!");
       onOpenChange(false);
-    } catch {
-      toast.error("Failed to update team template. Please try again.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update team template. Please try again."));
     }
   };
 

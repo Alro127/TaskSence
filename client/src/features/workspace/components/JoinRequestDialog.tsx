@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -43,9 +44,8 @@ export function JoinRequestDialog({
       onSuccess?.(result.data);
       setMessage("");
       onOpenChange(false);
-    } catch (err: unknown) {
-      const error = err as { data?: { message?: string } };
-      toast.error(error?.data?.message ?? "Failed to send join request");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to send join request"));
     }
   };
 

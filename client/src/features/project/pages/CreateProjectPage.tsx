@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Loader2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,8 +76,8 @@ export function CreateProjectPage() {
       }).unwrap();
       toast.success(`Project "${res.data.name}" created!`);
       navigate(`/workspaces/${workspaceId}/projects/${res.data.id}`);
-    } catch {
-      toast.error("Failed to create project. Please try again.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to create project. Please try again."));
     }
   };
 

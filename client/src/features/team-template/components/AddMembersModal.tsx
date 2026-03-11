@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Search, X, Loader2, CheckCircle2, AlertCircle, UserPlus, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -112,8 +113,8 @@ export function AddMembersModal({
           onMembersAdded(userMap);
         }
       }
-    } catch {
-      toast.error("Failed to add members. Please try again.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to add members. Please try again."));
     }
   };
 

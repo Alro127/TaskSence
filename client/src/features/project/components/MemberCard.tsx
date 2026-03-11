@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 import type { ProjectMember, ProjectMemberRole } from "@/types/api";
 import { useRemoveMemberMutation, useUpdateMemberRoleMutation } from "../api/projectMemberApi";
 import { ROLE_LABEL } from "./ProjectCard";
@@ -64,8 +64,8 @@ export function MemberCard({ member, canManage, currentUserId, onTransferManager
         role,
       }).unwrap();
       toast.success(`Role updated to ${ROLE_LABEL[role]}`);
-    } catch {
-      toast.error("Failed to update role.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update role."));
     }
   };
 
@@ -77,8 +77,8 @@ export function MemberCard({ member, canManage, currentUserId, onTransferManager
       }).unwrap();
       toast.success(`${member.user.fullName ?? member.user.email} removed from project.`);
       setIsRemoveDialogOpen(false);
-    } catch {
-      toast.error("Failed to remove member.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to remove member."));
     }
   };
 

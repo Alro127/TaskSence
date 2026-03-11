@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -79,10 +80,8 @@ export function EditWorkspaceModal({
         description: `"${data.name}" has been updated.`,
       });
       onOpenChange(false);
-    } catch {
-      toast.error("Failed to update workspace", {
-        description: "Please try again.",
-      });
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update workspace"));
     }
   };
 

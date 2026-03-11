@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2, UserPlus } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -77,9 +78,8 @@ export function InviteMemberModal({
       });
       reset();
       onOpenChange(false);
-    } catch (err: unknown) {
-      const error = err as { data?: { message?: string } };
-      toast.error(error?.data?.message ?? "Failed to send invitation");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to send invitation"));
     }
   };
 

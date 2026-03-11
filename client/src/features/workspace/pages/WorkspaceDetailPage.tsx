@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/utils";
 import {
   ChevronRight,
   FolderKanban,
@@ -109,8 +110,8 @@ export function WorkspaceDetailPage() {
         isPublic: data.isPublic,
       }).unwrap();
       toast.success("Workspace updated!");
-    } catch {
-      toast.error("Failed to update workspace");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update workspace"));
     }
   };
 

@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 import type { WorkspaceRole, BulkInviteResult, UserSearchResult } from "@/types/api";
 import { useLazySearchUsersQuery } from "@/features/user/api/userApi";
 import { useGetMyTemplatesQuery } from "@/features/team-template/api/teamTemplateApi";
@@ -297,9 +297,8 @@ export function BulkInviteModal({
       if (sc > 0) {
         toast.success(`${sc} invitation${sc > 1 ? "s" : ""} sent successfully!`);
       }
-    } catch (err: unknown) {
-      const error = err as { data?: { message?: string } };
-      toast.error(error?.data?.message ?? "Failed to send invitations");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to send invitations"));
     }
   };
 

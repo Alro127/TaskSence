@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 import type { JoinRequestStatus, ProjectJoinRequest, ProjectMember } from "@/types/api";
 
 import { useGetProjectByIdQuery, useGetCurrentUserRoleQuery } from "../api/projectApi";
@@ -93,8 +93,8 @@ function JoinRequestItem({
         status,
       }).unwrap();
       toast.success(`Request ${status === "APPROVED" ? "approved" : "rejected"}.`);
-    } catch {
-      toast.error("Failed to review request.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to review request."));
     }
   };
 
@@ -200,8 +200,8 @@ function TransferManagerDialog({
       toast.success("Manager role transferred successfully.");
       handleClose();
       window.location.reload();
-    } catch {
-      toast.error("Failed to transfer manager role.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to transfer manager role."));
     }
   };
 

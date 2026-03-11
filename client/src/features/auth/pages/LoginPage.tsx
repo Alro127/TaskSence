@@ -6,6 +6,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,10 +71,9 @@ export function LoginPage() {
         description: "You have successfully logged in.",
       });
       navigate("/dashboard");
-    } catch (error: unknown) {
-      const err = error as { data?: { message?: string }; status?: number };
+    } catch (error) {
       toast.error("Login failed", {
-        description: err?.data?.message || "Invalid email or password. Please try again.",
+        description: getApiErrorMessage(error, "Invalid email or password. Please try again."),
       });
     }
   };
@@ -99,12 +99,9 @@ export function LoginPage() {
           description: "You have successfully logged in with Google.",
         });
         navigate("/dashboard");
-      } catch (error: unknown) {
-        const err = error as { data?: { message?: string } };
+      } catch (error) {
         toast.error("Google login failed", {
-          description:
-            err?.data?.message ||
-            "Unable to complete Google login. Please try again.",
+          description: getApiErrorMessage(error, "Unable to complete Google login. Please try again."),
         });
       } finally {
         setGoogleLoading(false);
