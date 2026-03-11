@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
+import { Link, useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   ArrowRight,
@@ -286,6 +286,8 @@ export function ProjectDetailPage() {
   const projectId = Number(projectIdStr);
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get("tab") ?? "overview";
   const workspaceNameFromState = (location.state as { workspaceName?: string } | null)?.workspaceName;
 
   const currentUserId = useAppSelector((s) => s.user.currentUser?.id ?? 0);
@@ -442,7 +444,7 @@ export function ProjectDetailPage() {
       </div>
 
       {/* ── Tabs ── */}
-      <Tabs defaultValue="overview">
+      <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="overview" className="gap-2">
             <Settings className="h-4 w-4" />
