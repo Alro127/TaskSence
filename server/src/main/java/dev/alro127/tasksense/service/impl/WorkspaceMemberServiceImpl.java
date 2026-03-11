@@ -9,6 +9,7 @@ import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.dto.request.UpdateWorkspaceRoleRequest;
 import dev.alro127.tasksense.dto.response.WorkspaceMemberResponse;
+import dev.alro127.tasksense.exception.BadRequestException;
 import dev.alro127.tasksense.exception.ConflictException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
@@ -31,108 +32,113 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
-    private final WorkspaceMemberRepository workspaceMemberRepository;
-    private final WorkspaceRepository workspaceRepository;
-    private final ProjectMemberRepository projectMemberRepository;
-    private final NotificationService notificationService;
-    private final SecurityService securityService;
-    private final UserRepository userRepository;
+        private final WorkspaceMemberRepository workspaceMemberRepository;
+        private final WorkspaceRepository workspaceRepository;
+        private final ProjectMemberRepository projectMemberRepository;
+        private final NotificationService notificationService;
+        private final SecurityService securityService;
+        private final UserRepository userRepository;
 
-    @Override
-    public List<WorkspaceMemberResponse> getWorkspaceMembers(Long workspaceId) {
+        @Override
+        public List<WorkspaceMemberResponse> getWorkspaceMembers(Long workspaceId) {
 
-        workspaceRepository.findById(workspaceId)
-                .orElseThrow(() -> new EntityNotFoundException("Workspace not found"));
+                workspaceRepository.findById(workspaceId)
+                                .orElseThrow(() -> new EntityNotFoundException("Workspace not found"));
 
-        return workspaceMemberRepository.findByWorkspaceId(workspaceId)
-                .stream()
-                .map(WorkspaceMemberResponse::mapToResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional
-    public void addUserToWorkspace(Long workspaceId, Long userId) {
-
-        WorkspaceEntity workspace = workspaceRepository.findById(workspaceId).orElseThrow(
-                () -> new ResourceNotFoundException("Workspace not found"));
-
-        UserEntity user = userRepository.findById(userId).orElseThrow(
-                () -> new ResourceNotFoundException("User not found"));
-
-        WorkspaceMemberEntity member = workspaceMemberRepository.findByWorkspaceIdAndUserIdIgnoreRestriction(workspaceId,userId)
-                .orElse(WorkspaceMemberEntity.builder()
-                        .workspace(workspace)
-                        .user(user)
-                        .role(WorkspaceRole.MEMBER)
-                        .joinedAt(OffsetDateTime.now())
-                        .build());
-        member.setDeletedAt(null);
-        member.setRole(WorkspaceRole.MEMBER);
-
-        workspaceMemberRepository.save(member);
-    }
-
-    @Override
-    @Transactional
-    public WorkspaceMemberResponse updateMemberRole(Long workspaceId,
-            Long memberId,
-            UpdateWorkspaceRoleRequest request) {
-
-        WorkspaceMemberEntity member = workspaceMemberRepository
-                .findByIdAndWorkspaceId(memberId, workspaceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Member not found in workspace"));
-
-        WorkspaceRole newRole = request.getRole();
-
-        if (member.getRole() == WorkspaceRole.OWNER ) {
-            throw new ConflictException("Workspace have only one owner");
+                return workspaceMemberRepository.findByWorkspaceId(workspaceId)
+                                .stream()
+                                .map(WorkspaceMemberResponse::mapToResponse)
+                                .toList();
         }
 
-        member.setRole(newRole);
+        @Override
+        @Transactional
+        public void addUserToWorkspace(Long workspaceId, Long userId) {
 
-        notificationService.saveAndPublish(NotificationMessage.builder()
-                .receiverId(member.getUser().getId())
-                .actorId(securityService.getCurrentUserId())
-                .type(NotificationType.WORKSPACE_ROLE_CHANGE)
-                .referenceType(EntityType.WORKSPACE)
-                .referenceId(member.getWorkspace().getId())
-                .payload(Map.of("referenceName", member.getWorkspace().getName()))
-                .build());
+                WorkspaceEntity workspace = workspaceRepository.findById(workspaceId).orElseThrow(
+                                () -> new ResourceNotFoundException("Workspace not found"));
 
-        return WorkspaceMemberResponse.mapToResponse(member);
-    }
+                UserEntity user = userRepository.findById(userId).orElseThrow(
+                                () -> new ResourceNotFoundException("User not found"));
 
-    @Override
-    @Transactional
-    public void removeMember(Long workspaceId, Long memberId) {
+                WorkspaceMemberEntity member = workspaceMemberRepository
+                                .findByWorkspaceIdAndUserIdIgnoreRestriction(workspaceId, userId)
+                                .orElse(WorkspaceMemberEntity.builder()
+                                                .workspace(workspace)
+                                                .user(user)
+                                                .role(WorkspaceRole.MEMBER)
+                                                .joinedAt(OffsetDateTime.now())
+                                                .build());
+                member.setDeletedAt(null);
+                member.setRole(WorkspaceRole.MEMBER);
 
-        WorkspaceMemberEntity member = workspaceMemberRepository
-                .findByIdAndWorkspaceId(memberId, workspaceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Member not found in workspace"));
-
-        if (member.getRole() == WorkspaceRole.OWNER) {
-
-            long ownerCount = workspaceMemberRepository
-                    .countByWorkspaceIdAndRole(workspaceId, WorkspaceRole.OWNER);
-
-            if (ownerCount <= 1) {
-                throw new ConflictException("Cannot remove the last workspace owner");
-            }
+                workspaceMemberRepository.save(member);
         }
 
-        member.setDeletedAt(OffsetDateTime.now());
+        @Override
+        @Transactional
+        public WorkspaceMemberResponse updateMemberRole(Long workspaceId,
+                        Long memberId,
+                        UpdateWorkspaceRoleRequest request) {
 
-        //projectMemberRepository.deleteByWorkspaceIdAndUserId(workspaceId, memberId);
-        workspaceMemberRepository.save(member);
+                WorkspaceMemberEntity member = workspaceMemberRepository
+                                .findByIdAndWorkspaceId(memberId, workspaceId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Member not found in workspace"));
 
-        notificationService.saveAndPublish(NotificationMessage.builder()
-                .receiverId(member.getUser().getId())
-                .actorId(securityService.getCurrentUserId())
-                .type(NotificationType.WORKSPACE_REMOVE_MEMBER)
-                .referenceType(EntityType.WORKSPACE)
-                .referenceId(member.getWorkspace().getId())
-                .payload(Map.of("referenceName", member.getWorkspace().getName()))
-                .build());
-    }
+                WorkspaceRole newRole = request.getRole();
+
+                if (member.getRole() == WorkspaceRole.OWNER) {
+                        throw new ConflictException("Owner can not change their role");
+                }
+                if (newRole == WorkspaceRole.OWNER) {
+                        throw new BadRequestException("Can not change current into Owner");
+                }
+
+                member.setRole(newRole);
+
+                notificationService.saveAndPublish(NotificationMessage.builder()
+                                .receiverId(member.getUser().getId())
+                                .actorId(securityService.getCurrentUserId())
+                                .type(NotificationType.WORKSPACE_ROLE_CHANGE)
+                                .referenceType(EntityType.WORKSPACE)
+                                .referenceId(member.getWorkspace().getId())
+                                .payload(Map.of("referenceName", member.getWorkspace().getName()))
+                                .build());
+
+                return WorkspaceMemberResponse.mapToResponse(member);
+        }
+
+        @Override
+        @Transactional
+        public void removeMember(Long workspaceId, Long memberId) {
+
+                WorkspaceMemberEntity member = workspaceMemberRepository
+                                .findByIdAndWorkspaceId(memberId, workspaceId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Member not found in workspace"));
+
+                if (member.getRole() == WorkspaceRole.OWNER) {
+
+                        long ownerCount = workspaceMemberRepository
+                                        .countByWorkspaceIdAndRole(workspaceId, WorkspaceRole.OWNER);
+
+                        if (ownerCount <= 1) {
+                                throw new ConflictException("Cannot remove the last workspace owner");
+                        }
+                }
+                OffsetDateTime now = OffsetDateTime.now();
+
+                member.setDeletedAt(now);
+
+                projectMemberRepository.softDeleteByWorkspaceIdAndUserId(workspaceId, member.getUser().getId(), now);
+                workspaceMemberRepository.save(member);
+
+                notificationService.saveAndPublish(NotificationMessage.builder()
+                                .receiverId(member.getUser().getId())
+                                .actorId(securityService.getCurrentUserId())
+                                .type(NotificationType.WORKSPACE_REMOVE_MEMBER)
+                                .referenceType(EntityType.WORKSPACE)
+                                .referenceId(member.getWorkspace().getId())
+                                .payload(Map.of("referenceName", member.getWorkspace().getName()))
+                                .build());
+        }
 }
