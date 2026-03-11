@@ -38,4 +38,25 @@ public class OutboxWorker {
             events.forEach(processor::processEvent);
         }
     }
+
+    @Scheduled(fixedDelay = 60000)
+    public void processEmailEvents() {
+
+        System.out.println("Worker is running");
+        while (true) {
+
+            List<OutboxEventEntity> events =
+                    repository.lockEventsForProcessing(
+                            OutboxEventType.EMAIL.name(),
+                            100
+                    );
+
+            if (events.isEmpty()) {
+                System.out.println("events is empty");
+                return;
+            }
+
+            events.forEach(processor::processEvent);
+        }
+    }
 }

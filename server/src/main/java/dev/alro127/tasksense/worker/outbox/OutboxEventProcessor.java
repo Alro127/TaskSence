@@ -5,6 +5,8 @@ import dev.alro127.tasksense.domain.enums.DeliveryStatus;
 import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.repository.jpa.OutboxEventRepository;
 import dev.alro127.tasksense.service.publisher.NotificationPublisher;
+import dev.alro127.tasksense.service.publisher.Publisher;
+import dev.alro127.tasksense.service.publisher.PublisherFactory;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +20,7 @@ import java.time.OffsetDateTime;
 @Slf4j
 public class OutboxEventProcessor {
 
-    private final NotificationPublisher notificationPublisher;
+    private final PublisherFactory publisherFactory;
     private final OutboxEventRepository repository;
     private final ObjectMapper objectMapper;
 
@@ -29,11 +31,14 @@ public class OutboxEventProcessor {
 
             System.out.println("process event");
 
-            NotificationMessage message = objectMapper.readValue(
-                    event.getPayload().toString(),
-                    NotificationMessage.class);
+            Publisher publisher = publisherFactory.get(event.getEventType());
 
-            notificationPublisher.publish(message);
+            Object message = objectMapper.readValue(
+                    event.getPayload().toString(),
+                    Object.class
+            );
+
+            publisher.publish(message);
 
             event.setDeliveryStatus(DeliveryStatus.SUCCESS);
             event.setPublishedAt(OffsetDateTime.now());
