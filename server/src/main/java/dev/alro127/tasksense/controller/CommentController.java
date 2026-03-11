@@ -5,10 +5,12 @@ import dev.alro127.tasksense.dto.request.CommentCreateRequest;
 import dev.alro127.tasksense.dto.request.CommentReactionRequest;
 import dev.alro127.tasksense.dto.request.UpdateCommentRequest;
 import dev.alro127.tasksense.dto.response.CommentResponse;
+import dev.alro127.tasksense.dto.response.UserSummaryResponse;
 import dev.alro127.tasksense.service.CommentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -74,6 +76,38 @@ public class CommentController {
 
     @PostMapping("/{commentId}/reactions")
     public ResponseEntity<ApiResponse<Void>> addReaction(
+            @PathVariable Long commentId,
+            @Valid @RequestBody CommentReactionRequest request) {
+
+        commentService.addReaction(commentId, request);
+
+        ApiResponse<Void> response = new ApiResponse<>(
+                "200",
+                "Add reaction successfully",
+                null,
+                null
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{commentId}/reactions/{icon}")
+    public ResponseEntity<ApiResponse<List<UserSummaryResponse>>> getReactions(
+            @PathVariable Long commentId,
+            @PathVariable String icon) {
+
+        ApiResponse<List<UserSummaryResponse>> response = new ApiResponse<>(
+                "200",
+                "Get reactions successfully",
+                commentService.getReactions(commentId, icon),
+                null
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{commentId}/reactions")
+    public ResponseEntity<ApiResponse<Void>> updateReaction(
             @PathVariable Long commentId,
             @Valid @RequestBody CommentReactionRequest request) {
 

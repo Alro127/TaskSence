@@ -5,7 +5,9 @@ import dev.alro127.tasksense.dto.request.CommentCreateRequest;
 import dev.alro127.tasksense.dto.request.CommentReactionRequest;
 import dev.alro127.tasksense.dto.request.UpdateCommentRequest;
 import dev.alro127.tasksense.dto.response.CommentResponse;
+import dev.alro127.tasksense.dto.response.UserSummaryResponse;
 import dev.alro127.tasksense.exception.ForbiddenException;
+import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.*;
 import dev.alro127.tasksense.service.CommentService;
 import dev.alro127.tasksense.service.SecurityService;
@@ -13,6 +15,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -39,17 +42,18 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    @Transactional
     public CommentResponse createComment(CommentCreateRequest request) {
 
         UserEntity currentUser = securityService.getCurrentUser();
 
         TaskEntity task = taskRepository.findById(request.getTaskId())
-                .orElseThrow(() -> new EntityNotFoundException("Task not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
         CommentEntity parent = null;
         if (request.getParentCommentId() != null) {
             parent = commentRepository.findById(request.getParentCommentId())
-                    .orElseThrow(() -> new EntityNotFoundException("Parent comment not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent comment not found"));
         }
 
         CommentEntity comment = CommentEntity.builder()
@@ -66,6 +70,7 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    @Transactional
     public CommentResponse updateComment(Long commentId, UpdateCommentRequest request) {
 
         CommentEntity comment = commentRepository.findById(commentId)
@@ -82,10 +87,11 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    @Transactional
     public void deleteComment(Long commentId) {
 
         CommentEntity comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new EntityNotFoundException("Comment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
 
         checkOwner(comment);
 
@@ -132,6 +138,7 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    @Transactional
     public void addReaction(Long commentId, CommentReactionRequest request) {
 
         UserEntity currentUser = securityService.getCurrentUser();
@@ -143,7 +150,7 @@ public class CommentServiceImpl implements CommentService {
         if (exists) return;
 
         CommentEntity comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new EntityNotFoundException("Comment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
 
         CommentReactionEntity reaction = CommentReactionEntity.builder()
                 .comment(comment)
@@ -154,7 +161,28 @@ public class CommentServiceImpl implements CommentService {
         reactionRepository.save(reaction);
     }
 
+    @Transactional
     @Override
+    public void updateReaction(Long commentId, CommentReactionRequest request) {
+
+        UserEntity currentUser = securityService.getCurrentUser();
+
+        CommentEntity comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+
+        CommentReactionEntity reaction = reactionRepository
+                .findByCommentIdAndUserId(commentId, currentUser.getId()).orElse(
+                        CommentReactionEntity.builder()
+                        .comment(comment)
+                        .user(currentUser)
+                        .build());
+
+        reaction.setIcon(request.getIcon());
+        reactionRepository.save(reaction);
+    }
+
+    @Override
+    @Transactional
     public void removeReaction(Long commentId, CommentReactionRequest request) {
 
         UserEntity currentUser = securityService.getCurrentUser();
@@ -164,5 +192,12 @@ public class CommentServiceImpl implements CommentService {
                 currentUser.getId(),
                 request.getIcon()
         );
+    }
+
+    @Override
+    public List<UserSummaryResponse> getReactions(Long commentId, String icon) {
+        List<UserEntity> users = reactionRepository.findUsersByCommentIdAndIcon(commentId, icon);
+
+        return users.stream().map(UserSummaryResponse::mapToResponse).toList();
     }
 }
