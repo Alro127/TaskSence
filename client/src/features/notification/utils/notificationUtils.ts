@@ -132,8 +132,12 @@ export function getNotificationTarget(notification: NotificationResponse): strin
       return "/tasks";
     }
     case "TASK_REMINDER": {
+      const workspaceId = payload.workspaceId as number | undefined;
+      const projectId = payload.projectId as number | undefined;
       const taskId = notification.referenceId;
-      return taskId ? `/tasks` : "/tasks";
+      return workspaceId && projectId && taskId
+        ? `/workspaces/${workspaceId}/projects/${projectId}/tasks/${taskId}`
+        : "/tasks";
     }
     case "PROJECT_ROLE_UPDATED": {
       const workspaceId = payload.workspaceId as number | undefined;

@@ -1,7 +1,6 @@
 package dev.alro127.tasksense.repository.jpa;
 
 import dev.alro127.tasksense.domain.entity.TaskEntity;
-import dev.alro127.tasksense.domain.enums.TaskPriority;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,7 +10,6 @@ import org.springframework.stereotype.Repository;
 
 import org.springframework.data.domain.Pageable;
 
-import java.time.OffsetDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -61,12 +59,14 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
           OffsetDateTime window);
 
   @Query("""
-    SELECT t
+    SELECT DISTINCT t
     FROM TaskEntity t
     LEFT JOIN FETCH t.assignees
+    LEFT JOIN FETCH t.project p
+    LEFT JOIN FETCH p.workspace
     WHERE t.id = :id
-  """)
-  Optional<TaskEntity> findWithAssignees(Long id);
+""")
+  Optional<TaskEntity> findWithAssigneesProjectWorkspace(Long id);
 
   @Modifying
   @Query("UPDATE TaskEntity t SET t.deletedAt = :now WHERE t.project.id = :projectId AND t.deletedAt IS NULL")

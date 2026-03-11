@@ -208,10 +208,10 @@ public class TaskServiceImpl implements TaskService {
 
         reminderService.removeReminder(taskId);
 
-        if (saved.getDueDate() != null) {
+        if (saved.getDueDate() != null && !saved.getStatus().equals(TaskStatus.DONE) && !saved.getStatus().equals(TaskStatus.REVIEW)) {
+
             OffsetDateTime reminderTime =
                     saved.getDueDate().minusMinutes(15);
-
             reminderService.scheduleReminder(saved.getId(), reminderTime);
         }
         return TaskResponse.mapToResponse(task);
