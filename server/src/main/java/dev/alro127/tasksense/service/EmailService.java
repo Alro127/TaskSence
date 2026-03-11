@@ -2,20 +2,37 @@ package dev.alro127.tasksense.service;
 
 import dev.alro127.tasksense.config.common.AppConfig;
 import dev.alro127.tasksense.domain.enums.EmailType;
+import dev.alro127.tasksense.domain.enums.OutboxEventType;
 import dev.alro127.tasksense.dto.message.EmailMessage;
 import dev.alro127.tasksense.service.publisher.EmailPublisher;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
 public class EmailService {
     private final EmailPublisher publisher;
-    private final RedisTemplate<String, Object> redisTemplate;
     private final AppConfig appConfig;
-    private final ObjectMapper objectMapper;
+    private final OutboxEventService outboxEventService;
+
+    private void dispatchEmail(EmailMessage message) {
+
+        Long outboxId = outboxEventService.publishEvent(
+                OutboxEventType.EMAIL,
+                null,
+                null,
+                message
+        );
+
+        try {
+
+            publisher.publish(message);
+            outboxEventService.markSuccess(outboxId);
+
+        } catch (Exception e) {
+            System.out.println("Realtime publish failed, worker will retry");
+        }
+    }
 
     public void sendWorkspaceInviteEmail(String to, String rawToken) {
 
@@ -55,7 +72,7 @@ public class EmailService {
                 .content(htmlContent)
                 .build();
 
-        publisher.publish(message);
+        dispatchEmail(message);
     }
 
     public void sendVerifyEmail(String to, String otp) {
@@ -67,7 +84,7 @@ public class EmailService {
                 .content("Your OTP is: " + otp)
                 .build();
 
-        publisher.publish(message);
+        dispatchEmail(message);
     }
 
     public void sendResetPasswordEmail(String to, String rawToken) {
@@ -107,6 +124,6 @@ public class EmailService {
                 .content(htmlContent)
                 .build();
 
-        publisher.publish(message);
+        dispatchEmail(message);
     }
 }

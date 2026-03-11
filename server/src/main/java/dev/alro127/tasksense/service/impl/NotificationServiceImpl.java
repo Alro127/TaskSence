@@ -6,6 +6,7 @@ import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.OutboxEventType;
 import dev.alro127.tasksense.dto.common.NotificationResponse;
 import dev.alro127.tasksense.dto.message.NotificationMessage;
+import dev.alro127.tasksense.exception.ForbiddenException;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
 import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.OutboxEventService;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -98,6 +100,10 @@ public class NotificationServiceImpl implements NotificationService {
 
         NotificationEntity notification = repository.findById(notificationId)
                 .orElseThrow();
+
+        if (!notification.getReceiver().getId().equals(userId)) {
+            throw new ForbiddenException("You don't have right to take this action");
+        }
 
         if (notification.getReadAt() == null) {
             notification.setReadAt(OffsetDateTime.now());

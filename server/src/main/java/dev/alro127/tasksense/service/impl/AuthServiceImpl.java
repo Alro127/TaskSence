@@ -6,10 +6,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
-import dev.alro127.tasksense.config.common.AppConfig;
 import dev.alro127.tasksense.config.provider.GoogleConfig;
-import dev.alro127.tasksense.domain.enums.EmailType;
-import dev.alro127.tasksense.dto.message.EmailMessage;
 import dev.alro127.tasksense.dto.request.AuthRequest;
 import dev.alro127.tasksense.dto.request.TokenRequest;
 import dev.alro127.tasksense.dto.response.AuthResponse;
@@ -24,6 +21,7 @@ import dev.alro127.tasksense.security.token.TokenProvider;
 import dev.alro127.tasksense.service.AuthService;
 import dev.alro127.tasksense.service.EmailService;
 
+import dev.alro127.tasksense.util.redis.RedisKeys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -36,11 +34,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import tools.jackson.databind.ObjectMapper;
-
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Collections;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Service
@@ -61,10 +57,9 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = tokenProvider.generate();
 
         String hashedToken = tokenHasher.hash(refreshToken);
-        String redisKey = "refresh:token:" + hashedToken;
 
         stringRedisTemplate.opsForValue().set(
-                redisKey,
+                RedisKeys.refreshToken(hashedToken),
                 user.getId().toString(),
                 Duration.ofDays(7));
 
@@ -116,9 +111,8 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse refresh(TokenRequest request) {
 
         String hashedToken = tokenHasher.hash(request.getToken());
-        String redisKey = "refresh:token:" + hashedToken;
 
-        String userId = stringRedisTemplate.opsForValue().get(redisKey);
+        String userId = stringRedisTemplate.opsForValue().get(RedisKeys.refreshToken(hashedToken));
 
         if (userId == null) {
             throw new UnauthorizedException("Invalid or expired refresh token");
@@ -142,7 +136,7 @@ public class AuthServiceImpl implements AuthService {
         UserEntity user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        String otp = String.valueOf(100000 + new Random().nextInt(900000));
+        String otp = String.valueOf(100000 + new SecureRandom().nextInt(900000));
 
         stringRedisTemplate.opsForValue().set(
                 "OTP:" + email,
@@ -155,8 +149,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse verifyOtp(String email, String otp) {
 
-        String key = "OTP:" + email;
-        String savedOtp = stringRedisTemplate.opsForValue().get(key);
+        String savedOtp = stringRedisTemplate.opsForValue().get(RedisKeys.otp(email));
 
         if (savedOtp == null) {
             throw new UnauthorizedException("OTP expired or not found");
@@ -190,10 +183,8 @@ public class AuthServiceImpl implements AuthService {
         String rawToken = tokenProvider.generate();
         String hashedToken = tokenHasher.hash(rawToken);
 
-        String redisKey = "reset:token:" + hashedToken;
-
         stringRedisTemplate.opsForValue().set(
-                redisKey,
+                RedisKeys.resetToken(hashedToken),
                 user.getId().toString(),
                 Duration.ofMinutes(5));
 
@@ -205,7 +196,7 @@ public class AuthServiceImpl implements AuthService {
     public void resetPassword(String rawToken, String newPassword) {
         String hashedToken = tokenHasher.hash(rawToken);
 
-        String redisKey = "reset:token:" + hashedToken;
+        String redisKey = RedisKeys.refreshToken(hashedToken);
 
         String userIdStr = stringRedisTemplate.opsForValue().get(redisKey);
 
@@ -298,9 +289,8 @@ public class AuthServiceImpl implements AuthService {
     public void logout(TokenRequest tokenRequest) {
 
         String hashedToken = tokenHasher.hash(tokenRequest.getToken());
-        String redisKey = "refresh:token:" + hashedToken;
 
-        Boolean deleted = stringRedisTemplate.delete(redisKey);
+        Boolean deleted = stringRedisTemplate.delete(RedisKeys.refreshToken(hashedToken));
 
         if (Boolean.FALSE.equals(deleted)) {
             throw new UnauthorizedException("Invalid refresh token");

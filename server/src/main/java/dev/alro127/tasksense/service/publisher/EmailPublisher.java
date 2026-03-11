@@ -1,20 +1,25 @@
 package dev.alro127.tasksense.service.publisher;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.alro127.tasksense.domain.enums.OutboxEventType;
 import dev.alro127.tasksense.dto.message.EmailMessage;
-import dev.alro127.tasksense.dto.message.NotificationMessage;
-import dev.alro127.tasksense.service.EmailService;
 import dev.alro127.tasksense.util.redis.RedisKeys;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class EmailPublisher {
+public class EmailPublisher implements Publisher {
     private final RedisTemplate<String, Object> redisTemplate;
 
-    public void publish(EmailMessage message) {
+    @Override
+    public OutboxEventType eventType() {
+        return OutboxEventType.EMAIL;
+    }
+
+    @Override
+    public void publish(Object message) {
 
         try {
 

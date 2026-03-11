@@ -12,18 +12,20 @@ public class NotificationPublisher {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
-    public void publish(NotificationMessage message) {
+    public void publish(Object message) {
 
         try {
+
+            NotificationMessage notificationMessage = (NotificationMessage) message;
 
             redisTemplate.convertAndSend(
                     RedisKeys.NOTIFICATION_CHANNEL,
                     message
             );
 
-            if (message.getReceiverId() != null) {
+            if (notificationMessage.getReceiverId() != null) {
                 redisTemplate.opsForValue()
-                        .increment(RedisKeys.unreadCount(message.getReceiverId()));
+                        .increment(RedisKeys.unreadCount(notificationMessage.getReceiverId()));
             }
 
         } catch (Exception e) {

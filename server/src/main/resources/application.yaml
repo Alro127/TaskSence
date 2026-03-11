@@ -30,7 +30,7 @@ spring:
     redis:
       host: localhost
       port: 6379
-      timeout: 60000
+      timeout: 5000
 
   mail:
     host: smtp.gmail.com
