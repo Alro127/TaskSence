@@ -1,7 +1,9 @@
 package dev.alro127.tasksense.security.permission;
 
+import dev.alro127.tasksense.domain.entity.ProjectEntity;
 import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
 import dev.alro127.tasksense.domain.entity.TaskEntity;
+import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
 import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 import dev.alro127.tasksense.exception.UnauthorizedException;
@@ -10,6 +12,9 @@ import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.service.SecurityService;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Optional;
+
 import org.springframework.stereotype.Component;
 
 /**
@@ -50,6 +55,7 @@ public class PermissionChecker {
     /**
      * Check project-level permission.
      * Workspace OWNER có implicit full access cho mọi project.
+     * Workspace MANAGER có implicit VIEWER access cho mọi project.
      * Dùng: @PreAuthorize("@perm.project(#projectId, 'CREATE_TASK')")
      */
     public boolean project(Long projectId, String permissionName) {
@@ -62,8 +68,8 @@ public class PermissionChecker {
             return policy.hasProjectPermission(projectMember.get().getRole(), permission);
         }
 
-        // 2. Fallback: workspace OWNER luôn có full project access
-        return isWorkspaceOwnerOfProject(projectId, userId);
+        // 2. Fallback: check workspace role for implicit project access
+        return hasImplicitProjectPermission(projectId, userId, permission);
     }
 
     /**
@@ -142,5 +148,37 @@ public class PermissionChecker {
                         project.getWorkspace().getId(), userId))
                 .map(wsMember -> wsMember.getRole() == WorkspaceRole.OWNER)
                 .orElse(false);
+    }
+
+    /**
+     * Implicit project permission dựa trên workspace role:
+     * - OWNER: full project access
+     * - MANAGER: VIEWER-level project access
+     */
+    private boolean hasImplicitProjectPermission(Long projectId, Long userId, ProjectPermission permission) {
+
+        Optional<ProjectEntity> projectOpt = projectRepository.findById(projectId);
+        if (projectOpt.isEmpty())
+            return false;
+
+        Long workspaceId = projectOpt.get().getWorkspace().getId();
+
+        Optional<WorkspaceMemberEntity> wsMemberOpt = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId,
+                userId);
+
+        if (wsMemberOpt.isEmpty())
+            return false;
+
+        WorkspaceMemberEntity wsMember = wsMemberOpt.get();
+
+        if (wsMember.getRole() == WorkspaceRole.OWNER) {
+            return true;
+        }
+
+        if (wsMember.getRole() == WorkspaceRole.MANAGER) {
+            return policy.hasProjectPermission(ProjectMemberRole.VIEWER, permission);
+        }
+
+        return false;
     }
 }

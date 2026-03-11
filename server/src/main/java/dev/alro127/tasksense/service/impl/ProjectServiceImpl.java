@@ -78,13 +78,12 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public List<ProjectResponse> getProjectsByWorkspace(Long workspaceId) {
-        UserEntity currentUser = securityService.getCurrentUser();
         // @PreAuthorize đã kiểm tra workspace VIEW permission
 
         workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
-        return projectRepository.findAllByWorkspaceIdAndMemberId(workspaceId, currentUser.getId())
+        return projectRepository.findAllByWorkspaceId(workspaceId)
                 .stream()
                 .map(ProjectResponse::mapToResponse)
                 .toList();
