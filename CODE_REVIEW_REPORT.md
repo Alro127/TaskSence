@@ -141,84 +141,31 @@ public void markAsRead(Long notificationId) {
 
 ## 2. CRITICAL - Nghiệp vụ & Tính toàn vẹn dữ liệu
 
-### 2.1. `createWorkspace` KHÔNG có @Transactional
-**File:** `server/.../service/impl/WorkspaceServiceImpl.java:32-53`
-```java
-@Override
-public WorkspaceResponse createWorkspace(CreateWorkspaceRequest request) {
-    // ← THIẾU @Transactional!
-    WorkspaceEntity saved = workspaceRepository.save(workspace);  // ← save 1
-    WorkspaceMemberEntity member = ...;
-    workspaceMemberRepository.save(member);                        // ← save 2
-}
-```
-**Vấn đề:** 2 thao tác save riêng biệt KHÔNG trong cùng transaction:
-- Nếu `save(workspace)` thành công nhưng `save(member)` fail → workspace tồn tại nhưng KHÔNG CÓ OWNER → **orphan workspace**, không ai quản lý được.
-
-**Gợi ý:** Thêm `@Transactional` annotation.
+### ~~2.1. `createWorkspace` KHÔNG có @Transactional~~ ✅ ĐÃ FIX
+> Đã thêm `@Transactional` annotation cho method `createWorkspace` trong `WorkspaceServiceImpl`.
 
 ---
 
-### 2.2. Soft delete cascade không xử lý
-**Vấn đề xuyên suốt nhiều service:**
-
-| Hành động | File | Thiếu gì |
-|-----------|------|----------|
-| `deleteWorkspace` | `WorkspaceServiceImpl:100-108` | Chỉ soft-delete workspace, KHÔNG xử lý projects, members, invites, join requests |
-| `deleteProject` | `ProjectServiceImpl:121-132` | Chỉ soft-delete project, KHÔNG xử lý tasks, members |
-| `deleteTask` | `TaskServiceImpl:222-231` | Chỉ soft-delete task, KHÔNG xử lý subtasks |
-
-**Kịch bản lỗi:**
-1. OWNER delete workspace → workspace bị soft-delete
-2. Members vẫn query được project (vì project chưa bị delete) → truy cập vào workspace "ma"
-3. Tasks trong project vẫn hiện trên board
-
-**Gợi ý:** Cascade soft-delete: workspace → projects → tasks. Hoặc filter thêm `workspace.deletedAt IS NULL` khi query project.
+### ~~2.2. Soft delete cascade không xử lý~~ ✅ ĐÃ FIX
+> Đã implement cascade soft-delete đầy đủ:
+> - `deleteWorkspace`: cascade tasks → project members → projects → workspace members → invites → workspace
+> - `deleteProject`: cascade tasks → project members → project
+> - `deleteTask`: cascade subtasks → task
 
 ---
 
-### 2.3. Remove workspace member không dọn project memberships
-**File:** `server/.../service/impl/WorkspaceMemberServiceImpl.java:126`
-```java
-//projectMemberRepository.deleteByWorkspaceIdAndUserId(workspaceId, memberId);
-// ← CODE BỊ COMMENT OUT!
-```
-**Vấn đề:** Khi xóa member khỏi workspace, member vẫn là thành viên của tất cả project trong workspace đó. Họ vẫn có thể truy cập task, tạo task, v.v.
-
-**Gợi ý:** Uncomment hoặc implement cascade remove: workspace member → project members.
+### ~~2.3. Remove workspace member không dọn project memberships~~ ✅ ĐÃ FIX
+> Đã implement `projectMemberRepository.softDeleteByWorkspaceIdAndUserId(workspaceId, userId, now)` — cascade soft-delete project memberships khi remove workspace member.
 
 ---
 
-### 2.4. `updateMemberRole` cho phép set OWNER nhưng logic chặn
-**File:** `server/.../service/impl/WorkspaceMemberServiceImpl.java:86-92`
-```java
-if (member.getRole() == WorkspaceRole.OWNER) {
-    throw new ConflictException("Workspace have only one owner");
-}
-member.setRole(newRole); // ← Nếu newRole = OWNER → workspace có 2 OWNER!
-```
-**Vấn đề:** Code chỉ check nếu member **hiện tại** là OWNER thì không cho đổi role. Nhưng KHÔNG check nếu `newRole = OWNER` → admin có thể promote ai đó thành OWNER → 2 OWNER cùng tồn tại.
-
-**Gợi ý:** Thêm check: `if (newRole == WorkspaceRole.OWNER) throw new BadRequestException("Use transfer ownership instead")`.
+### ~~2.4. `updateMemberRole` cho phép set OWNER nhưng logic chặn~~ ✅ ĐÃ FIX
+> Đã thêm check: `if (newRole == WorkspaceRole.OWNER) throw new BadRequestException("Can not change current into Owner")`.
 
 ---
 
-### 2.5. `register` không check email trùng trước khi tạo user
-**File:** `server/.../service/impl/AuthServiceImpl.java:74-84`
-```java
-public void register(AuthRequest request) {
-    var user = UserEntity.builder()
-        .email(request.getEmail())
-        .password(passwordEncoder.encode(request.getPassword()))
-        .isActive(false)
-        .build();
-    userRepository.save(user); // ← Throws DataIntegrityViolationException nếu email trùng
-    sendOtp(user.getEmail());
-}
-```
-**Vấn đề:** Dựa vào DB unique constraint để bắt duplicate email → exception không có message thân thiện. Client nhận được `500 Internal Server Error` thay vì `409 Conflict: Email already exists`.
-
-**Gợi ý:** Check `userRepository.existsByEmail(email)` trước khi save, throw `ConflictException`.
+### ~~2.5. `register` không check email trùng trước khi tạo user~~ ✅ ĐÃ FIX
+> Đã thêm `userRepository.existsByEmail(email)` check trước khi save, throw `BadRequestException("Email already exists")`.
 
 ---
 
@@ -257,21 +204,8 @@ Không có validation:
 
 ## 3. HIGH - Hiệu năng & N+1 Query
 
-### 3.1. `SecurityServiceImpl.getCurrentUserId()` query DB mỗi lần gọi
-**File:** `server/.../service/impl/SecurityServiceImpl.java:42-44`
-```java
-public Long getCurrentUserId() {
-    return getCurrentUser().getId(); // ← Gọi findByEmail() mỗi lần!
-}
-```
-**Vấn đề:** Mỗi request thường gọi `getCurrentUserId()` 2-5 lần (trong controller, service, permission checker). Mỗi lần = 1 query `SELECT * FROM users WHERE email = ?`.
-
-**Ước tính:** 1 request tạo task → ~5 lần query user table chỉ để lấy userId.
-
-**Gợi ý:**
-- Cache userId vào JWT claims: `jwtTokenProvider.generateAccessToken(email, userId)`
-- Hoặc cache trong `SecurityContext` / `RequestScope` bean
-- Hoặc ít nhất cache trong `ThreadLocal` cho scope 1 request
+### ~~3.1. `SecurityServiceImpl.getCurrentUserId()` query DB mỗi lần gọi~~ ✅ ĐÃ FIX
+> Đã dùng `@RequestScope` + cache instance variable `currentUser`. Trong cùng 1 request, `getCurrentUser()` chỉ query DB 1 lần duy nhất, các lần gọi sau trả về cached result.
 
 ---
 
@@ -466,17 +400,8 @@ isAuthenticated: !!localStorage.getItem("accessToken"), // authSlice.ts:13
 
 ---
 
-### 5.4. Wildcard redirect khi route không tồn tại
-**File:** `client/src/routes/index.tsx:143-146`
-```typescript
-{
-    path: "*",
-    element: <Navigate to="/auth/login" replace />,
-}
-```
-**Vấn đề:** Mọi URL không hợp lệ → redirect về login, kể cả khi user đã đăng nhập. Nên hiển thị 404 page.
-
-**Gợi ý:** Thêm 404 page, chỉ redirect về login nếu chưa authenticated.
+### ~~5.4. Wildcard redirect khi route không tồn tại~~ ✅ ĐÃ FIX
+> Đã thay `<Navigate to="/auth/login">` bằng `<NotFoundPage />` cho route `*`.
 
 ---
 
@@ -505,33 +430,18 @@ isAuthenticated: !!localStorage.getItem("accessToken"), // authSlice.ts:13
 
 ---
 
-### 6.3. Email template sai nội dung
-**File:** `server/.../service/EmailService.java:24-49`
-
-Email workspace invite có:
-```html
-<h2>Password Reset Request</h2>
-<p>We received a request to reset your password.</p>
-```
-→ Copy-paste từ template reset password, quên đổi nội dung!
-
-Ngoài ra: email nói `"This link will expire in 15 minutes"` nhưng code set `expiredAt = now + 7 days`.
+### ~~6.3. Email template sai nội dung~~ ✅ ĐÃ FIX
+> Email workspace invite đã được sửa: hiển thị đúng "Workspace Invitation" thay vì "Password Reset Request".
 
 ---
 
-### 6.4. Frontend URL sai trong config
-**File:** `server/src/main/resources/application.yaml:5`
-```yaml
-frontend-url: http:/localhost:5173  # ← Thiếu 1 dấu "/"
-```
-Đúng: `http://localhost:5173`
+### ~~6.4. Frontend URL sai trong config~~ ✅ ĐÃ FIX
+> Đã sửa `http:/localhost:5173` → `http://localhost:5173`.
 
 ---
 
-### 6.5. Mix `jakarta.transaction` và `spring.transaction`
-Một số service dùng `jakarta.transaction.Transactional` (AuthServiceImpl, ProjectServiceImpl), trong khi đa số dùng `org.springframework.transaction.annotation.Transactional`.
-
-**Vấn đề:** `jakarta.transaction.Transactional` không hỗ trợ rollback rules, propagation, isolation customization. Nên thống nhất dùng Spring's `@Transactional`.
+### ~~6.5. Mix `jakarta.transaction` và `spring.transaction`~~ ✅ ĐÃ FIX
+> Tất cả service đã thống nhất dùng `org.springframework.transaction.annotation.Transactional`.
 
 ---
 
@@ -596,31 +506,31 @@ Chỉ có 1 file `application.yaml` dùng cho mọi environment. Production cầ
 |-----------|:-----------:|---------|
 | **Kiến trúc tổng thể** | 7 | Clean architecture, phân layer rõ ràng, permission policy tập trung |
 | **Bảo mật** | 4 | Nhiều lỗ hổng critical (hardcoded secret, no rate limit, IDOR) |
-| **Tính toàn vẹn dữ liệu** | 5 | Thiếu @Transactional, cascade delete, race conditions |
-| **Hiệu năng** | 5 | N+1 queries, thiếu pagination, getCurrentUser() overhead |
+| **Tính toàn vẹn dữ liệu** | 7.5 | Đã fix @Transactional, cascade soft-delete, email check, remove member cascade project memberships |
+| **Hiệu năng** | 6 | Đã fix getCurrentUser() caching (@RequestScope). Còn: N+1 queries, thiếu pagination |
 | **Resilience/Production** | 3 | Không retry, không circuit breaker, fire-and-forget messaging |
 | **Testing** | 1 | Chỉ có contextLoads() |
-| **Code Quality** | 6 | Khá sạch, nhưng có typo, System.out, copy-paste bug |
-| **Client Architecture** | 6 | RTK Query tốt, nhưng thiếu token refresh, DRY violation |
+| **Code Quality** | 7 | Đã fix email template, frontend-url, thống nhất @Transactional import. Còn: typo, System.out |
+| **Client Architecture** | 6.5 | Đã fix 404 page. Còn: thiếu token refresh, DRY violation |
 
 ### Roadmap ưu tiên sửa
 
 #### Giai đoạn 1: Sửa CRITICAL trước bảo vệ (1-2 ngày)
 - [ ] Xóa hardcoded JWT secret → dùng env variable
 - [ ] Xóa `System.out.println(rawToken)`
-- [ ] Thêm `@Transactional` cho `createWorkspace`
+- [x] Thêm `@Transactional` cho `createWorkspace`
 - [ ] Fix `markAsRead` IDOR vulnerability
-- [ ] Fix email template copy-paste bug
-- [ ] Fix `updateMemberRole` cho phép set OWNER
+- [x] Fix email template copy-paste bug
+- [x] Fix `updateMemberRole` cho phép set OWNER
 - [ ] Dùng `SecureRandom` cho OTP
-- [ ] Thêm check email trùng trước khi register
-- [ ] Fix frontend-url typo trong application.yaml
+- [x] Thêm check email trùng trước khi register
+- [x] Fix frontend-url typo trong application.yaml
 
 #### Giai đoạn 2: Cải thiện trải nghiệm (3-5 ngày)
 - [ ] Implement token refresh interceptor trên client
 - [ ] Thêm rate limiting cho auth endpoints
-- [ ] Implement cascade soft-delete (workspace → projects → tasks)
-- [ ] Uncomment project member cleanup khi remove workspace member
+- [x] Implement cascade soft-delete (workspace → projects → tasks)
+- [x] Uncomment project member cleanup khi remove workspace member
 - [ ] Thêm pagination cho list endpoints
 - [ ] Tạo shared `baseQueryWithAuth` cho client API
 - [ ] Validate password strength

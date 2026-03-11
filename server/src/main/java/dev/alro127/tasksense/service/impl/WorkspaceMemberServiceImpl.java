@@ -125,10 +125,11 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
                                 throw new ConflictException("Cannot remove the last workspace owner");
                         }
                 }
+                OffsetDateTime now = OffsetDateTime.now();
 
-                member.setDeletedAt(OffsetDateTime.now());
+                member.setDeletedAt(now);
 
-                // projectMemberRepository.deleteByWorkspaceIdAndUserId(workspaceId, memberId);
+                projectMemberRepository.softDeleteByWorkspaceIdAndUserId(workspaceId, member.getUser().getId(), now);
                 workspaceMemberRepository.save(member);
 
                 notificationService.saveAndPublish(NotificationMessage.builder()
