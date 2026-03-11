@@ -7,6 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.repository.query.Param;
+
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,4 +38,11 @@ public interface ProjectRepository extends JpaRepository<ProjectEntity, Long> {
     boolean existsByIdAndWorkspaceId(Long id, Long workspaceId);
 
     boolean existsById(Long id);
+
+    @Query("SELECT p.id FROM ProjectEntity p WHERE p.workspace.id = :workspaceId")
+    List<Long> findIdsByWorkspaceId(@Param("workspaceId") Long workspaceId);
+
+    @Modifying
+    @Query("UPDATE ProjectEntity p SET p.deletedAt = :now WHERE p.workspace.id = :workspaceId AND p.deletedAt IS NULL")
+    int softDeleteByWorkspaceId(@Param("workspaceId") Long workspaceId, @Param("now") OffsetDateTime now);
 }

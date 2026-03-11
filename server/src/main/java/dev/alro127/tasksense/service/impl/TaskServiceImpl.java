@@ -247,7 +247,12 @@ public class TaskServiceImpl implements TaskService {
         // Resource-level: MANAGER delete bất kỳ, MEMBER chỉ delete task mình tạo
         permissionChecker.requireTaskEditPermission(projectId, task);
 
-        task.setDeletedAt(OffsetDateTime.now());
+        OffsetDateTime now = OffsetDateTime.now();
+
+        // Cascade soft delete subtasks
+        taskRepository.softDeleteByParentTaskId(taskId, now);
+
+        task.setDeletedAt(now);
         taskRepository.save(task);
     }
 }

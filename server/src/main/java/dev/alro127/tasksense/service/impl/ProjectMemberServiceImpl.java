@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -103,11 +104,15 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                                 continue;
                         }
 
-                        ProjectMemberEntity entity = ProjectMemberEntity.builder()
-                                        .project(project)
-                                        .user(userMap.get(userId))
-                                        .role(role)
-                                        .build();
+                        // Reactivate soft-deleted member or create new
+                        ProjectMemberEntity entity = projectMemberRepository
+                                        .findByProjectIdAndUserIdIgnoreRestriction(projectId, userId)
+                                        .orElse(ProjectMemberEntity.builder()
+                                                        .project(project)
+                                                        .user(userMap.get(userId))
+                                                        .build());
+                        entity.setRole(role);
+                        entity.setDeletedAt(null);
 
                         toSave.add(entity);
                         results.add(AddProjectMemberResultItem.builder()
@@ -160,7 +165,8 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                         throw new BadRequestException("Cannot remove a manager from the project.");
                 }
 
-                projectMemberRepository.delete(member);
+                member.setDeletedAt(OffsetDateTime.now());
+                projectMemberRepository.save(member);
         }
 
         @Override
