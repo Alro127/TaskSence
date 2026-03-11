@@ -16,60 +16,62 @@ import java.util.Optional;
 @Repository
 public interface ProjectMemberRepository extends JpaRepository<ProjectMemberEntity, Long> {
 
-        @Query("""
-                            SELECT m
-                            FROM ProjectMemberEntity m
-                            JOIN FETCH m.user
-                            WHERE m.project.id = :projectId
-                        """)
-        List<ProjectMemberEntity> findAllByProjectId(Long projectId);
+  @Query("""
+          SELECT m
+          FROM ProjectMemberEntity m
+          JOIN FETCH m.user
+          WHERE m.project.id = :projectId
+      """)
+  List<ProjectMemberEntity> findAllByProjectId(Long projectId);
 
-        Optional<ProjectMemberEntity> findByProjectIdAndUserId(Long projectId, Long userId);
+  Optional<ProjectMemberEntity> findByProjectIdAndUserId(Long projectId, Long userId);
 
-        boolean existsByProjectIdAndUserId(Long projectId, Long userId);
+  Optional<ProjectMemberEntity> findByProjectIdAndRole(Long projectId, ProjectMemberRole role);
 
-        boolean existsByProjectIdAndUserIdAndRole(Long projectId, Long userId, ProjectMemberRole role);
+  boolean existsByProjectIdAndUserId(Long projectId, Long userId);
 
-        @Query("""
-                            SELECT COUNT(m.id)
-                            FROM ProjectMemberEntity m
-                            WHERE m.project.id = :projectId
-                        """)
-        Long countByProjectId(Long projectId);
+  boolean existsByProjectIdAndUserIdAndRole(Long projectId, Long userId, ProjectMemberRole role);
 
-        void deleteByProjectIdAndUserId(Long projectId, Long userId);
+  @Query("""
+          SELECT COUNT(m.id)
+          FROM ProjectMemberEntity m
+          WHERE m.project.id = :projectId
+      """)
+  Long countByProjectId(Long projectId);
 
-        @Modifying
-        @Query("""
-                            DELETE FROM ProjectMemberEntity pm
-                            WHERE pm.user.id = :userId
-                              AND pm.project.workspace.id = :workspaceId
-                        """)
-        void deleteByWorkspaceIdAndUserId(Long workspaceId, Long userId);
+  void deleteByProjectIdAndUserId(Long projectId, Long userId);
 
-        @Query(value = """
-                        SELECT * FROM project_members pm
-                        WHERE pm.project_id = :projectId AND pm.user_id = :userId
-                        """, nativeQuery = true)
-        Optional<ProjectMemberEntity> findByProjectIdAndUserIdIgnoreRestriction(
-                        @Param("projectId") Long projectId, @Param("userId") Long userId);
+  @Modifying
+  @Query("""
+          DELETE FROM ProjectMemberEntity pm
+          WHERE pm.user.id = :userId
+            AND pm.project.workspace.id = :workspaceId
+      """)
+  void deleteByWorkspaceIdAndUserId(Long workspaceId, Long userId);
 
-        @Modifying
-        @Query("UPDATE ProjectMemberEntity pm SET pm.deletedAt = :now WHERE pm.project.id IN :projectIds AND pm.deletedAt IS NULL")
-        int softDeleteByProjectIds(@Param("projectIds") List<Long> projectIds, @Param("now") OffsetDateTime now);
+  @Query(value = """
+      SELECT * FROM project_members pm
+      WHERE pm.project_id = :projectId AND pm.user_id = :userId
+      """, nativeQuery = true)
+  Optional<ProjectMemberEntity> findByProjectIdAndUserIdIgnoreRestriction(
+      @Param("projectId") Long projectId, @Param("userId") Long userId);
 
-        @Modifying
-        @Query("UPDATE ProjectMemberEntity pm SET pm.deletedAt = :now WHERE pm.project.id = :projectId AND pm.deletedAt IS NULL")
-        int softDeleteByProjectId(@Param("projectId") Long projectId, @Param("now") OffsetDateTime now);
+  @Modifying
+  @Query("UPDATE ProjectMemberEntity pm SET pm.deletedAt = :now WHERE pm.project.id IN :projectIds AND pm.deletedAt IS NULL")
+  int softDeleteByProjectIds(@Param("projectIds") List<Long> projectIds, @Param("now") OffsetDateTime now);
 
-        @Modifying
-        @Query("""
-                            UPDATE ProjectMemberEntity pm
-                            SET pm.deletedAt = :now
-                            WHERE pm.user.id = :userId
-                              AND pm.project.workspace.id = :workspaceId
-                              AND pm.deletedAt IS NULL
-                        """)
-        void softDeleteByWorkspaceIdAndUserId(Long workspaceId, Long userId, OffsetDateTime now);
+  @Modifying
+  @Query("UPDATE ProjectMemberEntity pm SET pm.deletedAt = :now WHERE pm.project.id = :projectId AND pm.deletedAt IS NULL")
+  int softDeleteByProjectId(@Param("projectId") Long projectId, @Param("now") OffsetDateTime now);
+
+  @Modifying
+  @Query("""
+          UPDATE ProjectMemberEntity pm
+          SET pm.deletedAt = :now
+          WHERE pm.user.id = :userId
+            AND pm.project.workspace.id = :workspaceId
+            AND pm.deletedAt IS NULL
+      """)
+  void softDeleteByWorkspaceIdAndUserId(Long workspaceId, Long userId, OffsetDateTime now);
 
 }

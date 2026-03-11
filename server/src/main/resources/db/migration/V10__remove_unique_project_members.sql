@@ -1,0 +1,2 @@
+ALTER TABLE project_members
+DROP CONSTRAINT IF EXISTS project_members_project_id_user_id_key;
