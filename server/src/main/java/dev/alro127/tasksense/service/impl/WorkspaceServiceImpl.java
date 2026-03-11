@@ -8,6 +8,10 @@ import dev.alro127.tasksense.dto.request.CreateWorkspaceRequest;
 import dev.alro127.tasksense.dto.request.UpdateWorkspaceRequest;
 import dev.alro127.tasksense.dto.response.WorkspaceResponse;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
+import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
+import dev.alro127.tasksense.repository.jpa.ProjectRepository;
+import dev.alro127.tasksense.repository.jpa.TaskRepository;
+import dev.alro127.tasksense.repository.jpa.WorkspaceInviteRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
 import dev.alro127.tasksense.service.SecurityService;
@@ -27,6 +31,10 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
+    private final ProjectRepository projectRepository;
+    private final ProjectMemberRepository projectMemberRepository;
+    private final TaskRepository taskRepository;
+    private final WorkspaceInviteRepository workspaceInviteRepository;
     private final SecurityService securityService;
 
     @Override
@@ -99,13 +107,26 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     }
 
     @Override
+    @Transactional
     public void deleteWorkspace(Long id) {
         WorkspaceEntity workspace = workspaceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
         // @PreAuthorize đã đảm bảo chỉ OWNER mới gọi được
-        workspace.setDeletedAt(OffsetDateTime.now());
 
+        OffsetDateTime now = OffsetDateTime.now();
+
+        // Cascade soft delete: tasks → project members → projects → workspace members → invites → workspace
+        List<Long> projectIds = projectRepository.findIdsByWorkspaceId(id);
+        if (!projectIds.isEmpty()) {
+            taskRepository.softDeleteByProjectIds(projectIds, now);
+            projectMemberRepository.softDeleteByProjectIds(projectIds, now);
+        }
+        projectRepository.softDeleteByWorkspaceId(id, now);
+        workspaceMemberRepository.softDeleteByWorkspaceId(id, now);
+        workspaceInviteRepository.softDeleteByWorkspaceId(id, now);
+
+        workspace.setDeletedAt(now);
         workspaceRepository.save(workspace);
     }
 

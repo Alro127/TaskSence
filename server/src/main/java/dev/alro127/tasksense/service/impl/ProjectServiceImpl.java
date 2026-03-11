@@ -11,6 +11,7 @@ import dev.alro127.tasksense.dto.response.ProjectResponse;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
+import dev.alro127.tasksense.repository.jpa.TaskRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
 import dev.alro127.tasksense.service.ProjectService;
 import dev.alro127.tasksense.service.SecurityService;
@@ -29,6 +30,7 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectRepository projectRepository;
     private final WorkspaceRepository workspaceRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final TaskRepository taskRepository;
     private final SecurityService securityService;
 
     @Override
@@ -119,6 +121,7 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
+    @Transactional
     public void deleteProject(Long workspaceId, Long projectId) {
         // @PreAuthorize đã kiểm tra project DELETE permission (MANAGER hoặc WS OWNER)
 
@@ -127,8 +130,13 @@ public class ProjectServiceImpl implements ProjectService {
 
         validateProjectBelongsToWorkspace(project, workspaceId);
 
-        project.setDeletedAt(OffsetDateTime.now());
+        OffsetDateTime now = OffsetDateTime.now();
 
+        // Cascade soft delete: tasks → project members → project
+        taskRepository.softDeleteByProjectId(projectId, now);
+        projectMemberRepository.softDeleteByProjectId(projectId, now);
+
+        project.setDeletedAt(now);
         projectRepository.save(project);
     }
 
