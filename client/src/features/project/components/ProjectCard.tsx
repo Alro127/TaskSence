@@ -84,7 +84,7 @@ export function ProjectCard({
 
   const handleCardClick = () => {
     navigate(`/workspaces/${workspaceId}/projects/${project.id}`, {
-      state: { workspaceName },
+      state: { workspaceName, projectSnapshot: project },
     });
   };
 

@@ -6,6 +6,7 @@ import {
   ArrowRightLeft,
   ChevronRight,
   ListTodo,
+  Lock,
   Loader2,
   Pencil,
   Trash2,
@@ -16,6 +17,7 @@ import {
   ClipboardList,
   CheckCircle2,
   XCircle,
+  X,
   Clock,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -37,16 +39,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn, getApiErrorMessage } from "@/lib/utils";
 import type { JoinRequestStatus, ProjectJoinRequest, ProjectMember } from "@/types/api";
 
+import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import { useGetProjectByIdQuery, useGetCurrentUserRoleQuery } from "../api/projectApi";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
 import { useGetMembersQuery, useUpdateMemberRoleMutation } from "../api/projectMemberApi";
-import { useGetJoinRequestsQuery, useReviewJoinRequestMutation } from "../api/projectJoinRequestApi";
+import { useGetJoinRequestsQuery, useReviewJoinRequestMutation, useCancelJoinRequestMutation } from "../api/projectJoinRequestApi";
 import { useGetTasksByProjectQuery } from "@/features/task/api/taskApi";
 import {
   DeleteProjectDialog,
   EditProjectModal,
   AddMembersModal,
   MemberCard,
+  RequestJoinProjectDialog,
   STATUS_CONFIG,
   ROLE_LABEL,
 } from "../components";
@@ -288,7 +292,8 @@ export function ProjectDetailPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get("tab") ?? "overview";
-  const workspaceNameFromState = (location.state as { workspaceName?: string } | null)?.workspaceName;
+  const workspaceNameFromState = (location.state as { workspaceName?: string; projectSnapshot?: import("@/types/api").Project } | null)?.workspaceName;
+  const projectSnapshot = (location.state as { projectSnapshot?: import("@/types/api").Project } | null)?.projectSnapshot ?? null;
 
   const currentUserId = useAppSelector((s) => s.user.currentUser?.id ?? 0);
 
@@ -303,11 +308,18 @@ export function ProjectDetailPage() {
   );
   const project = projectData?.data ?? null;
 
-  const { data: roleData } = useGetCurrentUserRoleQuery(projectId, {
+  const { data: roleData, isLoading: isRoleLoading, isError: isRoleError, error: roleError } = useGetCurrentUserRoleQuery(projectId, {
     skip: isNaN(projectId),
   });
   const currentUserRole = roleData?.data ?? undefined;
   const isManager = currentUserRole === "MANAGER";
+  const isNonMember = !isRoleLoading && isRoleError
+    && roleError !== undefined
+    && "status" in roleError
+    && (roleError as FetchBaseQueryError).status === 404;
+
+  // skip = role still loading OR confirmed non-member
+  const skipMemberOnlyQueries = isNaN(projectId) || isRoleLoading || isNonMember;
 
   const { data: workspaceData } = useGetWorkspaceByIdQuery(workspaceId, {
     skip: isNaN(workspaceId) || !!workspaceNameFromState,
@@ -315,19 +327,19 @@ export function ProjectDetailPage() {
   const workspaceName = workspaceNameFromState ?? workspaceData?.data?.name ?? "Workspace";
 
   const { data: membersData, isLoading: isMembersLoading } =
-    useGetMembersQuery(projectId, { skip: isNaN(projectId) });
+    useGetMembersQuery(projectId, { skip: skipMemberOnlyQueries });
   const members = membersData?.data ?? [];
 
   const { data: joinRequestsData, isLoading: isJoinRequestsLoading } =
     useGetJoinRequestsQuery(projectId, {
-      skip: isNaN(projectId) || !isManager,
+      skip: skipMemberOnlyQueries || !isManager,
     });
   const joinRequests = joinRequestsData?.data ?? [];
   const pendingCount = joinRequests.filter((r) => r.status === "PENDING").length;
 
   const { data: tasksData, isLoading: isTasksLoading } = useGetTasksByProjectQuery(
     projectId,
-    { skip: isNaN(projectId) },
+    { skip: skipMemberOnlyQueries },
   );
   const tasks = tasksData?.data ?? [];
 
@@ -337,12 +349,206 @@ export function ProjectDetailPage() {
   const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
   const [isTransferManagerOpen, setIsTransferManagerOpen] = useState(false);
   const [transferSourceId, setTransferSourceId] = useState<number | null>(null);
+  const [localJoinRequest, setLocalJoinRequest] = useState<ProjectJoinRequest | null>(null);
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+  const [cancelJoinRequest, { isLoading: isCancellingJoin }] = useCancelJoinRequestMutation();
 
   // ── Loading ──
-  if (isProjectLoading) {
+  if (isProjectLoading || isRoleLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // ── Non-member view (check BEFORE project error — getProjectById also 403s for non-members) ──
+  if (isNonMember) {
+    const displayProject = project ?? projectSnapshot;
+    if (!displayProject) {
+      return (
+        <div className="flex min-h-[400px] flex-col items-center justify-center gap-3 text-center">
+          <p className="text-sm text-muted-foreground">You don&apos;t have access to this project.</p>
+          <Button variant="outline" size="sm" onClick={() => navigate(`/workspaces/${workspaceId}`)}>
+            Back to Workspace
+          </Button>
+        </div>
+      );
+    }
+
+    const displayCfg = STATUS_CONFIG[displayProject.status];
+    const DisplayStatusIcon = displayCfg.icon;
+
+    const handleCancelJoinRequest = async () => {
+      if (!localJoinRequest) return;
+      try {
+        await cancelJoinRequest({
+          projectId: displayProject.id,
+          requestId: localJoinRequest.id,
+        }).unwrap();
+        toast.success("Join request cancelled.");
+        setLocalJoinRequest(null);
+      } catch (err) {
+        toast.error(getApiErrorMessage(err, "Failed to cancel join request."));
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
+          <Link to="/workspaces" className="hover:text-foreground transition-colors">
+            Workspaces
+          </Link>
+          <ChevronRight className="h-3 w-3" />
+          <Link
+            to={`/workspaces/${workspaceId}`}
+            className="hover:text-foreground transition-colors"
+          >
+            {workspaceName}
+          </Link>
+          <ChevronRight className="h-3 w-3" />
+          <span className="text-foreground font-medium">{displayProject.name}</span>
+        </nav>
+
+        {/* Project Header */}
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <LayoutGrid className="h-6 w-6 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold tracking-tight">{displayProject.name}</h1>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                  displayCfg.badgeClass,
+                )}
+              >
+                <DisplayStatusIcon className="h-3 w-3" />
+                {displayCfg.label}
+              </span>
+            </div>
+            {displayProject.description && (
+              <p className="mt-1 text-sm text-muted-foreground">{displayProject.description}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Non-member Banner */}
+        {!localJoinRequest ? (
+          <div className="flex items-center gap-4 rounded-xl border bg-card px-5 py-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+              <Lock className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">You are not a member of this project</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Send a join request to the project manager to gain access to tasks and collaboration tools.
+              </p>
+            </div>
+            <Button size="sm" onClick={() => setIsJoinDialogOpen(true)}>
+              Request to join
+            </Button>
+          </div>
+        ) : localJoinRequest.status === "PENDING" ? (
+          <div className="flex items-center gap-4 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100">
+              <Clock className="h-5 w-5 text-amber-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-800">Join request pending</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Your request has been sent. You'll be notified once the manager reviews it.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 text-muted-foreground"
+              disabled={isCancellingJoin}
+              onClick={handleCancelJoinRequest}
+            >
+              {isCancellingJoin ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <X className="h-3.5 w-3.5" />
+              )}
+              Cancel request
+            </Button>
+          </div>
+        ) : localJoinRequest.status === "REJECTED" ? (
+          <div className="flex items-center gap-4 rounded-xl border border-destructive/20 bg-destructive/5 px-5 py-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+              <XCircle className="h-5 w-5 text-destructive" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-destructive">Join request rejected</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Your previous request was not approved. You may send a new request.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setIsJoinDialogOpen(true)}>
+              Send again
+            </Button>
+          </div>
+        ) : null}
+
+        {/* Read-only Project Overview */}
+        <Card className="p-6 space-y-4 max-w-2xl">
+          <h3 className="text-lg font-semibold">Project Information</h3>
+          <Separator />
+          <dl className="grid grid-cols-1 gap-y-4 sm:grid-cols-2">
+            <div>
+              <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</dt>
+              <dd className="mt-1">
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                    displayCfg.badgeClass,
+                  )}
+                >
+                  <DisplayStatusIcon className="h-3 w-3" />
+                  {displayCfg.label}
+                </span>
+              </dd>
+            </div>
+            {displayProject.startDate && (
+              <div>
+                <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Start Date</dt>
+                <dd className="mt-1 text-sm">{format(new Date(displayProject.startDate), "MMM d, yyyy")}</dd>
+              </div>
+            )}
+            {displayProject.endDate && (
+              <div>
+                <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Due Date</dt>
+                <dd className="mt-1 flex items-center gap-1 text-sm">
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                  {format(new Date(displayProject.endDate), "MMM d, yyyy")}
+                </dd>
+              </div>
+            )}
+            <div className="sm:col-span-2">
+              <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Created</dt>
+              <dd className="mt-1 text-sm">{format(new Date(displayProject.createdAt), "MMM d, yyyy · HH:mm")}</dd>
+            </div>
+            {displayProject.description && (
+              <div className="sm:col-span-2">
+                <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Description</dt>
+                <dd className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
+                  {displayProject.description}
+                </dd>
+              </div>
+            )}
+          </dl>
+        </Card>
+
+        <RequestJoinProjectDialog
+          project={displayProject}
+          open={isJoinDialogOpen}
+          onOpenChange={setIsJoinDialogOpen}
+          onSuccess={(req) => setLocalJoinRequest(req)}
+        />
       </div>
     );
   }
