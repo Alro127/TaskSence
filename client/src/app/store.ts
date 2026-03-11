@@ -17,6 +17,7 @@ import { projectJoinRequestApi } from "@/features/project/api/projectJoinRequest
 import { notificationApi } from "@/features/notification/api/notificationApi";
 import notificationReducer from "@/features/notification/notificationSlice";
 import { taskApi } from "@/features/task/api/taskApi";
+import { commentApi } from "@/features/task/api/commentApi";
 
 const combinedReducer = combineReducers({
   auth: authReducer,
@@ -37,6 +38,7 @@ const combinedReducer = combineReducers({
   notification: notificationReducer,
   [notificationApi.reducerPath]: notificationApi.reducer,
   [taskApi.reducerPath]: taskApi.reducer,
+  [commentApi.reducerPath]: commentApi.reducer,
 });
 
 type RootReducerState = ReturnType<typeof combinedReducer>;
@@ -71,7 +73,8 @@ export const store = configureStore({
       .concat(projectMemberApi.middleware)
       .concat(projectJoinRequestApi.middleware)
       .concat(notificationApi.middleware)
-      .concat(taskApi.middleware),
+      .concat(taskApi.middleware)
+      .concat(commentApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

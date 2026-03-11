@@ -434,3 +434,31 @@ export interface TaskSearchParams {
   page?: number;
   size?: number;
 }
+
+// ─── Comment ─────────────────────────────────────────────────────────────────
+export interface CommentResponse {
+  id: number;
+  taskId: number;
+  parentCommentId: number | null;
+  content: string;
+  isEdited: boolean;
+  createdAt: string;
+  updatedAt: string;
+  user: UserSummaryResponse;
+  mentions: UserSummaryResponse[];
+  reactions: Record<string, number>;
+}
+
+export interface CommentCreateRequest {
+  taskId: number;
+  parentCommentId?: number;
+  content: string;
+}
+
+export interface CommentUpdateRequest {
+  content: string;
+}
+
+export interface CommentReactionRequest {
+  icon: string;
+}

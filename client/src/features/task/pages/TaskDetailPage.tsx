@@ -53,6 +53,7 @@ import {
 } from "../api/taskApi";
 import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
 import { TaskFormSheet } from "../components/TaskFormSheet";
+import { CommentSection } from "../components/CommentSection";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
 import { useGetProjectByIdQuery } from "@/features/project/api/projectApi";
 
@@ -807,6 +808,9 @@ export function TaskDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* ── Comments ── */}
+      <CommentSection taskId={taskId} projectId={projectId} />
 
       {/* ── Subtask full-form sheet ── */}
       <TaskFormSheet
