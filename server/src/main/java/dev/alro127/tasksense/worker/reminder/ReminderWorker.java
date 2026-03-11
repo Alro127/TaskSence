@@ -72,7 +72,7 @@ public class ReminderWorker {
 
             Long taskId = Long.valueOf(tuple.getValue());
 
-            TaskEntity task = taskRepository.findWithAssignees(taskId).orElse(null);
+            TaskEntity task = taskRepository.findWithAssigneesProjectWorkspace(taskId).orElse(null);
 
             if(task == null){
                 continue;
@@ -86,7 +86,9 @@ public class ReminderWorker {
                                 .type(NotificationType.TASK_REMINDER)
                                 .referenceType(EntityType.TASK)
                                 .referenceId(task.getId())
-                                .payload(Map.of("referenceName", task.getTitle()))
+                                .payload(Map.of("referenceName", task.getTitle(),
+                                        "projectId", task.getProject().getId(),
+                                        "workspaceId", task.getProject().getWorkspace().getId()))
                                 .build()
                 );
             }
