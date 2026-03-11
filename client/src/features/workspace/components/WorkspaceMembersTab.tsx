@@ -17,6 +17,7 @@ import {
   Eye,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -144,9 +145,8 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
         role: newRole,
       }).unwrap();
       toast.success(`${member.user.fullName ?? member.user.email}'s role updated to ${ROLE_CONFIG[newRole].label}`);
-    } catch (err: unknown) {
-      const error = err as { data?: { message?: string } };
-      toast.error(error?.data?.message ?? "Failed to update role");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update role"));
     }
   };
 
@@ -160,9 +160,8 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
       }).unwrap();
       toast.success(`${removeTarget.user.fullName ?? removeTarget.user.email} has been removed`);
       setRemoveTarget(null);
-    } catch (err: unknown) {
-      const error = err as { data?: { message?: string } };
-      toast.error(error?.data?.message ?? "Failed to remove member");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to remove member"));
     }
   };
 
@@ -184,9 +183,8 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
           : "Join request rejected"
       );
       setExpandedRequestId(null);
-    } catch (err: unknown) {
-      const error = err as { data?: { message?: string } };
-      toast.error(error?.data?.message ?? "Failed to review request");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to review request"));
     } finally {
       setReviewingId(null);
     }
@@ -197,9 +195,8 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
     try {
       await revokeInvite({ inviteId, workspaceId }).unwrap();
       toast.success(`Invitation to ${email} has been revoked`);
-    } catch (err: unknown) {
-      const error = err as { data?: { message?: string } };
-      toast.error(error?.data?.message ?? "Failed to revoke invitation");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to revoke invitation"));
     }
   };
 

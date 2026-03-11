@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FolderKanban, Globe, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,9 +38,8 @@ export function WorkspaceExploreCard({
       }).unwrap();
       toast.success("Join request cancelled");
       setLocalRequest(null);
-    } catch (err: unknown) {
-      const error = err as { data?: { message?: string } };
-      toast.error(error?.data?.message ?? "Failed to cancel request");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to cancel request"));
     }
   };
 

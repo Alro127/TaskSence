@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -128,8 +129,8 @@ export function TaskFormSheet({
         toast.success("Task created");
       }
       onOpenChange(false);
-    } catch {
-      toast.error(isEdit ? "Failed to update task" : "Failed to create task");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, isEdit ? "Failed to update task" : "Failed to create task"));
     }
   }
 

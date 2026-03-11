@@ -40,7 +40,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 import type { TaskPriority, TaskStatus, UserSummaryResponse } from "@/types/api";
 
 import {
@@ -200,8 +200,8 @@ export function TaskDetailPage() {
     }
     try {
       await updateTask({ projectId, taskId, title: titleDraft.trim() }).unwrap();
-    } catch {
-      toast.error("Failed to update title");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update title"));
     }
     setEditingTitle(false);
   }
@@ -215,8 +215,8 @@ export function TaskDetailPage() {
     }
     try {
       await updateTask({ projectId, taskId, description: next }).unwrap();
-    } catch {
-      toast.error("Failed to update description");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update description"));
     }
     setEditingDesc(false);
   }
@@ -224,20 +224,20 @@ export function TaskDetailPage() {
   function saveStatus(status: TaskStatus) {
     updateTaskStatus({ projectId, taskId, status })
       .unwrap()
-      .catch(() => toast.error("Failed to update status"));
+      .catch((err) => toast.error(getApiErrorMessage(err, "Failed to update status")));
   }
 
   function savePriority(priority: TaskPriority) {
     updateTask({ projectId, taskId, priority })
       .unwrap()
-      .catch(() => toast.error("Failed to update priority"));
+      .catch((err) => toast.error(getApiErrorMessage(err, "Failed to update priority")));
   }
 
   async function saveStartDate(value: string) {
     try {
       await updateTask({ projectId, taskId, startDate: value ? new Date(value).toISOString() : undefined }).unwrap();
-    } catch {
-      toast.error("Failed to update start date");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update start date"));
     }
     setEditingStartDate(false);
   }
@@ -245,8 +245,8 @@ export function TaskDetailPage() {
   async function saveDueDate(value: string) {
     try {
       await updateTask({ projectId, taskId, dueDate: value ? new Date(value).toISOString() : undefined }).unwrap();
-    } catch {
-      toast.error("Failed to update due date");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update due date"));
     }
     setEditingDueDate(false);
   }
@@ -256,7 +256,7 @@ export function TaskDetailPage() {
     const ids = [...task.assignees.map((a) => a.id), userId];
     updateTask({ projectId, taskId, assigneeIds: ids })
       .unwrap()
-      .catch(() => toast.error("Failed to assign member"));
+      .catch((err) => toast.error(getApiErrorMessage(err, "Failed to assign member")));
     setShowAssigneeMenu(false);
   }
 
@@ -265,7 +265,7 @@ export function TaskDetailPage() {
     const ids = task.assignees.map((a) => a.id).filter((id) => id !== userId);
     updateTask({ projectId, taskId, assigneeIds: ids })
       .unwrap()
-      .catch(() => toast.error("Failed to remove assignee"));
+      .catch((err) => toast.error(getApiErrorMessage(err, "Failed to remove assignee")));
   }
 
   async function addSubtask() {
@@ -277,8 +277,8 @@ export function TaskDetailPage() {
         parentTaskId: taskId,
       }).unwrap();
       setNewSubtaskTitle("");
-    } catch {
-      toast.error("Failed to add subtask");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to add subtask"));
     }
   }
 
@@ -286,7 +286,7 @@ export function TaskDetailPage() {
     const status: TaskStatus = currentStatus === "DONE" ? "TODO" : "DONE";
     updateTaskStatus({ projectId, taskId: subtaskId, status, _parentTaskId: taskId })
       .unwrap()
-      .catch(() => toast.error("Failed to update subtask"));
+      .catch((err) => toast.error(getApiErrorMessage(err, "Failed to update subtask")));
   }
 
   async function handleDelete() {
@@ -306,8 +306,8 @@ export function TaskDetailPage() {
           },
         },
       });
-    } catch {
-      toast.error("Failed to delete task");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to delete task"));
     }
   }
 

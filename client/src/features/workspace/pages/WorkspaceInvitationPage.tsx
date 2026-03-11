@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { Loader2, FolderKanban, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -59,10 +60,8 @@ export function WorkspaceInvitationPage() {
       setAcceptedWorkspaceId(result.data.workspaceId);
       setPageState("success");
       toast.success("You've successfully joined the workspace!");
-    } catch (err: unknown) {
-      const error = err as { data?: { message?: string } };
-      const msg =
-        error?.data?.message ?? "The invitation may have expired or been revoked.";
+    } catch (err) {
+      const msg = getApiErrorMessage(err, "The invitation may have expired or been revoked.");
       setErrorMessage(msg);
       setPageState("error");
     }

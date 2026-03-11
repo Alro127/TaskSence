@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2, TriangleAlert } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -43,10 +44,8 @@ export function DeleteWorkspaceDialog({
       });
       onSuccess?.();
       onOpenChange(false);
-    } catch {
-      toast.error("Failed to delete workspace", {
-        description: "Please try again.",
-      });
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to delete workspace"));
     }
   };
 

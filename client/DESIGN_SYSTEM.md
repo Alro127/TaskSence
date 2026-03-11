@@ -474,18 +474,60 @@ function TaskCardSkeleton() {
 }
 ```
 
-### 6. State & Error Mapping (Golang Integration)
+### 6. State & Error Mapping (Backend Integration)
 
 **Optimistic UI**: Cập nhật UI ngay lập tức bằng React Query `onMutate` trước khi chờ Backend phản hồi.
 
-**Error Handling** — ánh xạ lỗi từ Golang API sang sonner toast:
+**Error Handling** — luôn dùng `getApiErrorMessage` để lấy `message` từ response body của backend.
 
-| HTTP Status | Toast                                               |
-| ----------- | --------------------------------------------------- |
-| 401 / 403   | `toast.error("Phiên đăng nhập hết hạn")`            |
-| 404         | `toast.error("Không tìm thấy dữ liệu")`             |
-| 422         | `toast.error("Dữ liệu không hợp lệ")`               |
-| 500         | `toast.error("Lỗi hệ thống, vui lòng thử lại sau")` |
+Backend trả về shape:
+
+```json
+{
+  "status": 403,
+  "message": "You do not have permission to perform this action",
+  "timestamp": "..."
+}
+```
+
+RTK Query parse body này vào `error.data`. Dùng utility sau để extract:
+
+```ts
+// src/lib/utils.ts — đã có sẵn
+import { getApiErrorMessage } from "@/lib/utils";
+```
+
+**Pattern bắt buộc cho mọi catch block**:
+
+```tsx
+// ✅ ĐÚNG — hiển thị đúng message từ backend
+} catch (err) {
+  toast.error(getApiErrorMessage(err, "Fallback message nếu không có message từ BE"));
+}
+
+// ❌ SAI — fallback cứng, bỏ qua message từ backend
+} catch {
+  toast.error("Something went wrong");
+}
+
+// ❌ SAI — cast thủ công, không dùng nữa
+} catch (err: unknown) {
+  const error = err as { data?: { message?: string } };
+  toast.error(error?.data?.message ?? "Fallback");
+}
+```
+
+**Khi cần hiển thị thêm `description`**:
+
+```tsx
+} catch (err) {
+  toast.error("Failed to update profile", {
+    description: getApiErrorMessage(err, "Something went wrong. Please try again."),
+  });
+}
+```
+
+> **Rule**: Không bao giờ dùng `} catch {` (không bind error) cho các mutation call. Luôn bind `(err)` và gọi `getApiErrorMessage(err, fallback)`.
 
 ---
 

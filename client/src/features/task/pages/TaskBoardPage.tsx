@@ -54,7 +54,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 import type { TaskPriority, TaskResponse, TaskStatus } from "@/types/api";
 
 import { useSearchTasksQuery, useDeleteTaskMutation, useUpdateTaskStatusMutation } from "../api/taskApi";
@@ -618,8 +618,8 @@ export function TaskBoardPage() {
           },
         },
       });
-    } catch {
-      toast.error("Failed to delete task");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to delete task"));
     }
   };
 
@@ -662,8 +662,8 @@ export function TaskBoardPage() {
         taskId: task.id,
         status: droppedOnColumn.value,
       }).unwrap();
-    } catch {
-      toast.error("Failed to move task");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to move task"));
     }
   };
 

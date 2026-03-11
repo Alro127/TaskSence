@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 import type { UserSkill } from "@/types/api";
 import { SkillStars, LEVEL_LABELS } from "./SkillStars";
 import {
@@ -293,8 +293,8 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
       }).unwrap();
       setEditingId(null);
       toast.success("Skill updated");
-    } catch {
-      toast.error("Failed to update skill", { description: "Please try again." });
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update skill"));
     } finally {
       setIsSavingEdit(false);
     }
@@ -305,8 +305,8 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
     try {
       await deleteSkill(skillId).unwrap();
       toast.success("Skill removed");
-    } catch {
-      toast.error("Failed to remove skill");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to remove skill"));
     } finally {
       setIsDeletingId(null);
     }
@@ -320,8 +320,8 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
       setNewLevel(3);
       setShowAddForm(false);
       toast.success("Skill added");
-    } catch {
-      toast.error("Failed to add skill", { description: "Please try again." });
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to add skill"));
     }
   };
 
