@@ -1,0 +1,2 @@
+ALTER TABLE project_join_requests
+DROP CONSTRAINT IF EXISTS project_join_requests_project_id_user_id_key;

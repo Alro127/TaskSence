@@ -4,8 +4,11 @@ import dev.alro127.tasksense.domain.entity.ProjectEntity;
 import dev.alro127.tasksense.domain.entity.ProjectJoinRequestEntity;
 import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
+import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.JoinRequestStatus;
+import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
+import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.dto.request.ProjectJoinRequest;
 import dev.alro127.tasksense.dto.request.ReviewProjectJoinRequest;
 import dev.alro127.tasksense.dto.response.ProjectJoinRequestResponse;
@@ -16,6 +19,7 @@ import dev.alro127.tasksense.exception.UnauthorizedException;
 import dev.alro127.tasksense.repository.jpa.ProjectJoinRequestRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
+import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.ProjectJoinRequestService;
 import dev.alro127.tasksense.service.SecurityService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +38,7 @@ public class ProjectJoinRequestServiceImpl implements ProjectJoinRequestService 
     private final ProjectMemberRepository projectMemberRepository;
     private final ProjectRepository projectRepository;
     private final SecurityService securityService;
+    private final NotificationService notificationService;
 
     @Override
     public ProjectJoinRequestResponse sendJoinRequest(Long projectId, ProjectJoinRequest request) {
@@ -58,6 +64,18 @@ public class ProjectJoinRequestServiceImpl implements ProjectJoinRequestService 
                 .build();
 
         projectJoinRequestRepository.save(joinRequest);
+        ProjectMemberEntity manager = projectMemberRepository
+                .findByProjectIdAndRole(projectId, ProjectMemberRole.MANAGER)
+                .orElseThrow(() -> new ResourceNotFoundException("Project manager not found"));
+
+        notificationService.saveAndPublish(NotificationMessage.builder()
+                .receiverId(manager.getUser().getId())
+                .actorId(securityService.getCurrentUserId())
+                .type(NotificationType.PROJECT_JOIN_REQUEST)
+                .referenceType(EntityType.INVITATION)
+                .referenceId(projectId)
+                .payload(Map.of("referenceName", project.getName()))
+                .build());
 
         return ProjectJoinRequestResponse.mapToResponse(joinRequest);
     }
@@ -119,6 +137,15 @@ public class ProjectJoinRequestServiceImpl implements ProjectJoinRequestService 
                     .build();
             projectMemberRepository.save(member);
         }
+
+        notificationService.saveAndPublish(NotificationMessage.builder()
+                .receiverId(joinRequest.getUser().getId())
+                .actorId(securityService.getCurrentUserId())
+                .type(NotificationType.PROJECT_JOIN_REQUEST)
+                .referenceType(EntityType.INVITATION)
+                .referenceId(projectId)
+                .payload(Map.of("referenceName", project.getName()))
+                .build());
 
         return ProjectJoinRequestResponse.mapToResponse(joinRequest);
     }
