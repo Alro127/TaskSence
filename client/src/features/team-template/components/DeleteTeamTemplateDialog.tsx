@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -45,8 +46,8 @@ export function DeleteTeamTemplateDialog({
       onOpenChange(false);
       setConfirmInput("");
       if (navigateAfterDelete) navigate("/team-templates");
-    } catch {
-      toast.error("Failed to delete template. Please try again.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to delete template. Please try again."));
     }
   };
 

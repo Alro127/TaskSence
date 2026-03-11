@@ -25,7 +25,7 @@ import { useUpdateUserProfileMutation } from "@/features/user/api/userApi";
 import { AvatarUpload } from "@/features/user/components";
 import { useAvatarUpload } from "@/features/user/hooks/useAvatarUpload";
 import { SkillsSection } from "@/features/user/components/SkillsSection";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Validation schema
@@ -142,11 +142,9 @@ function ProfileInfoTab({ avatarState }: ProfileInfoTabProps) {
       toast.success("Profile updated successfully!", {
         description: response.message || "Your changes have been saved.",
       });
-    } catch (error: unknown) {
-      const apiError = error as { data?: { message?: string } };
+    } catch (error) {
       toast.error("Failed to update profile", {
-        description:
-          apiError?.data?.message || "Something went wrong. Please try again.",
+        description: getApiErrorMessage(error, "Something went wrong. Please try again."),
       });
     }
   };

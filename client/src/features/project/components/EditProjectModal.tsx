@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -94,8 +95,8 @@ export function EditProjectModal({
       }).unwrap();
       toast.success("Project updated!");
       onOpenChange(false);
-    } catch {
-      toast.error("Failed to update project. Please try again.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update project. Please try again."));
     }
   };
 

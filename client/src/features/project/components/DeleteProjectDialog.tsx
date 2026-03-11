@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -53,10 +54,8 @@ export function DeleteProjectDialog({
       } else {
         navigate(`/workspaces/${project.workspaceId}`);
       }
-    } catch {
-      toast.error("Failed to delete project", {
-        description: "Please try again.",
-      });
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to delete project"));
     }
   };
 

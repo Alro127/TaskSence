@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, ArrowLeft, Mail } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -71,11 +72,9 @@ export function VerifyOtpPage() {
       });
 
       navigate("/dashboard");
-    } catch (error: unknown) {
-      const err = error as { data?: { message?: string } };
+    } catch (error) {
       toast.error("Verification failed", {
-        description:
-          err?.data?.message || "Invalid or expired OTP. Please try again.",
+        description: getApiErrorMessage(error, "Invalid or expired OTP. Please try again."),
       });
       setOtp("");
     }
