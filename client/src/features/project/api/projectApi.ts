@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import type {
   ApiResponse,
+  PageResponse,
   Project,
   CreateProjectRequest,
   UpdateProjectRequest,
@@ -25,9 +26,15 @@ export const projectApi = createApi({
   }),
   tagTypes: ["Project"],
   endpoints: (builder) => ({
-    getProjectsByWorkspace: builder.query<ApiResponse<Project[]>, number>({
-      query: (workspaceId) => `/workspaces/${workspaceId}/projects`,
-      providesTags: (_result, _error, workspaceId) => [
+    getProjectsByWorkspace: builder.query<
+      ApiResponse<PageResponse<Project>>,
+      { workspaceId: number; page?: number; size?: number }
+    >({
+      query: ({ workspaceId, page = 0, size = 20 }) => ({
+        url: `/workspaces/${workspaceId}/projects`,
+        params: { page, size },
+      }),
+      providesTags: (_result, _error, { workspaceId }) => [
         { type: "Project", id: `WORKSPACE_${workspaceId}` },
       ],
     }),

@@ -5,6 +5,15 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+// Paginated response matching backend PageResponse<T>
+export interface PageResponse<T> {
+  data: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
 // Auth types
 export interface AuthRequest {
   email: string;
