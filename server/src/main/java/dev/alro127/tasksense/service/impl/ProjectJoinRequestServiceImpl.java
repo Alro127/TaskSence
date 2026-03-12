@@ -8,6 +8,7 @@ import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.JoinRequestStatus;
 import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.dto.request.ProjectJoinRequest;
 import dev.alro127.tasksense.dto.request.ReviewProjectJoinRequest;
@@ -23,6 +24,8 @@ import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.ProjectJoinRequestService;
 import dev.alro127.tasksense.service.SecurityService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -81,7 +84,7 @@ public class ProjectJoinRequestServiceImpl implements ProjectJoinRequestService 
     }
 
     @Override
-    public List<ProjectJoinRequestResponse> getJoinRequests(Long projectId) {
+    public PageResponse<ProjectJoinRequestResponse> getJoinRequests(Long projectId, Pageable pageable) {
         UserEntity currentUser = securityService.getCurrentUser();
 
         ProjectEntity project = projectRepository.findById(projectId)
@@ -89,11 +92,16 @@ public class ProjectJoinRequestServiceImpl implements ProjectJoinRequestService 
 
         validateProjectManagerAccess(project, currentUser.getId());
 
-        return projectJoinRequestRepository
-                .findAllByProjectIdAndStatus(projectId, JoinRequestStatus.PENDING)
-                .stream()
-                .map(ProjectJoinRequestResponse::mapToResponse)
-                .toList();
+        Page<ProjectJoinRequestResponse> responsePage = projectJoinRequestRepository
+                .findAllByProjectIdAndStatus(projectId, JoinRequestStatus.PENDING, pageable)
+                .map(ProjectJoinRequestResponse::mapToResponse);
+
+        return new PageResponse<>(
+                responsePage.getContent(),
+                responsePage.getNumber(),
+                responsePage.getSize(),
+                responsePage.getTotalElements(),
+                responsePage.getTotalPages());
     }
 
     @Override

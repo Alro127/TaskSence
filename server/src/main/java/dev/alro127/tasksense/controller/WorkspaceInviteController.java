@@ -1,6 +1,7 @@
 package dev.alro127.tasksense.controller;
 
 import dev.alro127.tasksense.dto.common.ApiResponse;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.CreateBulkWorkspaceInviteRequest;
 import dev.alro127.tasksense.dto.request.TokenRequest;
 import dev.alro127.tasksense.dto.request.BulkInviteItemRequest;
@@ -9,6 +10,7 @@ import dev.alro127.tasksense.dto.response.WorkspaceInviteResponse;
 import dev.alro127.tasksense.service.WorkspaceInviteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -54,13 +56,14 @@ public class WorkspaceInviteController {
 
         @GetMapping("/{workspaceId}/invites")
         @PreAuthorize("@perm.workspace(#workspaceId, 'INVITE_MEMBERS')")
-        public ResponseEntity<ApiResponse<List<WorkspaceInviteResponse>>> getWorkspaceInvites(
-                        @PathVariable Long workspaceId) {
+        public ResponseEntity<ApiResponse<PageResponse<WorkspaceInviteResponse>>> getWorkspaceInvites(
+                        @PathVariable Long workspaceId,
+                        Pageable pageable) {
 
-                ApiResponse<List<WorkspaceInviteResponse>> response = new ApiResponse<>(
+                ApiResponse<PageResponse<WorkspaceInviteResponse>> response = new ApiResponse<>(
                                 "200",
                                 "Get workspace invites successfully",
-                                workspaceInviteService.getWorkspaceInvites(workspaceId),
+                                workspaceInviteService.getWorkspaceInvites(workspaceId, pageable),
                                 null);
 
                 return ResponseEntity.ok(response);

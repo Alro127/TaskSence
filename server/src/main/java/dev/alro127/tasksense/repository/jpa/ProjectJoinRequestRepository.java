@@ -2,6 +2,8 @@ package dev.alro127.tasksense.repository.jpa;
 
 import dev.alro127.tasksense.domain.entity.ProjectJoinRequestEntity;
 import dev.alro127.tasksense.domain.enums.JoinRequestStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -15,7 +17,8 @@ public interface ProjectJoinRequestRepository extends JpaRepository<ProjectJoinR
 
     List<ProjectJoinRequestEntity> findAllByProjectId(Long projectId);
 
-    List<ProjectJoinRequestEntity> findAllByProjectIdAndStatus(Long projectId, JoinRequestStatus status);
+    Page<ProjectJoinRequestEntity> findAllByProjectIdAndStatus(Long projectId, JoinRequestStatus status,
+            Pageable pageable);
 
     List<ProjectJoinRequestEntity> findAllByUserId(Long userId);
 

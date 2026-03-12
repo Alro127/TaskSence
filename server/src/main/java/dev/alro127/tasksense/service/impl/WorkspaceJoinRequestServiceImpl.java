@@ -8,6 +8,7 @@ import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.JoinRequestStatus;
 import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.domain.enums.WorkspaceRole;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.dto.request.CreateWorkspaceJoinRequest;
 import dev.alro127.tasksense.dto.request.ReviewWorkspaceJoinRequest;
@@ -24,6 +25,8 @@ import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.WorkspaceJoinRequestService;
 import dev.alro127.tasksense.service.WorkspaceMemberService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,177 +40,179 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class WorkspaceJoinRequestServiceImpl implements WorkspaceJoinRequestService {
 
-    private final WorkspaceJoinRequestRepository joinRequestRepository;
-    private final WorkspaceRepository workspaceRepository;
-    private final WorkspaceMemberService workspaceMemberService;
-    private final UserRepository userRepository;
-    private final SecurityService securityService;
-    private final WorkspaceMemberRepository workspaceMemberRepository;
-    private final NotificationService notificationService;
+        private final WorkspaceJoinRequestRepository joinRequestRepository;
+        private final WorkspaceRepository workspaceRepository;
+        private final WorkspaceMemberService workspaceMemberService;
+        private final UserRepository userRepository;
+        private final SecurityService securityService;
+        private final WorkspaceMemberRepository workspaceMemberRepository;
+        private final NotificationService notificationService;
 
-    private final EnumMap<JoinRequestStatus, List<JoinRequestStatus>> state =
-            new EnumMap<>(JoinRequestStatus.class);
+        private final EnumMap<JoinRequestStatus, List<JoinRequestStatus>> state = new EnumMap<>(
+                        JoinRequestStatus.class);
 
-    {
-        state.put(
-                JoinRequestStatus.PENDING,
-                List.of(
-                        JoinRequestStatus.APPROVED,
-                        JoinRequestStatus.REJECTED,
-                        JoinRequestStatus.CANCELLED
-                )
-        );
-    }
-    @Override
-    @Transactional
-    public WorkspaceJoinRequestResponse createJoinRequest(
-            Long workspaceId,
-            CreateWorkspaceJoinRequest request
-    ) {
-
-        Long userId = securityService.getCurrentUserId();
-
-        WorkspaceEntity workspace = workspaceRepository.findById(workspaceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
-
-        UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        boolean existsPending = joinRequestRepository
-                .existsByWorkspaceIdAndUserIdAndStatus(
-                        workspaceId,
-                        userId,
-                        JoinRequestStatus.PENDING
-                );
-
-        if (existsPending) {
-            throw new ConflictException("Join request already exists");
+        {
+                state.put(
+                                JoinRequestStatus.PENDING,
+                                List.of(
+                                                JoinRequestStatus.APPROVED,
+                                                JoinRequestStatus.REJECTED,
+                                                JoinRequestStatus.CANCELLED));
         }
 
-        boolean existMember = workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userId);
+        @Override
+        @Transactional
+        public WorkspaceJoinRequestResponse createJoinRequest(
+                        Long workspaceId,
+                        CreateWorkspaceJoinRequest request) {
 
-        if (existMember) {
-            throw new ConflictException("You are already a member of this workspace");
+                Long userId = securityService.getCurrentUserId();
+
+                WorkspaceEntity workspace = workspaceRepository.findById(workspaceId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+
+                UserEntity user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+                boolean existsPending = joinRequestRepository
+                                .existsByWorkspaceIdAndUserIdAndStatus(
+                                                workspaceId,
+                                                userId,
+                                                JoinRequestStatus.PENDING);
+
+                if (existsPending) {
+                        throw new ConflictException("Join request already exists");
+                }
+
+                boolean existMember = workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userId);
+
+                if (existMember) {
+                        throw new ConflictException("You are already a member of this workspace");
+                }
+
+                WorkspaceJoinRequestEntity entity = WorkspaceJoinRequestEntity.builder()
+                                .workspace(workspace)
+                                .user(user)
+                                .message(request.getMessage())
+                                .status(JoinRequestStatus.PENDING)
+                                .build();
+
+                joinRequestRepository.save(entity);
+
+                notificationService.saveAndPublish(NotificationMessage.builder()
+                                .receiverId(workspace.getOwner().getId())
+                                .actorId(securityService.getCurrentUserId())
+                                .type(NotificationType.WORKSPACE_JOIN_REQUEST)
+                                .referenceType(EntityType.WORKSPACE)
+                                .referenceId(workspace.getId())
+                                .payload(Map.of("referenceName", workspace.getName()))
+                                .build());
+
+                return WorkspaceJoinRequestResponse.mapToResponse(entity);
         }
 
-        WorkspaceJoinRequestEntity entity = WorkspaceJoinRequestEntity.builder()
-                .workspace(workspace)
-                .user(user)
-                .message(request.getMessage())
-                .status(JoinRequestStatus.PENDING)
-                .build();
+        @Override
+        public PageResponse<WorkspaceJoinRequestResponse> getWorkspaceJoinRequests(Long workspaceId,
+                        Pageable pageable) {
 
-        joinRequestRepository.save(entity);
+                Long currentUserId = securityService.getCurrentUserId();
 
-        notificationService.saveAndPublish(NotificationMessage.builder()
-                .receiverId(workspace.getOwner().getId())
-                .actorId(securityService.getCurrentUserId())
-                .type(NotificationType.WORKSPACE_JOIN_REQUEST)
-                .referenceType(EntityType.WORKSPACE)
-                .referenceId(workspace.getId())
-                .payload(Map.of("referenceName", workspace.getName()))
-                .build());
+                WorkspaceMemberEntity member = workspaceMemberRepository
+                                .findByWorkspaceIdAndUserId(workspaceId, currentUserId)
+                                .orElseThrow(() -> new ForbiddenException("You aren't a member of this workspace"));
 
-        return WorkspaceJoinRequestResponse.mapToResponse(entity);
-    }
+                if (member.getRole() != WorkspaceRole.OWNER && member.getRole() != WorkspaceRole.MANAGER) {
+                        throw new ForbiddenException("You don't have permission to do this action");
+                }
 
-    @Override
-    public List<WorkspaceJoinRequestResponse> getWorkspaceJoinRequests(Long workspaceId) {
+                Page<WorkspaceJoinRequestResponse> responsePage = joinRequestRepository
+                                .findByWorkspaceId(workspaceId, pageable)
+                                .map(WorkspaceJoinRequestResponse::mapToResponse);
 
-        Long currentUserId = securityService.getCurrentUserId();
-
-        WorkspaceMemberEntity member = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, currentUserId)
-                .orElseThrow(() -> new ForbiddenException("You aren't a member of this workspace"));
-
-        if (member.getRole() != WorkspaceRole.OWNER && member.getRole() != WorkspaceRole.MANAGER) {
-            throw new ForbiddenException("You don't have permission to do this action");
+                return new PageResponse<>(
+                                responsePage.getContent(),
+                                responsePage.getNumber(),
+                                responsePage.getSize(),
+                                responsePage.getTotalElements(),
+                                responsePage.getTotalPages());
         }
 
-        List<WorkspaceJoinRequestEntity> requests =
-                joinRequestRepository.findByWorkspaceId(workspaceId);
+        @Override
+        @Transactional
+        public WorkspaceJoinRequestResponse reviewJoinRequest(
+                        Long requestId,
+                        ReviewWorkspaceJoinRequest request) {
 
-        return requests.stream()
-                .map(WorkspaceJoinRequestResponse::mapToResponse)
-                .collect(Collectors.toList());
-    }
+                WorkspaceJoinRequestEntity entity = joinRequestRepository.findById(requestId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Join request not found"));
 
-    @Override
-    @Transactional
-    public WorkspaceJoinRequestResponse reviewJoinRequest(
-            Long requestId,
-            ReviewWorkspaceJoinRequest request
-    ) {
+                var allowState = state.get(entity.getStatus());
+                if (!allowState.contains(request.getStatus())) {
+                        throw new ConflictException("Join request already reviewed");
+                }
 
-        WorkspaceJoinRequestEntity entity = joinRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Join request not found"));
+                Long reviewerId = securityService.getCurrentUserId();
 
-        var allowState = state.get(entity.getStatus());
-        if (!allowState.contains(request.getStatus())) {
-            throw new ConflictException("Join request already reviewed");
+                UserEntity reviewer = userRepository.findById(reviewerId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Reviewer not found"));
+
+                WorkspaceMemberEntity member = workspaceMemberRepository
+                                .findByWorkspaceIdAndUserId(entity.getWorkspace().getId(), reviewerId)
+                                .orElseThrow(() -> new ForbiddenException("You aren't a member of this workspace"));
+
+                if (member.getRole() != WorkspaceRole.OWNER && member.getRole() != WorkspaceRole.MANAGER) {
+                        throw new ForbiddenException("You don't have permission to do this action");
+                }
+
+                JoinRequestStatus status = request.getStatus();
+
+                entity.setStatus(status);
+                entity.setReviewedBy(reviewer);
+                entity.setReviewedAt(OffsetDateTime.now());
+
+                joinRequestRepository.save(entity);
+
+                NotificationMessage message = NotificationMessage.builder()
+                                .receiverId(entity.getUser().getId())
+                                .actorId(securityService.getCurrentUserId())
+                                .type(NotificationType.WORKSPACE_REVIEW_REQUEST)
+                                .referenceType(EntityType.WORKSPACE)
+                                .payload(Map.of("referenceName", entity.getWorkspace().getName()))
+                                .build();
+
+                if (status == JoinRequestStatus.APPROVED) {
+                        workspaceMemberService.addUserToWorkspace(entity.getWorkspace().getId(),
+                                        entity.getUser().getId());
+                        message.setReferenceId(entity.getWorkspace().getId());
+                }
+
+                notificationService.saveAndPublish(message);
+
+                return WorkspaceJoinRequestResponse.mapToResponse(entity);
         }
 
-        Long reviewerId = securityService.getCurrentUserId();
+        @Override
+        @Transactional
+        public WorkspaceJoinRequestResponse cancelJoinRequest(Long requestId) {
 
-        UserEntity reviewer = userRepository.findById(reviewerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Reviewer not found"));
+                WorkspaceJoinRequestEntity entity = joinRequestRepository.findById(requestId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Join request not found"));
 
-        WorkspaceMemberEntity member = workspaceMemberRepository.findByWorkspaceIdAndUserId(entity.getWorkspace().getId(), reviewerId)
-                .orElseThrow(() -> new ForbiddenException("You aren't a member of this workspace"));
+                Long userId = securityService.getCurrentUserId();
 
-        if (member.getRole() != WorkspaceRole.OWNER && member.getRole() != WorkspaceRole.MANAGER) {
-            throw new ForbiddenException("You don't have permission to do this action");
+                if (!entity.getUser().getId().equals(userId)) {
+                        throw new ForbiddenException("You cannot cancel this request");
+                }
+
+                var allowState = state.get(entity.getStatus());
+                if (!allowState.contains(JoinRequestStatus.CANCELLED)) {
+                        throw new ConflictException("Join request already reviewed");
+                }
+
+                entity.setStatus(JoinRequestStatus.CANCELLED);
+
+                joinRequestRepository.save(entity);
+
+                return WorkspaceJoinRequestResponse.mapToResponse(entity);
         }
-
-        JoinRequestStatus status = request.getStatus();
-
-        entity.setStatus(status);
-        entity.setReviewedBy(reviewer);
-        entity.setReviewedAt(OffsetDateTime.now());
-
-        joinRequestRepository.save(entity);
-
-        NotificationMessage message = NotificationMessage.builder()
-                .receiverId(entity.getUser().getId())
-                .actorId(securityService.getCurrentUserId())
-                .type(NotificationType.WORKSPACE_REVIEW_REQUEST)
-                .referenceType(EntityType.WORKSPACE)
-                .payload(Map.of("referenceName", entity.getWorkspace().getName()))
-                .build();
-
-        if (status == JoinRequestStatus.APPROVED) {
-            workspaceMemberService.addUserToWorkspace(entity.getWorkspace().getId(), entity.getUser().getId());
-            message.setReferenceId(entity.getWorkspace().getId());
-        }
-
-        notificationService.saveAndPublish(message);
-
-        return WorkspaceJoinRequestResponse.mapToResponse(entity);
-    }
-
-    @Override
-    @Transactional
-    public WorkspaceJoinRequestResponse cancelJoinRequest(Long requestId) {
-
-        WorkspaceJoinRequestEntity entity = joinRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Join request not found"));
-
-        Long userId = securityService.getCurrentUserId();
-
-        if (!entity.getUser().getId().equals(userId)) {
-            throw new ForbiddenException("You cannot cancel this request");
-        }
-
-        var allowState = state.get(entity.getStatus());
-        if (!allowState.contains(JoinRequestStatus.CANCELLED)) {
-            throw new ConflictException("Join request already reviewed");
-        }
-
-        entity.setStatus(JoinRequestStatus.CANCELLED);
-
-        joinRequestRepository.save(entity);
-
-        return WorkspaceJoinRequestResponse.mapToResponse(entity);
-    }
 }
-
-
