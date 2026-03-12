@@ -23,8 +23,6 @@ export function getNotificationText(
   const taskName = (payload.taskName as string | undefined) ?? (referenceName !== "" ? referenceName : "a task");
   const workspaceName = referenceName !== "" ? referenceName : ((payload.workspaceName as string | undefined) ?? "a workspace");
   const projectName = referenceName !== "" ? referenceName : ((payload.projectName as string | undefined) ?? "a project");
-  const commentText =
-    (payload.commentText as string | undefined) ?? "your work";
   const newRole = (payload.newRole as string | undefined) ?? "a new role";
 
   const map: Record<NotificationType, NotificationText> = {
@@ -66,7 +64,15 @@ export function getNotificationText(
     },
     COMMENT_MENTION: {
       title: "You were mentioned",
-      description: `${actorName} mentioned you: "${commentText}"`,
+      description: `${actorName} mentioned you in a comment`,
+    },
+    COMMENT_REACTION: {
+      title: "New reaction",
+      description: `${actorName} reacted to your comment`,
+    },
+    COMMENT_TASK: {
+      title: "New comment",
+      description: `${actorName} commented on "${taskName}"`,
     },
     TASK_REMINDER: {
       title: "Task reminder",
@@ -128,8 +134,17 @@ export function getNotificationTarget(notification: NotificationResponse): strin
       const workspaceId = payload.workspaceId as number | undefined;
       return workspaceId ? `/workspaces/${workspaceId}` : "/workspaces";
     }
-    case "COMMENT_MENTION": {
-      return "/tasks";
+    case "COMMENT_MENTION":
+    case "COMMENT_REACTION":
+    case "COMMENT_TASK": {
+      const workspaceId = payload.workspaceId as number | undefined;
+      const projectId = payload.projectId as number | undefined;
+      const taskId = payload.taskId as number | undefined;
+      // referenceId is the comment ID for all comment notification types
+      const commentId = notification.referenceId;
+      if (!workspaceId || !projectId || !taskId) return "/tasks";
+      const base = `/workspaces/${workspaceId}/projects/${projectId}/tasks/${taskId}`;
+      return commentId ? `${base}?commentId=${commentId}` : base;
     }
     case "TASK_REMINDER": {
       const workspaceId = payload.workspaceId as number | undefined;

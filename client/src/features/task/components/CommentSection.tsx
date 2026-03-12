@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Loader2, MessageSquare } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
@@ -27,6 +28,16 @@ export function CommentSection({ taskId, projectId }: CommentSectionProps) {
 
   const { data: roleData } = useGetCurrentUserRoleQuery(projectId);
   const isManager = roleData?.data === "MANAGER";
+
+  // ── Deep-link: highlight a specific comment from notification ────────────
+  const [searchParams] = useSearchParams();
+  const targetCommentId = useMemo(() => {
+    const raw = searchParams.get("commentId");
+    return raw ? Number(raw) : null;
+  }, [searchParams]);
+  const [highlightedCommentId, setHighlightedCommentId] = useState<number | null>(null);
+  // Prevents firing multiple concurrent "chase" fetches
+  const chasingRef = useRef(false);
 
   // ── Paginated comment state ──────────────────────────────────────────────
   const [allComments, setAllComments] = useState<CommentResponse[]>([]);
@@ -57,6 +68,48 @@ export function CommentSection({ taskId, projectId }: CommentSectionProps) {
   useEffect(() => {
     loadInitial();
   }, [loadInitial]);
+
+  // ── Chase target comment: keep loading pages until it's visible ──────────
+  useEffect(() => {
+    if (!targetCommentId) return;
+    const found = allComments.some((c) => c.id === targetCommentId);
+    if (found) {
+      setHighlightedCommentId(targetCommentId);
+      chasingRef.current = false;
+      return;
+    }
+    if (hasMore && !isFetching && !chasingRef.current && nextCursor !== undefined) {
+      chasingRef.current = true;
+      fetchComments({ taskId, cursor: nextCursor, limit: PAGE_LIMIT }, false)
+        .unwrap()
+        .then((result) => {
+          setAllComments((prev) => [...prev, ...result.data]);
+          setHasMore(result.data.length >= PAGE_LIMIT);
+          setNextCursor(
+            result.data.length > 0
+              ? result.data[result.data.length - 1].id
+              : undefined,
+          );
+          chasingRef.current = false;
+        })
+        .catch(() => { chasingRef.current = false; });
+    }
+  }, [targetCommentId, allComments, hasMore, isFetching, nextCursor, taskId, fetchComments]);
+
+  // ── Clear highlight when user clicks anywhere ────────────────────────────
+  useEffect(() => {
+    if (!highlightedCommentId) return;
+    // Defer so the navigation click itself doesn't immediately clear the highlight
+    const setup = setTimeout(() => {
+      function onDocClick() {
+        setHighlightedCommentId(null);
+      }
+      document.addEventListener("click", onDocClick, { capture: true, once: true });
+      // cleanup in case component unmounts before user clicks
+      return () => document.removeEventListener("click", onDocClick, true);
+    }, 400);
+    return () => clearTimeout(setup);
+  }, [highlightedCommentId]);
 
   // Append the next page
   async function loadMore() {
@@ -148,6 +201,7 @@ export function CommentSection({ taskId, projectId }: CommentSectionProps) {
               isManager={isManager}
               members={members}
               onMutate={loadInitial}
+              highlightedCommentId={highlightedCommentId}
             />
           ))}
 

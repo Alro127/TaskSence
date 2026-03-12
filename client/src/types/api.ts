@@ -343,6 +343,8 @@ export type NotificationType =
   | "WORKSPACE_ROLE_CHANGE"
   | "PROJECT_JOIN_REQUEST"
   | "COMMENT_MENTION"
+  | "COMMENT_REACTION"
+  | "COMMENT_TASK"
   | "TASK_REMINDER"
   | "PROJECT_ROLE_UPDATED";
 
@@ -453,10 +455,12 @@ export interface CommentCreateRequest {
   taskId: number;
   parentCommentId?: number;
   content: string;
+  mentionUserIds?: number[];
 }
 
 export interface CommentUpdateRequest {
   content: string;
+  mentionUserIds?: number[];
 }
 
 export interface CommentReactionRequest {
