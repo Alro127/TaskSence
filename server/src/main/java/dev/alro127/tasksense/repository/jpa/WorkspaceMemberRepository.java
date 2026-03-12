@@ -11,20 +11,21 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
-public interface WorkspaceMemberRepository extends JpaRepository< WorkspaceMemberEntity, Long> {
+public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMemberEntity, Long> {
 
     @Query(value = """
-        SELECT *
-            FROM workspace_members wm
-            WHERE wm.workspace_id = :workspaceId
-            AND wm.user_id = :userId
-        """,
-            nativeQuery = true)
-    Optional<WorkspaceMemberEntity>  findByWorkspaceIdAndUserIdIgnoreRestriction(Long workspaceId, Long userId);
+            SELECT *
+                FROM workspace_members wm
+                WHERE wm.workspace_id = :workspaceId
+                AND wm.user_id = :userId
+            """, nativeQuery = true)
+    Optional<WorkspaceMemberEntity> findByWorkspaceIdAndUserIdIgnoreRestriction(Long workspaceId, Long userId);
 
     Optional<WorkspaceMemberEntity> findByWorkspaceIdAndUserId(Long workspaceId, Long userId);
 
     List<WorkspaceMemberEntity> findByWorkspaceId(Long workspaceId);
+
+    List<WorkspaceMemberEntity> findByWorkspaceIdAndUserIdIn(Long workspaceId, List<Long> userIds);
 
     long countByWorkspaceIdAndRole(Long workspaceId, WorkspaceRole workspaceRole);
 

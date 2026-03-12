@@ -54,6 +54,15 @@ import {
   STATUS_CONFIG,
   ROLE_LABEL,
 } from "../components";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 // ─── Join Request Status config ─────────────────────────────────────────────────
 const JOIN_STATUS_CONFIG: Record<
@@ -292,6 +301,8 @@ export function ProjectDetailPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get("tab") ?? "overview";
+  const [memberPage, setMemberPage] = useState(0);
+  const MEMBER_PAGE_SIZE = 12;
   const workspaceNameFromState = (location.state as { workspaceName?: string; projectSnapshot?: import("@/types/api").Project } | null)?.workspaceName;
   const projectSnapshot = (location.state as { projectSnapshot?: import("@/types/api").Project } | null)?.projectSnapshot ?? null;
 
@@ -327,8 +338,20 @@ export function ProjectDetailPage() {
   const workspaceName = workspaceNameFromState ?? workspaceData?.data?.name ?? "Workspace";
 
   const { data: membersData, isLoading: isMembersLoading } =
-    useGetMembersQuery(projectId, { skip: skipMemberOnlyQueries });
-  const members = membersData?.data ?? [];
+    useGetMembersQuery(
+      { projectId, page: memberPage, size: MEMBER_PAGE_SIZE },
+      { skip: skipMemberOnlyQueries },
+    );
+  const members = membersData?.data?.data ?? [];
+  const totalMembers = membersData?.data?.totalElements ?? 0;
+  const totalMemberPages = membersData?.data?.totalPages ?? 1;
+
+  // All members for TransferManagerDialog (needs all non-manager candidates)
+  const { data: allMembersData } = useGetMembersQuery(
+    { projectId, page: 0, size: 100 },
+    { skip: skipMemberOnlyQueries },
+  );
+  const allMembers = allMembersData?.data?.data ?? [];
 
   const { data: joinRequestsData, isLoading: isJoinRequestsLoading } =
     useGetJoinRequestsQuery(projectId, {
@@ -663,9 +686,9 @@ export function ProjectDetailPage() {
           <TabsTrigger value="members" className="gap-2">
             <Users className="h-4 w-4" />
             Members
-            {members.length > 0 && (
+            {totalMembers > 0 && (
               <Badge variant="secondary" className="text-xs">
-                {members.length}
+                {totalMembers}
               </Badge>
             )}
           </TabsTrigger>
@@ -712,7 +735,7 @@ export function ProjectDetailPage() {
                 </dt>
                 <dd className="mt-1 flex items-center gap-1 text-sm">
                   <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                  {members.length} member{members.length !== 1 ? "s" : ""}
+                  {totalMembers} member{totalMembers !== 1 ? "s" : ""}
                 </dd>
               </div>
 
@@ -863,7 +886,7 @@ export function ProjectDetailPage() {
         <TabsContent value="members" className="mt-6 space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {members.length} member{members.length !== 1 ? "s" : ""}
+              {totalMembers} member{totalMembers !== 1 ? "s" : ""}
             </p>
             {isManager && (
               <Button size="sm" onClick={() => setIsAddMembersOpen(true)}>
@@ -904,6 +927,56 @@ export function ProjectDetailPage() {
                 />
               ))}
             </div>
+          )}
+
+          {totalMemberPages > 1 && (
+            <Pagination className="mt-4">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setMemberPage((p) => Math.max(0, p - 1))}
+                    aria-disabled={memberPage === 0}
+                    className={memberPage === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+
+                {Array.from({ length: totalMemberPages }, (_, i) => {
+                  const showPage =
+                    i === 0 ||
+                    i === totalMemberPages - 1 ||
+                    Math.abs(i - memberPage) <= 1;
+                  if (!showPage) {
+                    if (i === 1 || i === totalMemberPages - 2) {
+                      return (
+                        <PaginationItem key={`ellipsis-${i}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      );
+                    }
+                    return null;
+                  }
+                  return (
+                    <PaginationItem key={i}>
+                      <PaginationLink
+                        isActive={i === memberPage}
+                        onClick={() => setMemberPage(i)}
+                        className="cursor-pointer"
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setMemberPage((p) => Math.min(totalMemberPages - 1, p + 1))}
+                    aria-disabled={memberPage === totalMemberPages - 1}
+                    className={memberPage === totalMemberPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           )}
         </TabsContent>
 
@@ -981,7 +1054,7 @@ export function ProjectDetailPage() {
         onOpenChange={setIsTransferManagerOpen}
         projectId={projectId}
         sourceManagerId={transferSourceId}
-        members={members}
+        members={allMembers}
       />
     </div>
   );

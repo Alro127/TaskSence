@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import type {
   ApiResponse,
+  PageResponse,
   ProjectMember,
   AddProjectMemberRequest,
   AddProjectMemberResultItem,
@@ -26,9 +27,15 @@ export const projectMemberApi = createApi({
   tagTypes: ["ProjectMember"],
   endpoints: (builder) => ({
     /** GET /projects/{projectId}/members */
-    getMembers: builder.query<ApiResponse<ProjectMember[]>, number>({
-      query: (projectId) => `/projects/${projectId}/members`,
-      providesTags: (_result, _error, projectId) => [
+    getMembers: builder.query<
+      ApiResponse<PageResponse<ProjectMember>>,
+      { projectId: number; page: number; size: number }
+    >({
+      query: ({ projectId, page, size }) => ({
+        url: `/projects/${projectId}/members`,
+        params: { page, size },
+      }),
+      providesTags: (_result, _error, { projectId }) => [
         { type: "ProjectMember", id: projectId },
       ],
     }),

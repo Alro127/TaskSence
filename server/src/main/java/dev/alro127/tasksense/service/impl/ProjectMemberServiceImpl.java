@@ -6,11 +6,13 @@ import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
 import dev.alro127.tasksense.domain.enums.MemberAddStatus;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.AddProjectMemberRequest;
 import dev.alro127.tasksense.dto.request.ProjectMemberItem;
 import dev.alro127.tasksense.dto.request.UpdateProjectMemberRoleRequest;
 import dev.alro127.tasksense.dto.response.AddProjectMemberResultItem;
 import dev.alro127.tasksense.dto.response.ProjectMemberResponse;
+import dev.alro127.tasksense.dto.response.ProjectResponse;
 import dev.alro127.tasksense.exception.BadRequestException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
@@ -20,6 +22,9 @@ import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.service.ProjectMemberService;
 import dev.alro127.tasksense.service.SecurityService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,13 +64,14 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 Map<Long, UserEntity> userMap = foundUsers.stream()
                                 .collect(Collectors.toMap(UserEntity::getId, u -> u));
 
-                List<ProjectMemberEntity> existingMembers = projectMemberRepository.findAllByProjectId(projectId);
-                Map<Long, ProjectMemberEntity> existingMap = existingMembers.stream()
+                Map<Long, ProjectMemberEntity> existingProjectMembers = projectMemberRepository
+                                .findByProjectIdAndUserIdIn(projectId, userIds).stream()
                                 .collect(Collectors.toMap(m -> m.getUser().getId(), m -> m));
 
                 Long workspaceId = project.getWorkspace().getId();
 
-                List<WorkspaceMemberEntity> workspaceMembers = workspaceMemberRepository.findByWorkspaceId(workspaceId);
+                List<WorkspaceMemberEntity> workspaceMembers = workspaceMemberRepository
+                                .findByWorkspaceIdAndUserIdIn(workspaceId, userIds);
 
                 Set<Long> workspaceUserIds = workspaceMembers.stream()
                                 .map(m -> m.getUser().getId())
@@ -95,7 +101,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                                 continue;
                         }
 
-                        if (existingMap.containsKey(userId)) {
+                        if (existingProjectMembers.containsKey(userId)) {
                                 results.add(AddProjectMemberResultItem.builder()
                                                 .userId(userId)
                                                 .role(role)
@@ -105,12 +111,15 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                         }
 
                         // Reactivate soft-deleted member or create new
-                        ProjectMemberEntity entity = projectMemberRepository
-                                        .findByProjectIdAndUserIdIgnoreRestriction(projectId, userId)
-                                        .orElse(ProjectMemberEntity.builder()
-                                                        .project(project)
-                                                        .user(userMap.get(userId))
-                                                        .build());
+                        ProjectMemberEntity entity = existingProjectMembers.get(userId);
+
+                        if (entity == null) {
+                                entity = ProjectMemberEntity.builder()
+                                                .project(project)
+                                                .user(userMap.get(userId))
+                                                .build();
+                        }
+
                         entity.setRole(role);
                         entity.setDeletedAt(null);
 
@@ -130,13 +139,18 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         }
 
         @Override
-        public List<ProjectMemberResponse> getMembers(Long projectId) {
+        public PageResponse<ProjectMemberResponse> getMembers(Long projectId, Pageable pageable) {
                 // @PreAuthorize đã kiểm tra VIEW_MEMBERS permission
 
-                return projectMemberRepository.findAllByProjectId(projectId)
-                                .stream()
-                                .map(ProjectMemberResponse::mapToResponse)
-                                .toList();
+                Page<ProjectMemberResponse> responsePage = projectMemberRepository
+                                .findAllByProjectId(projectId, pageable)
+                                .map(ProjectMemberResponse::mapToResponse);
+                return new PageResponse<>(
+                                responsePage.getContent(),
+                                responsePage.getNumber(),
+                                responsePage.getSize(),
+                                responsePage.getTotalElements(),
+                                responsePage.getTotalPages());
         }
 
         @Override
