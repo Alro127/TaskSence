@@ -22,8 +22,10 @@ interface CommentSectionProps {
 export function CommentSection({ taskId, projectId }: CommentSectionProps) {
   const currentUserId = useAppSelector((s) => s.user.currentUser?.id ?? 0);
 
-  const { data: membersData } = useGetMembersQuery(projectId);
-  const members = membersData?.data ?? [];
+  const { data: membersData } = useGetMembersQuery(
+    { projectId, page: 0, size: 100 },
+  );
+  const members = membersData?.data?.data ?? [];
 
   const { data: roleData } = useGetCurrentUserRoleQuery(projectId);
   const isManager = roleData?.data === "MANAGER";

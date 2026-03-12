@@ -551,10 +551,11 @@ export function TaskBoardPage() {
   const projectName = projectData?.data?.name ?? "Project";
 
   // ─── Project members for assignee filter ────────────────────────────────────
-  const { data: membersData } = useGetMembersQuery(projectId, {
-    skip: isNaN(projectId),
-  });
-  const members = membersData?.data ?? [];
+  const { data: membersData } = useGetMembersQuery(
+    { projectId, page: 0, size: 100 },
+    { skip: isNaN(projectId) },
+  );
+  const members = membersData?.data?.data ?? [];
 
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();

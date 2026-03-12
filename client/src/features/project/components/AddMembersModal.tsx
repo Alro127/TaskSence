@@ -96,12 +96,15 @@ export function AddMembersModal({
   // Fetch workspace members (source of truth) and existing project members
   const { data: workspaceMembersData, isLoading: isLoadingMembers } =
     useGetWorkspaceMembersQuery(workspaceId, { skip: !open });
-  const { data: projectMembersData } = useGetMembersQuery(projectId, { skip: !open });
+  const { data: projectMembersData } = useGetMembersQuery(
+    { projectId, page: 0, size: 100 },
+    { skip: !open },
+  );
   const [addMembers, { isLoading: isAdding }] = useAddMembersMutation();
 
   const workspaceMembers = workspaceMembersData?.data?.data ?? [];
   const projectMemberIds = useMemo(
-    () => new Set((projectMembersData?.data ?? []).map((m) => m.user.id)),
+    () => new Set((projectMembersData?.data?.data ?? []).map((m) => m.user.id)),
     [projectMembersData],
   );
 

@@ -66,8 +66,11 @@ export function TaskFormSheet({
   const [dueDate, setDueDate] = useState("");
   const [assigneeIds, setAssigneeIds] = useState<number[]>([]);
 
-  const { data: membersData } = useGetMembersQuery(projectId, { skip: !open });
-  const members = membersData?.data ?? [];
+  const { data: membersData } = useGetMembersQuery(
+    { projectId, page: 0, size: 100 },
+    { skip: !open },
+  );
+  const members = membersData?.data?.data ?? [];
 
   const [createTask, { isLoading: isCreating }] = useCreateTaskMutation();
   const [updateTask, { isLoading: isUpdating }] = useUpdateTaskMutation();
