@@ -7,6 +7,8 @@ import {
   UserMinus,
   FolderPlus,
   MessageSquare,
+  MessageCircle,
+  SmilePlus,
   ShieldCheck,
   Bell,
   ClipboardCheck,
@@ -32,6 +34,8 @@ const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
   WORKSPACE_ROLE_CHANGE: <ShieldCheck className="h-4 w-4 text-amber-500" />,
   PROJECT_JOIN_REQUEST: <FolderPlus className="h-4 w-4 text-cyan-500" />,
   COMMENT_MENTION: <MessageSquare className="h-4 w-4 text-amber-500" />,
+  COMMENT_REACTION: <SmilePlus className="h-4 w-4 text-pink-500" />,
+  COMMENT_TASK: <MessageCircle className="h-4 w-4 text-blue-500" />,
   TASK_REMINDER: <Clock className="h-4 w-4 text-orange-500" />,
   PROJECT_ROLE_UPDATED: <ShieldCheck className="h-4 w-4 text-purple-500" />,
 };

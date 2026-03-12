@@ -7,6 +7,21 @@ import { getApiErrorMessage } from "@/lib/utils";
 import type { ProjectMember } from "@/types/api";
 import { useCreateCommentMutation } from "../api/commentApi";
 
+/** Parse all @tag tokens in `text` and return matching member user IDs. */
+function extractMentionIds(text: string, members: ProjectMember[]): number[] {
+  const tags = new Set(
+    [...text.matchAll(/@(\w+)/g)].map((m) => m[1].toLowerCase()),
+  );
+  return members
+    .filter((m) => {
+      const display = m.user.fullName
+        ? m.user.fullName.replace(/\s+/g, "").toLowerCase()
+        : m.user.email.split("@")[0].toLowerCase();
+      return tags.has(display);
+    })
+    .map((m) => m.user.id);
+}
+
 interface CommentInputProps {
   taskId: number;
   parentCommentId?: number;
@@ -110,11 +125,14 @@ export function CommentInput({
 
   async function handleSubmit() {
     if (!content.trim() || isLoading) return;
+    const trimmed = content.trim();
+    const mentionUserIds = extractMentionIds(trimmed, members);
     try {
       await createComment({
         taskId,
-        content: content.trim(),
+        content: trimmed,
         ...(parentCommentId !== undefined ? { parentCommentId } : {}),
+        ...(mentionUserIds.length > 0 ? { mentionUserIds } : {}),
       }).unwrap();
       setContent("");
       setMentionQuery(null);

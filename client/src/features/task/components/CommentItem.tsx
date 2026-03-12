@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import {
   ChevronDown,
@@ -31,6 +31,21 @@ import { CommentInput } from "./CommentInput";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "✅", "🔥", "👎"];
+
+/** Parse all @tag tokens in `text` and return matching member user IDs. */
+function extractMentionIds(text: string, members: ProjectMember[]): number[] {
+  const tags = new Set(
+    [...text.matchAll(/@(\w+)/g)].map((m) => m[1].toLowerCase()),
+  );
+  return members
+    .filter((m) => {
+      const display = m.user.fullName
+        ? m.user.fullName.replace(/\s+/g, "").toLowerCase()
+        : m.user.email.split("@")[0].toLowerCase();
+      return tags.has(display);
+    })
+    .map((m) => m.user.id);
+}
 
 // ─── Avatar helper ────────────────────────────────────────────────────────────
 function UserAvatar({
@@ -246,6 +261,8 @@ interface CommentItemProps {
   onMutate: () => void;
   /** Render as an indented reply (no nesting further down) */
   isReply?: boolean;
+  /** ID of the comment to highlight (from notification deep-link) */
+  highlightedCommentId?: number | null;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -259,14 +276,31 @@ export function CommentItem({
   members,
   onMutate,
   isReply = false,
+  highlightedCommentId,
 }: CommentItemProps) {
   const isOwner = comment.user.id === currentUserId;
   const canEdit = isOwner;
   const canDelete = isOwner || isManager;
+  const isHighlighted = highlightedCommentId === comment.id;
+
+  // Ref used for scroll-into-view when highlighted
+  const commentRef = useRef<HTMLDivElement>(null);
+
+  // Scroll into view when this comment becomes highlighted
+  useEffect(() => {
+    if (!isHighlighted || !commentRef.current) return;
+    const t = setTimeout(() => {
+      commentRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [isHighlighted]);
 
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
-  const [showReplies, setShowReplies] = useState(false);
+  // Auto-expand replies if the highlighted comment is one of our replies
+  const [showReplies, setShowReplies] = useState(
+    () => replies.some((r) => r.id === highlightedCommentId),
+  );
   const [replying, setReplying] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Optimistic local reactions map (icon → count)
@@ -296,11 +330,13 @@ export function CommentItem({
       setEditing(false);
       return;
     }
+    const mentionUserIds = extractMentionIds(trimmed, members);
     try {
       await updateComment({
         commentId: comment.id,
         taskId,
         content: trimmed,
+        ...(mentionUserIds.length > 0 ? { mentionUserIds } : {}),
       }).unwrap();
       setEditing(false);
       onMutate();
@@ -391,7 +427,13 @@ export function CommentItem({
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="group">
+    <div
+      ref={commentRef}
+      className={cn(
+        "group rounded-lg transition-shadow duration-300",
+        isHighlighted && "ring-2 ring-primary shadow-sm",
+      )}
+    >
       <div className="flex gap-3">
         <UserAvatar user={comment.user} size={isReply ? "xs" : "sm"} />
 
@@ -573,6 +615,7 @@ export function CommentItem({
                 members={members}
                 onMutate={onMutate}
                 isReply
+                highlightedCommentId={highlightedCommentId}
               />
             ))}
 

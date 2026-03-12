@@ -1,6 +1,9 @@
 package dev.alro127.tasksense.service.impl;
 
 import dev.alro127.tasksense.domain.entity.*;
+import dev.alro127.tasksense.domain.enums.EntityType;
+import dev.alro127.tasksense.domain.enums.NotificationType;
+import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.dto.request.CommentCreateRequest;
 import dev.alro127.tasksense.dto.request.CommentReactionRequest;
 import dev.alro127.tasksense.dto.request.UpdateCommentRequest;
@@ -10,6 +13,7 @@ import dev.alro127.tasksense.exception.ForbiddenException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.*;
 import dev.alro127.tasksense.service.CommentService;
+import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.SecurityService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -18,8 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +34,8 @@ public class CommentServiceImpl implements CommentService {
     private final CommentMentionRepository mentionRepository;
     private final TaskRepository taskRepository;
     private final SecurityService securityService;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     private void checkOwner(CommentEntity comment) {
 
@@ -38,6 +43,63 @@ public class CommentServiceImpl implements CommentService {
 
         if (!comment.getUser().getId().equals(currentUser.getId())) {
             throw new ForbiddenException("You are not allowed to take this action");
+        }
+    }
+
+    private void saveMentions(CommentEntity comment, Set<Long> userIds) {
+
+        if (userIds == null || userIds.isEmpty()) return;
+
+        List<UserEntity> users = userRepository.findAllById(userIds);
+
+        List<CommentMentionEntity> mentions = users.stream()
+                .map(user -> CommentMentionEntity.builder()
+                        .comment(comment)
+                        .user(user)
+                        .build())
+                .toList();
+
+        mentionRepository.saveAll(mentions);
+    }
+
+    private void sendTaskCommentNotifications(CommentEntity comment,
+                                              Set<Long> mentionIds,
+                                              UserEntity currentUser) {
+
+        TaskEntity task = comment.getTask();
+        ProjectEntity project = task.getProject();
+        WorkspaceEntity workspace = project.getWorkspace();
+
+        Map<Long, NotificationType> recipients = new HashMap<>();
+
+        for (UserEntity assignee : task.getAssignees()) {
+            recipients.put(assignee.getId(), NotificationType.COMMENT_TASK);
+        }
+
+        for (Long mentionId : mentionIds) {
+            recipients.put(mentionId, NotificationType.COMMENT_MENTION);
+        }
+
+        recipients.remove(currentUser.getId());
+
+        for (var entry : recipients.entrySet()) {
+
+            notificationService.saveAndPublish(
+                    NotificationMessage.builder()
+                            .actorId(currentUser.getId())
+                            .receiverId(entry.getKey())
+                            .type(entry.getValue())
+                            .referenceType(EntityType.COMMENT)
+                            .referenceId(comment.getId())
+                            .payload(Map.of(
+                                    "referenceName", task.getTitle(),
+                                    "sender", currentUser.getFullName(),
+                                    "taskId", task.getId(),
+                                    "projectId", project.getId(),
+                                    "workspaceId", workspace.getId()
+                            ))
+                            .build()
+            );
         }
     }
 
@@ -66,6 +128,13 @@ public class CommentServiceImpl implements CommentService {
 
         commentRepository.save(comment);
 
+        Set<Long> mentionIds = Optional.ofNullable(request.getMentionUserIds())
+                .orElse(Collections.emptySet());
+
+        saveMentions(comment, mentionIds);
+
+        sendTaskCommentNotifications(comment, mentionIds, currentUser);
+
         return CommentResponse.mapToResponse(comment);
     }
 
@@ -73,15 +142,29 @@ public class CommentServiceImpl implements CommentService {
     @Transactional
     public CommentResponse updateComment(Long commentId, UpdateCommentRequest request) {
 
+        UserEntity currentUser = securityService.getCurrentUser();
+
         CommentEntity comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new EntityNotFoundException("Comment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
 
         checkOwner(comment);
+
+        Set<Long> oldMentions = mentionRepository.findUserIdsByCommentId(commentId);
+
+        Set<Long> newMentions = request.getMentionUserIds();
 
         comment.setContent(request.getContent());
         comment.setIsEdited(true);
 
-        commentRepository.save(comment);
+        mentionRepository.deleteByCommentId(commentId);
+        saveMentions(comment, newMentions);
+
+        Set<Long> addedMentions = new HashSet<>(newMentions);
+        addedMentions.removeAll(oldMentions);
+
+        if (!addedMentions.isEmpty()) {
+            sendTaskCommentNotifications(comment, addedMentions, currentUser);
+        }
 
         return CommentResponse.mapToResponse(comment);
     }
@@ -96,8 +179,6 @@ public class CommentServiceImpl implements CommentService {
         checkOwner(comment);
 
         comment.setDeletedAt(OffsetDateTime.now());
-
-        commentRepository.save(comment);
     }
 
     @Override
@@ -116,17 +197,15 @@ public class CommentServiceImpl implements CommentService {
                 .map(CommentEntity::getId)
                 .toList();
 
-        List<CommentReactionEntity> reactions =
-                reactionRepository.findByCommentIdIn(commentIds);
-
-        List<CommentMentionEntity> mentions =
-                mentionRepository.findByCommentIdIn(commentIds);
-
         Map<Long, List<CommentReactionEntity>> reactionMap =
-                reactions.stream().collect(Collectors.groupingBy(r -> r.getComment().getId()));
+                reactionRepository.findByCommentIdIn(commentIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(r -> r.getComment().getId()));
 
         Map<Long, List<CommentMentionEntity>> mentionMap =
-                mentions.stream().collect(Collectors.groupingBy(m -> m.getComment().getId()));
+                mentionRepository.findByCommentIdIn(commentIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(m -> m.getComment().getId()));
 
         return comments.stream()
                 .map(comment -> CommentResponse.mapToResponse(
@@ -157,6 +236,26 @@ public class CommentServiceImpl implements CommentService {
                 .user(currentUser)
                 .icon(request.getIcon())
                 .build();
+
+        TaskEntity task = comment.getTask();
+        ProjectEntity project = task.getProject();
+        WorkspaceEntity workspace = project.getWorkspace();
+        UserEntity receiver = comment.getUser();
+
+        if (!currentUser.getId().equals(receiver.getId())) {
+            notificationService.saveAndPublish(NotificationMessage.builder()
+                    .actorId(currentUser.getId())
+                    .receiverId(receiver.getId())
+                    .type(NotificationType.COMMENT_REACTION)
+                    .referenceType(EntityType.COMMENT)
+                    .referenceId(comment.getId())
+                    .payload(Map.of("taskId", task.getId(),
+                            "sender", currentUser.getFullName(),
+                            "projectId", project.getId(),
+                            "workspaceId", workspace.getId()))
+                    .build());
+
+        }
 
         reactionRepository.save(reaction);
     }

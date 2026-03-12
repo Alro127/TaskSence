@@ -1,7 +1,7 @@
 # TaskSense - Frontend Project Context
 
 > File này dùng để giữ context cho AI và developers. Cập nhật sau mỗi sprint/thay đổi lớn.
-> **Cập nhật lần cuối**: Sprint 10 - Comment System (CRUD + Reactions + @mention + Cursor Pagination)
+> **Cập nhật lần cuối**: Sprint 10 - Comment System (CRUD + Reactions + @mention + Cursor Pagination + Notification Deep-link)
 
 ## 📋 Thông tin dự án
 
@@ -82,8 +82,8 @@
   - `PATCH /projects/:projectId/tasks/:taskId/status` → body: `{status}` → `TaskResponse` _(MANAGER: bất kỳ; MEMBER: task mình tạo hoặc được assign)_
   - `DELETE /projects/:projectId/tasks/:taskId` → xóa task (soft delete) _(MANAGER: bất kỳ; MEMBER: chỉ task mình tạo)_
 - **Comment Endpoints**:
-  - `POST /comments` → body: `CommentCreateRequest` → `CommentResponse` _(tạo comment hoặc reply)_
-  - `PUT /comments/:commentId` → body: `{content}` → `CommentResponse` _(chỉ owner)_
+  - `POST /comments` → body: `{taskId, parentCommentId?, content, mentionUserIds?}` → `CommentResponse` _(tạo comment hoặc reply)_
+  - `PUT /comments/:commentId` → body: `{content, mentionUserIds?}` → `CommentResponse` _(chỉ owner)_
   - `DELETE /comments/:commentId` → xóa comment _(owner hoặc MANAGER)_
   - `GET /comments/task/:taskId?cursor=&limit=` → danh sách comments (cursor-based) → `CommentResponse[]`
   - `POST /comments/:commentId/reactions` → body: `{icon}` → thêm reaction _(lần đầu hoặc khi icon mới)_
@@ -552,9 +552,10 @@ client/
 
 - ✅ **Types** — thêm vào `types/api.ts`:
   - `CommentResponse` — `id, taskId, parentCommentId, content, isEdited, createdAt, updatedAt, user (UserSummaryResponse), mentions (UserSummaryResponse[]), reactions (Record<string, number>)`
-  - `CommentCreateRequest` — `{taskId, parentCommentId?, content}`
-  - `CommentUpdateRequest` — `{content}`
+  - `CommentCreateRequest` — `{taskId, parentCommentId?, content, mentionUserIds?}`
+  - `CommentUpdateRequest` — `{content, mentionUserIds?}`
   - `CommentReactionRequest` — `{icon}`
+  - `NotificationType` mở rộng: thêm `"COMMENT_REACTION"` (ai đó react vào comment của mình) và `"COMMENT_TASK"` (ai đó comment vào task mình liên quan)
 - ✅ **commentApi** (`features/task/api/commentApi.ts`) — RTK Query với 8 endpoints:
   - `getComments(taskId, cursor?, limit?)` — cursor-based, tag `Comment:TASK_{taskId}`
   - `createComment(body)` — `POST /comments`, invalidate `Comment:TASK_{taskId}`
@@ -570,6 +571,7 @@ client/
   - `onMouseDown + preventDefault` trên dropdown items để tránh textarea blur
   - `Ctrl+Enter` = submit, `Escape` = cancel
   - "Replying to @name" banner khi `parentCommentId` được truyền vào
+  - `extractMentionIds(text, members)` — parse `@tag` tokens, map thành user IDs; gửi kèm `mentionUserIds` trong create request
   - Props: `taskId`, `parentCommentId?`, `members: ProjectMember[]`, `onSuccess?`, `onCancel?`, `replyingToName?`, `autoFocus?`
 - ✅ **CommentItem** (`features/task/components/CommentItem.tsx`):
   - `localReactions: Record<string, number>` state — mirror của `comment.reactions`, update optimistic trước API call, rollback on error
@@ -577,13 +579,16 @@ client/
   - `handleToggleReaction` — 3 cases: (1) same icon → DELETE remove; (2) no prior → POST add; (3) different icon → PATCH switch (atomic, 1 request)
   - `ReactionButton`: hover fires `useLazyGetReactionUsersQuery` → tooltip hiển thị avatars + names (max 8 + "+N others")
   - `ReactionBar`: emoji picker (EmojiPicker icon hiển thị active reaction icon khi có), highlights active emoji trong picker
-  - Inline edit: `Ctrl+Enter` save, `Escape` cancel; chỉ owner (`canEdit = isOwner`)
+  - Inline edit: `Ctrl+Enter` save, `Escape` cancel; chỉ owner (`canEdit = isOwner`); gửi `mentionUserIds` khi lưu
   - Inline delete confirm (không modal); `canDelete = isOwner || isManager`
   - Reply trigger: `isReply=true` ẩn nút Reply (chặn nest thêm)
+  - **Notification deep-link highlight**: prop `highlightedCommentId?: number | null` — khi match, thêm `ring-2 ring-primary` + `scrollIntoView({ behavior: "smooth" })`; prop truyền xuống replies; `showReplies` tự expand khi reply nào là target
 - ✅ **CommentSection** (`features/task/components/CommentSection.tsx`):
   - `useLazyGetCommentsQuery` — `loadInitial()` on mount và sau mutations; `loadMore()` append
   - Group: `topLevel` + `repliesMap: Record<number, CommentResponse[]>`
-  - Render: `CommentInput` ở top, list `CommentItem`, "Load more" button, empty state
+  - **Notification deep-link**: đọc `?commentId=` từ URL (`useSearchParams`) → tự động load thêm trang cho đến khi tìm thấy comment → set `highlightedCommentId`
+  - Highlight tự xóa khi user click bất kỳ đâu (`document` click listener, `once: true`, defer 400ms để tránh clear ngay khi navigate)
+  - Render: `CommentInput` ở top, list `CommentItem` (truyền `highlightedCommentId`), "Load more" button, empty state
   - Props: `taskId: number`, `projectId: number`
 - ✅ **TaskDetailPage** — thêm `<CommentSection taskId={taskId} projectId={projectId} />` sau 2-column grid
 - ✅ Cập nhật **store.ts**: đăng ký `commentApi` reducer + middleware
@@ -916,6 +921,12 @@ npm run preview
   - `payload.actorName` — fallback actor name cho các type khác
   - `payload.token` — raw invite token (chỉ `WORKSPACE_INVITE`), dùng navigate `/workspaces/invitation?token=<token>`
   - `payload.newRole`, `payload.oldRole` — cho `WORKSPACE_ROLE_CHANGE`, `PROJECT_ROLE_UPDATED`
+  - `payload.taskId`, `payload.projectId`, `payload.workspaceId` — cho `COMMENT_*` types (dùng xây deep-link URL)
+- **Comment notification types**:
+  - `COMMENT_MENTION` — gửi cho user bị mention trong comment; `referenceId` = commentId; navigate → task + `?commentId=<id>`
+  - `COMMENT_REACTION` — gửi cho owner của comment khi ai đó thả icon; `referenceId` = commentId; navigate → task + `?commentId=<id>`
+  - `COMMENT_TASK` — gửi cho assignees của task khi có comment mới; `referenceId` = commentId; navigate → task + `?commentId=<id>`
+  - icon: `MessageSquare` (amber, COMMENT_MENTION), `SmilePlus` (pink, COMMENT_REACTION), `MessageCircle` (blue, COMMENT_TASK)
 - **`WORKSPACE_REVIEW_REQUEST`** type (Sprint 9): backend gửi khi OWNER/MANAGER review join request. FE phát hiện approved vs rejected bằng cách kiểm tra `notification.referenceId !== null` (backend chỉ set `referenceId` khi APPROVED).
 - **`WORKSPACE_JOIN_REQUEST` navigation**: navigate đến `/workspaces/${workspaceId}?tab=members` để manager review ngay.
 - **WebSocket `createdAt` issue**: Backend `NotificationMessage` DTO (WebSocket push) không nhất thiết có `createdAt`. REST API entity luôn có. Fix 2 lớp: (1) fallback `new Date().toISOString()` trong `useNotificationSocket`; (2) IIFE guard `isNaN(d.getTime())` → `"just now"` trong `NotificationItem`.
@@ -948,16 +959,22 @@ npm run preview
   - Case 2 — no prior reaction → `addReaction` (POST), set `myCurrentReaction = icon`
   - Case 3 — switch to different icon → `updateReaction` (PATCH), set `myCurrentReaction = newIcon` (1 request thay vì DELETE + POST)
 - **Reaction tooltip (hover)**: `ReactionButton` gọi `useLazyGetReactionUsersQuery({ commentId, icon }, { preferCacheValue: true })` khi `onMouseEnter`. Hiển thị up to 8 avatars + names + "+N others". Cache value được tái dùng nếu đã fetch trước.
-- **@mention**: `CommentInput` theo dõi `/@(\w*)$/` trước cursor trong thẻ `onKeyUp`. Khi match: filter `members` theo keyword → dropdown. `onMouseDown + preventDefault` để tránh blur textarea trước khi item được select. Insert `@username ` vào text tại vị trí cursor sau khi chọn.
+- **@mention + mentionUserIds**: `CommentInput` theo dõi `/@(\w*)$/` trước cursor; sau khi user chọn → insert `@tag `. Khi submit/save, `extractMentionIds(text, members)` parse tất cả `@tag` token → map thành user IDs → gửi kèm `mentionUserIds` trong create/update request → backend tạo `COMMENT_MENTION` notification cho người được mention.
 - **Cursor pagination**: `CommentSection` dùng lazy query. `loadInitial()` fetch từ đầu (cursor=undefined, limit=20) → replaces `allComments`. `loadMore()` dùng `allComments[allComments.length-1].id` làm cursor → append. `loadInitial()` được gọi lại sau mỗi create/update/delete.
 - **1-level reply grouping**: `CommentSection` chia `allComments` thành `topLevel` (parentCommentId==null) và `repliesMap: Record<number, CommentResponse[]>`. Mỗi `CommentItem` nhận `replies` prop. `CommentItem` với `isReply=true` ẩn nút Reply để chặn nest thêm.
 - **Permission check trong CommentItem**: `canEdit = currentUser?.id === comment.user.id`, `canDelete = canEdit || isManager`. `isManager` được truyền từ `CommentSection` (lấy từ `useGetCurrentUserRoleQuery(projectId)`).
-- **Inline confirm pattern**: Delete dùng `confirmDelete: boolean` state để hiện "Are you sure?" inline (không mở Dialog/Modal). Giữ nhất quán với `TaskBoardPage` delete flow.
+- **Inline confirm pattern**: Delete dùng `confirmDelete: boolean` state để hiện "Are you sure?" inline (không mở Dialog/Modal).
+- **Comment notification deep-link**:
+  - URL format: `/workspaces/:wid/projects/:pid/tasks/:tid?commentId=<id>` (backend gửi `taskId`, `projectId`, `workspaceId` trong notification payload; `referenceId` = commentId)
+  - `CommentSection` đọc `commentId` từ `useSearchParams` → chạy "chase" loop: nếu ID chưa có trong `allComments`, tự động fetch trang tiếp cho đến khi tìm thấy rồi set `highlightedCommentId`
+  - `CommentItem` nhận `highlightedCommentId` prop: nếu match → `ring-2 ring-primary shadow-sm` + `scrollIntoView({ behavior: "smooth", block: "center" })`
+  - Replies tự expand (`showReplies = true` khi bất kỳ reply nào là target); prop truyền xuống nested `CommentItem` replies
+  - Highlight tự xóa khi user click bất kỳ đâu (`document` click listener, `once: true`, defer 400ms)
 
 ### Việc cần làm tiếp theo
 
 - ~~**Tasks (Sprint tiếp)**~~: ✅ Task Board (Kanban + List) + Task Detail đã implement. Route `/workspaces/:id/projects/:projectId/tasks` và `/:taskId`. FE đã tách đúng `updateTask` vs `updateTaskStatus` endpoint theo permission model.
-- ~~**Comment System (Sprint 10)**~~: ✅ Đã hoàn thành. CommentSection, CommentItem (reactions + 1-per-user + hover tooltip + @mention), CommentInput, commentApi (8 endpoints), cursor pagination.
+- ~~**Comment System (Sprint 10)**~~: ✅ Đã hoàn thành. CommentSection, CommentItem (reactions + 1-per-user + hover tooltip + @mention + mentionUserIds + notification deep-link highlight), CommentInput, commentApi (8 endpoints), cursor pagination, COMMENT_REACTION + COMMENT_TASK notification types.
 - **Workspace Join Request — backend alignment**: `WorkspaceJoinRequestResponse.java` cần embed `UserSummaryResponse` (thay vì chỉ `userId: Long`) để FE hiển thị tên/avatar trong Join Requests section của `WorkspaceMembersTab`.
 - **Workspace Join Request UI — từ ProjectDetailPage**: Non-member của project cũng có thể cần thấy "Request to Join" button tương tự pattern workspace; hiện chỉ có FE API hook, chưa có UI trigger.
 - **Notification — Project Join Request deep-link**: `PROJECT_JOIN_REQUEST` notification nên navigate đến tab Join Requests của ProjectDetailPage (đã có pattern với `?tab=` cho workspace, cần làm tương tự cho project).
