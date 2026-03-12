@@ -3,6 +3,7 @@ package dev.alro127.tasksense.repository.jpa;
 import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.jspecify.annotations.NullMarked;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -20,36 +21,35 @@ public interface WorkspaceRepository extends JpaRepository<WorkspaceEntity, Long
     List<WorkspaceEntity> findAllByOwnerId(Long ownerId);
 
     @Query("""
-       SELECT DISTINCT w
-       FROM WorkspaceEntity w
-       JOIN WorkspaceMemberEntity wm ON wm.workspace = w
-       WHERE wm.user.id = :userId
-       """)
-    List<WorkspaceEntity> findAllByMemberUserId(Long userId);
+            SELECT DISTINCT w
+            FROM WorkspaceEntity w
+            JOIN WorkspaceMemberEntity wm ON wm.workspace = w
+            WHERE wm.user.id = :userId
+            """)
+    Page<WorkspaceEntity> findAllByMemberUserId(Long userId, Pageable pageable);
 
     boolean existsById(Long id);
 
     @Query("""
-        SELECT w
-        FROM WorkspaceEntity w
-        JOIN FETCH w.owner
-        WHERE LOWER(w.name) LIKE LOWER(CONCAT('%', :name, '%'))
-        AND w.isPublic = true
-        AND (:cursor IS NULL OR w.id < :cursor)
-        ORDER BY w.id DESC
-    """)
+                SELECT w
+                FROM WorkspaceEntity w
+                JOIN FETCH w.owner
+                WHERE LOWER(w.name) LIKE LOWER(CONCAT('%', :name, '%'))
+                AND w.isPublic = true
+                AND (:cursor IS NULL OR w.id < :cursor)
+                ORDER BY w.id DESC
+            """)
     List<WorkspaceEntity> searchWorkspaces(
             @Param("name") String name,
             @Param("cursor") Long cursor,
-            Pageable pageable
-    );
+            Pageable pageable);
 
     @Query("""
-        SELECT w
-        FROM WorkspaceEntity w
-        JOIN FETCH w.owner
-        WHERE w.owner.id = :userId
-        AND w.isPublic = true
-    """)
+                SELECT w
+                FROM WorkspaceEntity w
+                JOIN FETCH w.owner
+                WHERE w.owner.id = :userId
+                AND w.isPublic = true
+            """)
     List<WorkspaceEntity> findPublicWorkspacesByOwner(@Param("userId") Long userId);
 }

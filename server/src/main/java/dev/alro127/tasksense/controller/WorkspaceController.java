@@ -1,12 +1,15 @@
 package dev.alro127.tasksense.controller;
 
 import dev.alro127.tasksense.dto.common.ApiResponse;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.CreateWorkspaceRequest;
 import dev.alro127.tasksense.dto.request.UpdateWorkspaceRequest;
 import dev.alro127.tasksense.dto.response.WorkspaceResponse;
 import dev.alro127.tasksense.service.WorkspaceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -33,11 +36,11 @@ public class WorkspaceController {
         }
 
         @GetMapping
-        public ResponseEntity<ApiResponse<List<WorkspaceResponse>>> getMyWorkspaces() {
-                ApiResponse<List<WorkspaceResponse>> response = new ApiResponse<>(
+        public ResponseEntity<ApiResponse<PageResponse<WorkspaceResponse>>> getMyWorkspaces(Pageable pageable) {
+                ApiResponse<PageResponse<WorkspaceResponse>> response = new ApiResponse<>(
                                 "200",
                                 "Get workspaces successfully",
-                                workspaceService.getMyWorkspaces(),
+                                workspaceService.getMyWorkspaces(pageable),
                                 null);
 
                 return ResponseEntity.ok(response);

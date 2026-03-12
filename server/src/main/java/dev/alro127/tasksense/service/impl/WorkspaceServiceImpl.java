@@ -4,6 +4,7 @@ import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
 import dev.alro127.tasksense.domain.enums.WorkspaceRole;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.CreateWorkspaceRequest;
 import dev.alro127.tasksense.dto.request.UpdateWorkspaceRequest;
 import dev.alro127.tasksense.dto.response.WorkspaceResponse;
@@ -17,6 +18,8 @@ import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.WorkspaceService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -73,13 +76,18 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     }
 
     @Override
-    public List<WorkspaceResponse> getMyWorkspaces() {
+    public PageResponse<WorkspaceResponse> getMyWorkspaces(Pageable pageable) {
         UserEntity currentUser = securityService.getCurrentUser();
 
-        return workspaceRepository.findAllByMemberUserId(currentUser.getId())
-                .stream()
-                .map(WorkspaceResponse::mapToResponse)
-                .toList();
+        Page<WorkspaceResponse> responsePage = workspaceRepository.findAllByMemberUserId(currentUser.getId(), pageable)
+                .map(WorkspaceResponse::mapToResponse);
+
+        return new PageResponse<>(
+                responsePage.getContent(),
+                responsePage.getNumber(),
+                responsePage.getSize(),
+                responsePage.getTotalElements(),
+                responsePage.getTotalPages());
     }
 
     @Override
@@ -116,7 +124,8 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         OffsetDateTime now = OffsetDateTime.now();
 
-        // Cascade soft delete: tasks → project members → projects → workspace members → invites → workspace
+        // Cascade soft delete: tasks → project members → projects → workspace members →
+        // invites → workspace
         List<Long> projectIds = projectRepository.findIdsByWorkspaceId(id);
         if (!projectIds.isEmpty()) {
             taskRepository.softDeleteByProjectIds(projectIds, now);
