@@ -466,3 +466,26 @@ export interface CommentUpdateRequest {
 export interface CommentReactionRequest {
   icon: string;
 }
+
+// ─── Attachment ───────────────────────────────────────────────────────────────
+export interface AttachmentResponse {
+  id: number;
+  taskId: number;
+  uploaderId: number;
+  fileUrl: string;
+  fileType: string | null;
+  fileSize: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAttachmentFileInfo {
+  fileUrl: string;
+  fileType?: string;
+  fileSize?: number;
+}
+
+export interface CreateAttachmentsRequest {
+  taskId: number;
+  files: CreateAttachmentFileInfo[];
+}

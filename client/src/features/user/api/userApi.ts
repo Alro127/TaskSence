@@ -57,6 +57,15 @@ export const userApi = createApi({
       }),
     }),
 
+    // Get presigned URL for document upload
+    getDocumentPresignUrl: builder.mutation<ApiResponse<MediaResponse>, MediaRequest>({
+      query: (body) => ({
+        url: "/media/presign/document",
+        method: "POST",
+        body,
+      }),
+    }),
+
     // Search users by keyword — GET /users/search?keyword=...
     searchUsers: builder.query<ApiResponse<UserSearchResult[]>, string>({
       query: (keyword) => ({
@@ -77,6 +86,7 @@ export const {
   useLazyGetCurrentUserQuery,
   useUpdateUserProfileMutation,
   useGetAvatarPresignUrlMutation,
+  useGetDocumentPresignUrlMutation,
   useSearchUsersQuery,
   useLazySearchUsersQuery,
   useGetUserByIdQuery,
