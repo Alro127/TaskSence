@@ -20,7 +20,6 @@ import java.util.List;
 public class NotificationController {
 
     private final NotificationService notificationService;
-    private final SimpMessagingTemplate messagingTemplate;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<NotificationResponse>>> getMyNotifications(

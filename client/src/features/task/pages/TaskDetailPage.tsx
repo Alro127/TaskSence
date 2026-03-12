@@ -54,6 +54,7 @@ import {
 import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
 import { TaskFormSheet } from "../components/TaskFormSheet";
 import { CommentSection } from "../components/CommentSection";
+import { AttachmentSection } from "../components/AttachmentSection";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
 import { useGetProjectByIdQuery } from "@/features/project/api/projectApi";
 
@@ -602,6 +603,9 @@ export function TaskDetailPage() {
               </div>
             )}
           </Card>
+
+          {/* Attachments */}
+          <AttachmentSection taskId={taskId} />
         </div>
 
         {/* ───── Right sidebar ───── */}
