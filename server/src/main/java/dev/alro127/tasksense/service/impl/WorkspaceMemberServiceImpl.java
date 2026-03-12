@@ -6,9 +6,11 @@ import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
 import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.domain.enums.WorkspaceRole;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.dto.request.UpdateWorkspaceRoleRequest;
 import dev.alro127.tasksense.dto.response.WorkspaceMemberResponse;
+import dev.alro127.tasksense.dto.response.WorkspaceResponse;
 import dev.alro127.tasksense.exception.BadRequestException;
 import dev.alro127.tasksense.exception.ConflictException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
@@ -21,6 +23,9 @@ import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.WorkspaceMemberService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,15 +45,21 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
         private final UserRepository userRepository;
 
         @Override
-        public List<WorkspaceMemberResponse> getWorkspaceMembers(Long workspaceId) {
+        public PageResponse<WorkspaceMemberResponse> getWorkspaceMembers(Long workspaceId, Pageable pageable) {
 
                 workspaceRepository.findById(workspaceId)
                                 .orElseThrow(() -> new EntityNotFoundException("Workspace not found"));
 
-                return workspaceMemberRepository.findByWorkspaceId(workspaceId)
-                                .stream()
-                                .map(WorkspaceMemberResponse::mapToResponse)
-                                .toList();
+                Page<WorkspaceMemberResponse> responsePage = workspaceMemberRepository
+                                .findByWorkspaceId(workspaceId, pageable)
+                                .map(WorkspaceMemberResponse::mapToResponse);
+
+                return new PageResponse<>(
+                                responsePage.getContent(),
+                                responsePage.getNumber(),
+                                responsePage.getSize(),
+                                responsePage.getTotalElements(),
+                                responsePage.getTotalPages());
         }
 
         @Override

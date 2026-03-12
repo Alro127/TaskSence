@@ -1,11 +1,14 @@
 package dev.alro127.tasksense.controller;
 
 import dev.alro127.tasksense.dto.common.ApiResponse;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.UpdateWorkspaceRoleRequest;
 import dev.alro127.tasksense.dto.response.WorkspaceMemberResponse;
 import dev.alro127.tasksense.service.WorkspaceMemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -21,13 +24,13 @@ public class WorkspaceMemberController {
 
         @GetMapping("/{workspaceId}/members")
         @PreAuthorize("@perm.workspace(#workspaceId, 'VIEW_MEMBERS')")
-        public ResponseEntity<ApiResponse<List<WorkspaceMemberResponse>>> getWorkspaceMembers(
-                        @PathVariable Long workspaceId) {
+        public ResponseEntity<ApiResponse<PageResponse<WorkspaceMemberResponse>>> getWorkspaceMembers(
+                        @PathVariable Long workspaceId, Pageable pageable) {
 
-                ApiResponse<List<WorkspaceMemberResponse>> response = new ApiResponse<>(
+                ApiResponse<PageResponse<WorkspaceMemberResponse>> response = new ApiResponse<>(
                                 "200",
                                 "Get workspace members successfully",
-                                workspaceMemberService.getWorkspaceMembers(workspaceId),
+                                workspaceMemberService.getWorkspaceMembers(workspaceId, pageable),
                                 null);
 
                 return ResponseEntity.ok(response);

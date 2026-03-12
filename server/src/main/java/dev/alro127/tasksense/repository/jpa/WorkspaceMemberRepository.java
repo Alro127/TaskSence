@@ -2,6 +2,9 @@ package dev.alro127.tasksense.repository.jpa;
 
 import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
 import dev.alro127.tasksense.domain.enums.WorkspaceRole;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -23,7 +26,7 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
 
     Optional<WorkspaceMemberEntity> findByWorkspaceIdAndUserId(Long workspaceId, Long userId);
 
-    List<WorkspaceMemberEntity> findByWorkspaceId(Long workspaceId);
+    Page<WorkspaceMemberEntity> findByWorkspaceId(Long workspaceId, Pageable pageable);
 
     List<WorkspaceMemberEntity> findByWorkspaceIdAndUserIdIn(Long workspaceId, List<Long> userIds);
 
