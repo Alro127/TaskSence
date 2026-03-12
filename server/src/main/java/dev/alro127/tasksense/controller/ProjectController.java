@@ -1,12 +1,15 @@
 package dev.alro127.tasksense.controller;
 
 import dev.alro127.tasksense.dto.common.ApiResponse;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.CreateProjectRequest;
 import dev.alro127.tasksense.dto.request.UpdateProjectRequest;
 import dev.alro127.tasksense.dto.response.ProjectResponse;
 import dev.alro127.tasksense.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -37,13 +40,14 @@ public class ProjectController {
 
         @GetMapping
         @PreAuthorize("@perm.workspace(#workspaceId, 'VIEW')")
-        public ResponseEntity<ApiResponse<List<ProjectResponse>>> getProjectsByWorkspace(
-                        @PathVariable Long workspaceId) {
+        public ResponseEntity<ApiResponse<PageResponse<ProjectResponse>>> getProjectsByWorkspace(
+                        @PathVariable Long workspaceId,
+                        Pageable pageable) {
 
-                ApiResponse<List<ProjectResponse>> response = new ApiResponse<>(
+                ApiResponse<PageResponse<ProjectResponse>> response = new ApiResponse<>(
                                 "200",
                                 "Get projects successfully",
-                                projectService.getProjectsByWorkspace(workspaceId),
+                                projectService.getProjectsByWorkspace(workspaceId, pageable),
                                 null);
 
                 return ResponseEntity.ok(response);
