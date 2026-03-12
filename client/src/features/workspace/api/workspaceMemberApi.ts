@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import type {
   ApiResponse,
+  PageResponse,
   WorkspaceMember,
   UpdateWorkspaceRoleRequest,
 } from "@/types/api";
@@ -24,7 +25,7 @@ export const workspaceMemberApi = createApi({
   tagTypes: ["WorkspaceMember"],
   endpoints: (builder) => ({
     getWorkspaceMembers: builder.query<
-      ApiResponse<WorkspaceMember[]>,
+      ApiResponse<PageResponse<WorkspaceMember>>,
       number
     >({
       query: (workspaceId) => `/workspaces/${workspaceId}/members`,

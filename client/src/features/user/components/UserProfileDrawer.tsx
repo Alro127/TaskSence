@@ -66,7 +66,7 @@ export function UserProfileDrawer({ userId, open, onClose }: UserProfileDrawerPr
   });
 
   const { data: myWsData } = useGetMyWorkspacesQuery();
-  const myWorkspaceIds = new Set((myWsData?.data ?? []).map((w) => w.id));
+  const myWorkspaceIds = new Set((myWsData?.data?.data ?? []).map((w) => w.id));
 
   const publicWorkspaces = (publicWsData?.data ?? []).filter(
     (ws) => !myWorkspaceIds.has(ws.id)

@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import type {
   ApiResponse,
+  PageResponse,
   Workspace,
   CreateWorkspaceRequest,
   UpdateWorkspaceRequest,
@@ -24,7 +25,7 @@ export const workspaceApi = createApi({
   }),
   tagTypes: ["Workspace"],
   endpoints: (builder) => ({
-    getMyWorkspaces: builder.query<ApiResponse<Workspace[]>, void>({
+    getMyWorkspaces: builder.query<ApiResponse<PageResponse<Workspace>>, void>({
       query: () => "/workspaces",
       providesTags: ["Workspace"],
     }),

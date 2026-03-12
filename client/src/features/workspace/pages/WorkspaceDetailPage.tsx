@@ -84,7 +84,7 @@ export function WorkspaceDetailPage() {
   const { data: membersData } = useGetWorkspaceMembersQuery(workspaceId, {
     skip: isNaN(workspaceId),
   });
-  const members = membersData?.data ?? [];
+  const members = membersData?.data?.data ?? [];
   const myMember = members.find((m) => m.user.id === currentUserId);
   const myRole = myMember?.role ?? null;
   const canManage = myRole === "OWNER" || myRole === "MANAGER";

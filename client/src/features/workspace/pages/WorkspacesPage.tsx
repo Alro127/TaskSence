@@ -26,7 +26,7 @@ export function WorkspacesPage() {
   const currentUserId = useAppSelector((s) => s.user.currentUser?.id);
 
   const { data, isLoading, isError } = useGetMyWorkspacesQuery();
-  const workspaces = data?.data ?? [];
+  const workspaces = data?.data?.data ?? [];
 
   // Modal state
   const [isCreateOpen, setIsCreateOpen] = useState(false);

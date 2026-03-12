@@ -107,16 +107,16 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
     useGetWorkspaceMembersQuery(workspaceId);
 
   const { data: invitesData, isLoading: invitesLoading } =
-    useGetWorkspaceInvitesQuery(workspaceId);
+    useGetWorkspaceInvitesQuery({ workspaceId, size: 50 });
 
   // Compute current user's role early so join requests query can use it
-  const members = membersData?.data ?? [];
+  const members = membersData?.data?.data ?? [];
   const myMember = members.find((m) => m.user.id === currentUserId);
   const myRole = myMember?.role ?? null;
   const canManage = myRole === "OWNER" || myRole === "MANAGER";
 
   const { data: joinRequestsData, isLoading: joinRequestsLoading } =
-    useGetWorkspaceJoinRequestsQuery(workspaceId, { skip: !canManage });
+    useGetWorkspaceJoinRequestsQuery({ workspaceId, size: 50 }, { skip: !canManage });
 
   const [updateRole, { isLoading: isUpdatingRole }] = useUpdateMemberRoleMutation();
   const [removeMember, { isLoading: isRemoving }] = useRemoveMemberMutation();
@@ -129,10 +129,10 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
   const [expandedRequestId, setExpandedRequestId] = useState<number | null>(null);
   const [reviewingId, setReviewingId] = useState<number | null>(null);
 
-  const pendingInvites = (invitesData?.data ?? []).filter(
+  const pendingInvites = (invitesData?.data?.data ?? []).filter(
     (inv) => inv.status === "PENDING"
   );
-  const pendingJoinRequests = (joinRequestsData?.data ?? []).filter(
+  const pendingJoinRequests = (joinRequestsData?.data?.data ?? []).filter(
     (req) => req.status === "PENDING"
   );
 

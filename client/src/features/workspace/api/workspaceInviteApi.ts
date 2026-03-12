@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import type {
   ApiResponse,
+  PageResponse,
   WorkspaceInvite,
   CreateWorkspaceInviteRequest,
   CreateBulkWorkspaceInviteRequest,
@@ -26,11 +27,14 @@ export const workspaceInviteApi = createApi({
   tagTypes: ["WorkspaceInvite"],
   endpoints: (builder) => ({
     getWorkspaceInvites: builder.query<
-      ApiResponse<WorkspaceInvite[]>,
-      number
+      ApiResponse<PageResponse<WorkspaceInvite>>,
+      { workspaceId: number; page?: number; size?: number }
     >({
-      query: (workspaceId) => `/workspaces/${workspaceId}/invites`,
-      providesTags: (_result, _error, workspaceId) => [
+      query: ({ workspaceId, page = 0, size = 10 }) => ({
+        url: `/workspaces/${workspaceId}/invites`,
+        params: { page, size },
+      }),
+      providesTags: (_result, _error, { workspaceId }) => [
         { type: "WorkspaceInvite", id: workspaceId },
       ],
     }),

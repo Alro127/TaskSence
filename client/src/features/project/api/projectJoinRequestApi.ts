@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import type {
   ApiResponse,
+  PageResponse,
   ProjectJoinRequest,
   SendProjectJoinRequestBody,
   ReviewProjectJoinRequestBody,
@@ -40,9 +41,15 @@ export const projectJoinRequestApi = createApi({
     }),
 
     /** GET /projects/{projectId}/join-requests */
-    getJoinRequests: builder.query<ApiResponse<ProjectJoinRequest[]>, number>({
-      query: (projectId) => `/projects/${projectId}/join-requests`,
-      providesTags: (_result, _error, projectId) => [
+    getJoinRequests: builder.query<
+      ApiResponse<PageResponse<ProjectJoinRequest>>,
+      { projectId: number; page?: number; size?: number }
+    >({
+      query: ({ projectId, page = 0, size = 10 }) => ({
+        url: `/projects/${projectId}/join-requests`,
+        params: { page, size },
+      }),
+      providesTags: (_result, _error, { projectId }) => [
         { type: "ProjectJoinRequest", id: projectId },
       ],
     }),

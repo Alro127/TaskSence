@@ -303,6 +303,8 @@ export function ProjectDetailPage() {
   const defaultTab = searchParams.get("tab") ?? "overview";
   const [memberPage, setMemberPage] = useState(0);
   const MEMBER_PAGE_SIZE = 12;
+  const [joinRequestPage, setJoinRequestPage] = useState(0);
+  const JOIN_REQUEST_PAGE_SIZE = 10;
   const workspaceNameFromState = (location.state as { workspaceName?: string; projectSnapshot?: import("@/types/api").Project } | null)?.workspaceName;
   const projectSnapshot = (location.state as { projectSnapshot?: import("@/types/api").Project } | null)?.projectSnapshot ?? null;
 
@@ -354,11 +356,14 @@ export function ProjectDetailPage() {
   const allMembers = allMembersData?.data?.data ?? [];
 
   const { data: joinRequestsData, isLoading: isJoinRequestsLoading } =
-    useGetJoinRequestsQuery(projectId, {
-      skip: skipMemberOnlyQueries || !isManager,
-    });
-  const joinRequests = joinRequestsData?.data ?? [];
-  const pendingCount = joinRequests.filter((r) => r.status === "PENDING").length;
+    useGetJoinRequestsQuery(
+      { projectId, page: joinRequestPage, size: JOIN_REQUEST_PAGE_SIZE },
+      { skip: skipMemberOnlyQueries || !isManager },
+    );
+  const joinRequests = joinRequestsData?.data?.data ?? [];
+  const joinRequestsTotalElements = joinRequestsData?.data?.totalElements ?? 0;
+  const joinRequestsTotalPages = joinRequestsData?.data?.totalPages ?? 1;
+  const pendingCount = joinRequestsTotalElements;
 
   const { data: tasksData, isLoading: isTasksLoading } = useGetTasksByProjectQuery(
     projectId,
@@ -985,7 +990,7 @@ export function ProjectDetailPage() {
           <TabsContent value="join-requests" className="mt-6 space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                {pendingCount} pending · {joinRequests.length} total
+                {joinRequestsTotalElements} pending join request{joinRequestsTotalElements !== 1 ? "s" : ""}
               </p>
             </div>
 
@@ -1004,23 +1009,67 @@ export function ProjectDetailPage() {
                 </div>
               </div>
             ) : (
+              <>
               <div className="space-y-3">
-                {/* Pending first */}
-                {joinRequests
-                  .slice()
-                  .sort((a, b) => {
-                    if (a.status === "PENDING" && b.status !== "PENDING") return -1;
-                    if (a.status !== "PENDING" && b.status === "PENDING") return 1;
-                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                  })
-                  .map((request) => (
-                    <JoinRequestItem
-                      key={request.id}
-                      request={request}
-                      canReview={isManager}
-                    />
-                  ))}
+                {joinRequests.map((request) => (
+                  <JoinRequestItem
+                    key={request.id}
+                    request={request}
+                    canReview={isManager}
+                  />
+                ))}
               </div>
+
+              {joinRequestsTotalPages > 1 && (
+                <Pagination className="mt-4">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setJoinRequestPage((p) => Math.max(0, p - 1))}
+                        aria-disabled={joinRequestPage === 0}
+                        className={joinRequestPage === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: joinRequestsTotalPages }, (_, i) => {
+                      const showPage =
+                        i === 0 ||
+                        i === joinRequestsTotalPages - 1 ||
+                        Math.abs(i - joinRequestPage) <= 1;
+                      if (!showPage) {
+                        if (i === 1 || i === joinRequestsTotalPages - 2) {
+                          return (
+                            <PaginationItem key={`ellipsis-${i}`}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      }
+                      return (
+                        <PaginationItem key={i}>
+                          <PaginationLink
+                            isActive={i === joinRequestPage}
+                            onClick={() => setJoinRequestPage(i)}
+                            className="cursor-pointer"
+                          >
+                            {i + 1}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => setJoinRequestPage((p) => Math.min(joinRequestsTotalPages - 1, p + 1))}
+                        aria-disabled={joinRequestPage === joinRequestsTotalPages - 1}
+                        className={joinRequestPage === joinRequestsTotalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+              </>
             )}
           </TabsContent>
         )}

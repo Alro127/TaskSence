@@ -99,7 +99,7 @@ export function AddMembersModal({
   const { data: projectMembersData } = useGetMembersQuery(projectId, { skip: !open });
   const [addMembers, { isLoading: isAdding }] = useAddMembersMutation();
 
-  const workspaceMembers = workspaceMembersData?.data ?? [];
+  const workspaceMembers = workspaceMembersData?.data?.data ?? [];
   const projectMemberIds = useMemo(
     () => new Set((projectMembersData?.data ?? []).map((m) => m.user.id)),
     [projectMembersData],

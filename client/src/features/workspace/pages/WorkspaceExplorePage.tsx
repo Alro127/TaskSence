@@ -12,7 +12,7 @@ export function WorkspaceExplorePage() {
 
   const { data: myWorkspacesData } = useGetMyWorkspacesQuery();
   const myWorkspaceIds = new Set(
-    (myWorkspacesData?.data ?? []).map((w) => w.id)
+    (myWorkspacesData?.data?.data ?? []).map((w) => w.id)
   );
 
   const { data, isLoading, isFetching } = useSearchWorkspacesQuery(
