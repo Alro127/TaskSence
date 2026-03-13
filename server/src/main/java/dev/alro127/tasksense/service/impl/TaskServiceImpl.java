@@ -1,6 +1,7 @@
 package dev.alro127.tasksense.service.impl;
 
 import dev.alro127.tasksense.domain.entity.ProjectEntity;
+import dev.alro127.tasksense.domain.entity.SprintEntity;
 import dev.alro127.tasksense.domain.entity.TaskEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.enums.TaskPriority;
@@ -14,6 +15,7 @@ import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.exception.UnauthorizedException;
 import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
+import dev.alro127.tasksense.repository.jpa.SprintRepository;
 import dev.alro127.tasksense.repository.jpa.TaskRepository;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
 import dev.alro127.tasksense.security.permission.PermissionChecker;
@@ -36,6 +38,7 @@ public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
+    private final SprintRepository sprintRepository;
     private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final SecurityService securityService;
@@ -89,6 +92,21 @@ public class TaskServiceImpl implements TaskService {
         return assignees;
     }
 
+    private SprintEntity resolveSprint(Long projectId, Long sprintId) {
+        if (sprintId == null) {
+            return null;
+        }
+
+        SprintEntity sprint = sprintRepository.findById(sprintId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found"));
+
+        if (!sprint.getProject().getId().equals(projectId)) {
+            throw new BadRequestException("Sprint does not belong to this project");
+        }
+
+        return sprint;
+    }
+
     // ===== CRUD =====
 
     @Override
@@ -106,6 +124,7 @@ public class TaskServiceImpl implements TaskService {
                 .priority(request.getPriority())
                 .startDate(request.getStartDate())
                 .dueDate(request.getDueDate())
+                .sprint(resolveSprint(projectId, request.getSprintId()))
                 .createdBy(currentUser).assignees(resolveAssignees(request.getAssigneeIds(), projectId));
 
         if (request.getParentTaskId() != null) {
@@ -186,6 +205,12 @@ public class TaskServiceImpl implements TaskService {
             task.setPosition(request.getPosition());
         if (request.getAssigneeIds() != null)
             task.setAssignees(resolveAssignees(request.getAssigneeIds(), projectId));
+
+        if (request.isRemoveSprint()) {
+            task.setSprint(null);
+        } else if (request.getSprintId() != null) {
+            task.setSprint(resolveSprint(projectId, request.getSprintId()));
+        }
 
         if (request.isRemoveParent()) {
             task.setParentTask(null);

@@ -15,6 +15,7 @@ import {
   Settings,
   LayoutGrid,
   ClipboardList,
+  Flag,
   CheckCircle2,
   XCircle,
   X,
@@ -53,6 +54,7 @@ import {
   RequestJoinProjectDialog,
   STATUS_CONFIG,
   ROLE_LABEL,
+  SprintManagementTab,
 } from "../components";
 import {
   Pagination,
@@ -688,6 +690,10 @@ export function ProjectDetailPage() {
             <ListTodo className="h-4 w-4" />
             Tasks
           </TabsTrigger>
+          <TabsTrigger value="sprints" className="gap-2">
+            <Flag className="h-4 w-4" />
+            Sprints
+          </TabsTrigger>
           <TabsTrigger value="members" className="gap-2">
             <Users className="h-4 w-4" />
             Members
@@ -885,6 +891,15 @@ export function ProjectDetailPage() {
               </div>
             </>
           )}
+        </TabsContent>
+
+        {/* ── Sprints Tab ── */}
+        <TabsContent value="sprints" className="mt-6 space-y-6">
+          <SprintManagementTab
+            workspaceId={workspaceId}
+            projectId={projectId}
+            isManager={isManager}
+          />
         </TabsContent>
 
         {/* ── Members Tab ── */}

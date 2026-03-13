@@ -48,7 +48,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
         public PageResponse<WorkspaceMemberResponse> getWorkspaceMembers(Long workspaceId, Pageable pageable) {
 
                 workspaceRepository.findById(workspaceId)
-                                .orElseThrow(() -> new EntityNotFoundException("Workspace not found"));
+                                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
                 Page<WorkspaceMemberResponse> responsePage = workspaceMemberRepository
                                 .findByWorkspaceId(workspaceId, pageable)
