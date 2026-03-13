@@ -386,6 +386,62 @@ export interface DeleteNotificationsRequest {
   ids: number[];
 }
 
+// ─── Sprint ───────────────────────────────────────────────────────────────────
+export type SprintStatus = "PLANNING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+
+export interface SprintResponse {
+  id: number;
+  projectId: number;
+  name: string;
+  goal: string | null;
+  taskCount: number;
+  completedTaskCount: number;
+  status: SprintStatus;
+  startDate: string;
+  endDate: string;
+  createdBy: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSprintRequest {
+  projectId: number;
+  name: string;
+  goal?: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface UpdateSprintRequest {
+  name: string;
+  goal?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+// ─── Tag ─────────────────────────────────────────────────────────────────────
+export interface TagResponse {
+  id: number;
+  name: string;
+  color: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTagRequest {
+  name: string;
+  color?: string;
+}
+
+export interface UpdateTagRequest {
+  name: string;
+  color?: string;
+}
+
+export interface UpdateTaskTagsRequest {
+  tagIds: number[];
+}
+
 // ─── Task ────────────────────────────────────────────────────────────────────
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE";
@@ -404,6 +460,8 @@ export interface TaskResponse {
   position: number | null;
   createdBy: UserSummaryResponse;
   assignees: UserSummaryResponse[];
+  tags: TagResponse[];
+  sprintId: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -415,6 +473,7 @@ export interface CreateTaskRequest {
   startDate?: string;
   dueDate?: string;
   parentTaskId?: number;
+  sprintId?: number;
   assigneeIds?: number[];
 }
 
@@ -428,7 +487,9 @@ export interface UpdateTaskRequest {
   position?: number;
   assigneeIds?: number[];
   parentTaskId?: number;
+  sprintId?: number;
   removeParent?: boolean;
+  removeSprint?: boolean;
 }
 
 export interface UpdateTaskStatusRequest {

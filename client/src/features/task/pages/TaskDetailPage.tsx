@@ -53,6 +53,7 @@ import {
 } from "../api/taskApi";
 import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
 import { TaskFormSheet } from "../components/TaskFormSheet";
+import { TaskTagSelector } from "../components/TaskTagSelector";
 import { CommentSection } from "../components/CommentSection";
 import { AttachmentSection } from "../components/AttachmentSection";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
@@ -612,71 +613,78 @@ export function TaskDetailPage() {
         </div>
 
         {/* ───── Right sidebar ───── */}
-        <div className="space-y-4">
-          <Card className="p-5 space-y-5">
-            {/* Status */}
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Status
-              </p>
-              <Select
-                value={task.status}
-                onValueChange={(v) => saveStatus(v as TaskStatus)}
-              >
-                <SelectTrigger className={cn("border font-medium", statusCfg.badgeClass)}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Separator />
-
-            {/* Priority */}
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Priority
-              </p>
-              <Select
-                value={task.priority ?? "none"}
-                onValueChange={(v) => {
-                  if (v !== "none") savePriority(v as TaskPriority);
-                }}
-              >
-                <SelectTrigger
-                  className={cn(
-                    "border font-medium",
-                    priorityCfg ? priorityCfg.badgeClass : "text-muted-foreground",
-                  )}
-                >
-                  <SelectValue placeholder="No priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No priority</SelectItem>
-                  {PRIORITY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Separator />
-
-            {/* Dates */}
-            <div className="space-y-3">
-              {/* Start date */}
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Start Date
+        <div className="space-y-4 lg:sticky lg:top-20 self-start">
+          <Card className="p-4 space-y-4 bg-card/90 backdrop-blur-sm border-border/70">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Status
                 </p>
+                <Select
+                  value={task.status}
+                  onValueChange={(v) => saveStatus(v as TaskStatus)}
+                >
+                  <SelectTrigger className={cn("border font-medium", statusCfg.badgeClass)}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Priority
+                </p>
+                <Select
+                  value={task.priority ?? "none"}
+                  onValueChange={(v) => {
+                    if (v !== "none") savePriority(v as TaskPriority);
+                  }}
+                >
+                  <SelectTrigger
+                    className={cn(
+                      "border font-medium",
+                      priorityCfg ? priorityCfg.badgeClass : "text-muted-foreground",
+                    )}
+                  >
+                    <SelectValue placeholder="No priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No priority</SelectItem>
+                    {PRIORITY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Separator />
+
+            <TaskTagSelector
+              projectId={projectId}
+              task={task}
+              onOpenBoardByTag={(tagId) =>
+                navigate(`/workspaces/${workspaceId}/projects/${projectId}/tasks?tags=${tagId}`)
+              }
+            />
+          </Card>
+
+          <Card className="p-4 space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Schedule
+            </p>
+            <div className="space-y-2">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Start Date</p>
                 {editingStartDate ? (
                   <input
                     autoFocus
@@ -691,7 +699,7 @@ export function TaskDetailPage() {
                 ) : (
                   <button
                     onClick={() => setEditingStartDate(true)}
-                    className="-mx-2 w-full rounded-md px-2 py-1 text-left text-sm transition-colors hover:bg-muted/50"
+                    className="w-full rounded-md border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
                   >
                     {task.startDate ? (
                       format(new Date(task.startDate), "MMM d, yyyy · HH:mm")
@@ -702,11 +710,8 @@ export function TaskDetailPage() {
                 )}
               </div>
 
-              {/* Due date */}
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Due Date
-                </p>
+                <p className="text-xs text-muted-foreground">Due Date</p>
                 {editingDueDate ? (
                   <input
                     autoFocus
@@ -721,7 +726,7 @@ export function TaskDetailPage() {
                 ) : (
                   <button
                     onClick={() => setEditingDueDate(true)}
-                    className="-mx-2 w-full rounded-md px-2 py-1 text-left text-sm transition-colors hover:bg-muted/50"
+                    className="w-full rounded-md border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
                   >
                     {task.dueDate ? (
                       <span
@@ -740,78 +745,75 @@ export function TaskDetailPage() {
                 )}
               </div>
             </div>
+          </Card>
 
-            <Separator />
-
-            {/* Assignees */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <Card className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Assignees
               </p>
-
-              <div className="space-y-1.5">
-                {task.assignees.map((a) => (
-                  <div key={a.id} className="group flex items-center gap-2">
-                    <UserAvatar user={a} size="sm" />
-                    <span className="flex-1 truncate text-sm">
-                      {a.fullName ?? a.email}
-                    </span>
-                    <button
-                      onClick={() => removeAssignee(a.id)}
-                      className="invisible text-muted-foreground transition-colors hover:text-destructive group-hover:visible"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <DropdownMenu open={showAssigneeMenu} onOpenChange={setShowAssigneeMenu}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 w-full text-xs">
-                    <Plus className="mr-1.5 h-3.5 w-3.5" />
-                    Assign member
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="max-h-48 w-56 overflow-y-auto">
-                  {unassigned.length === 0 ? (
-                    <p className="px-2 py-3 text-center text-xs text-muted-foreground">
-                      All members assigned
-                    </p>
-                  ) : (
-                    unassigned.map((m) => (
-                      <DropdownMenuItem
-                        key={m.id}
-                        className="gap-2"
-                        onClick={() => addAssignee(m.user.id)}
-                      >
-                        <UserAvatar user={m.user} size="xs" />
-                        <span className="truncate text-sm">
-                          {m.user.fullName ?? m.user.email}
-                        </span>
-                      </DropdownMenuItem>
-                    ))
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <span className="text-xs text-muted-foreground">{task.assignees.length}</span>
             </div>
 
-            <Separator />
-
-            {/* Meta */}
-            <div className="space-y-2 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <UserAvatar user={task.createdBy} size="xs" />
-                <span>
-                  Created by{" "}
-                  <span className="font-medium text-foreground">
-                    {task.createdBy.fullName ?? task.createdBy.email}
+            <div className="space-y-1.5">
+              {task.assignees.map((a) => (
+                <div key={a.id} className="group flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-muted/40">
+                  <UserAvatar user={a} size="sm" />
+                  <span className="flex-1 truncate text-sm">
+                    {a.fullName ?? a.email}
                   </span>
-                </span>
-              </div>
-              <p>Created {format(new Date(task.createdAt), "MMM d, yyyy")}</p>
-              <p>Updated {format(new Date(task.updatedAt), "MMM d, yyyy · HH:mm")}</p>
+                  <button
+                    onClick={() => removeAssignee(a.id)}
+                    className="invisible text-muted-foreground transition-colors hover:text-destructive group-hover:visible"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
             </div>
+
+            <DropdownMenu open={showAssigneeMenu} onOpenChange={setShowAssigneeMenu}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 w-full text-xs">
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  Assign member
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="max-h-48 w-56 overflow-y-auto">
+                {unassigned.length === 0 ? (
+                  <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                    All members assigned
+                  </p>
+                ) : (
+                  unassigned.map((m) => (
+                    <DropdownMenuItem
+                      key={m.id}
+                      className="gap-2"
+                      onClick={() => addAssignee(m.user.id)}
+                    >
+                      <UserAvatar user={m.user} size="xs" />
+                      <span className="truncate text-sm">
+                        {m.user.fullName ?? m.user.email}
+                      </span>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Card>
+
+          <Card className="p-4 space-y-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <UserAvatar user={task.createdBy} size="xs" />
+              <span>
+                Created by{" "}
+                <span className="font-medium text-foreground">
+                  {task.createdBy.fullName ?? task.createdBy.email}
+                </span>
+              </span>
+            </div>
+            <p>Created {format(new Date(task.createdAt), "MMM d, yyyy")}</p>
+            <p>Updated {format(new Date(task.updatedAt), "MMM d, yyyy · HH:mm")}</p>
           </Card>
         </div>
       </div>

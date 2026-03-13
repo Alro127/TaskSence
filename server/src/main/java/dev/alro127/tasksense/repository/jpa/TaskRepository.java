@@ -2,6 +2,7 @@ package dev.alro127.tasksense.repository.jpa;
 
 import dev.alro127.tasksense.domain.entity.TaskEntity;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
+import dev.alro127.tasksense.repository.projection.SprintTaskStats;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -79,4 +80,24 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
   @Modifying
   @Query("UPDATE TaskEntity t SET t.deletedAt = :now WHERE t.parentTask.id = :parentTaskId AND t.deletedAt IS NULL")
   int softDeleteByParentTaskId(@Param("parentTaskId") Long parentTaskId, @Param("now") OffsetDateTime now);
+
+  @Query(value = """
+    SELECT
+        COUNT(*) as taskCount,
+        SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) as completedTaskCount
+    FROM tasks
+    WHERE sprint_id = :sprintId
+""", nativeQuery = true)
+  SprintTaskStats getSprintTaskStats(Long sprintId);
+
+  @Query("""
+    SELECT t.sprint.id as sprintId,
+           COUNT(t) as taskCount,
+           SUM(CASE WHEN t.status = 'DONE' THEN 1 ELSE 0 END) as completedTaskCount
+    FROM TaskEntity t
+    WHERE t.sprint.id IN :sprintIds
+    GROUP BY t.sprint.id
+""")
+  List<SprintTaskStats> getSprintTaskStatsBySprintIds(List<Long> sprintIds);
+
 }

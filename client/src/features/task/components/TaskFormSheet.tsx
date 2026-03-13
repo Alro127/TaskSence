@@ -31,6 +31,7 @@ function toDatetimeLocal(iso: string): string {
 }
 import { useCreateTaskMutation, useUpdateTaskMutation } from "../api/taskApi";
 import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
+import { useGetProjectSprintsQuery } from "@/features/sprint/api/sprintApi";
 
 interface TaskFormSheetProps {
   open: boolean;
@@ -64,6 +65,7 @@ export function TaskFormSheet({
   const [priority, setPriority] = useState<TaskPriority | "none">("none");
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [sprintSelection, setSprintSelection] = useState<string>("NONE");
   const [assigneeIds, setAssigneeIds] = useState<number[]>([]);
 
   const { data: membersData } = useGetMembersQuery(
@@ -71,6 +73,12 @@ export function TaskFormSheet({
     { skip: !open },
   );
   const members = membersData?.data?.data ?? [];
+
+  const { data: sprintsData } = useGetProjectSprintsQuery(
+    { projectId, page: 0, size: 100 },
+    { skip: !open },
+  );
+  const sprints = sprintsData?.data?.data ?? [];
 
   const [createTask, { isLoading: isCreating }] = useCreateTaskMutation();
   const [updateTask, { isLoading: isUpdating }] = useUpdateTaskMutation();
@@ -84,6 +92,7 @@ export function TaskFormSheet({
       setPriority(task.priority ?? "none");
       setStartDate(task.startDate ? toDatetimeLocal(task.startDate) : "");
       setDueDate(task.dueDate ? toDatetimeLocal(task.dueDate) : "");
+      setSprintSelection(task.sprintId != null ? String(task.sprintId) : "NONE");
       setAssigneeIds(task.assignees.map((a) => a.id));
     } else if (open && !task) {
       setTitle("");
@@ -91,6 +100,7 @@ export function TaskFormSheet({
       setPriority("none");
       setStartDate("");
       setDueDate("");
+      setSprintSelection("NONE");
       setAssigneeIds([]);
     }
   }, [open, task]);
@@ -116,12 +126,18 @@ export function TaskFormSheet({
       priority: priority !== "none" ? priority : undefined,
       startDate: startDate ? new Date(startDate).toISOString() : undefined,
       dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+      sprintId: sprintSelection !== "NONE" ? Number(sprintSelection) : undefined,
       assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
     };
 
     try {
       if (isEdit && task) {
-        await updateTask({ projectId, taskId: task.id, ...payload }).unwrap();
+        await updateTask({
+          projectId,
+          taskId: task.id,
+          ...payload,
+          removeSprint: sprintSelection === "NONE" && task.sprintId != null,
+        }).unwrap();
         toast.success("Task updated");
       } else {
         await createTask({
@@ -225,6 +241,24 @@ export function TaskFormSheet({
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
+          </div>
+
+          {/* Sprint */}
+          <div className="space-y-2">
+            <Label>Sprint</Label>
+            <Select value={sprintSelection} onValueChange={setSprintSelection}>
+              <SelectTrigger>
+                <SelectValue placeholder="No Sprint" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NONE">No Sprint</SelectItem>
+                {sprints.map((sprint) => (
+                  <SelectItem key={sprint.id} value={String(sprint.id)}>
+                    {sprint.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Assignees */}

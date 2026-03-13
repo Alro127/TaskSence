@@ -15,10 +15,12 @@ import {
   Settings,
   LayoutGrid,
   ClipboardList,
+  Flag,
   CheckCircle2,
   XCircle,
   X,
   Clock,
+  Tags,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -53,6 +55,8 @@ import {
   RequestJoinProjectDialog,
   STATUS_CONFIG,
   ROLE_LABEL,
+  SprintManagementTab,
+  ProjectTagsTab,
 } from "../components";
 import {
   Pagination,
@@ -688,6 +692,14 @@ export function ProjectDetailPage() {
             <ListTodo className="h-4 w-4" />
             Tasks
           </TabsTrigger>
+          <TabsTrigger value="sprints" className="gap-2">
+            <Flag className="h-4 w-4" />
+            Sprints
+          </TabsTrigger>
+          <TabsTrigger value="tags" className="gap-2">
+            <Tags className="h-4 w-4" />
+            Tags
+          </TabsTrigger>
           <TabsTrigger value="members" className="gap-2">
             <Users className="h-4 w-4" />
             Members
@@ -885,6 +897,20 @@ export function ProjectDetailPage() {
               </div>
             </>
           )}
+        </TabsContent>
+
+        {/* ── Sprints Tab ── */}
+        <TabsContent value="sprints" className="mt-6 space-y-6">
+          <SprintManagementTab
+            workspaceId={workspaceId}
+            projectId={projectId}
+            isManager={isManager}
+          />
+        </TabsContent>
+
+        {/* ── Tags Tab ── */}
+        <TabsContent value="tags" className="mt-6 space-y-6">
+          <ProjectTagsTab projectId={projectId} isManager={isManager} />
         </TabsContent>
 
         {/* ── Members Tab ── */}

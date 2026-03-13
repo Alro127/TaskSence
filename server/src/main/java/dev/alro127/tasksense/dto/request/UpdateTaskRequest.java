@@ -30,5 +30,9 @@ public class UpdateTaskRequest {
 
     private Long parentTaskId;
 
+    private Long sprintId;
+
     private boolean removeParent = false;
+
+    private boolean removeSprint = false;
 }

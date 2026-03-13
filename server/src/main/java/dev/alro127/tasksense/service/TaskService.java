@@ -33,4 +33,8 @@ public interface TaskService {
     TaskResponse updateTaskStatus(Long projectId, Long taskId, UpdateTaskStatusRequest request);
 
     void deleteTask(Long projectId, Long taskId);
+
+    void addTagsToTask(Long projectId, Long taskId, List<Long> tagIds);
+
+    void removeTagsFromTask(Long projectId, Long taskId, List<Long> tagIds);
 }

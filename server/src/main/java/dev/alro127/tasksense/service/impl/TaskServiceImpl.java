@@ -1,8 +1,6 @@
 package dev.alro127.tasksense.service.impl;
 
-import dev.alro127.tasksense.domain.entity.ProjectEntity;
-import dev.alro127.tasksense.domain.entity.TaskEntity;
-import dev.alro127.tasksense.domain.entity.UserEntity;
+import dev.alro127.tasksense.domain.entity.*;
 import dev.alro127.tasksense.domain.enums.TaskPriority;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
 import dev.alro127.tasksense.dto.common.PageResponse;
@@ -11,12 +9,10 @@ import dev.alro127.tasksense.dto.request.UpdateTaskRequest;
 import dev.alro127.tasksense.dto.request.UpdateTaskStatusRequest;
 import dev.alro127.tasksense.dto.response.TaskResponse;
 import dev.alro127.tasksense.exception.BadRequestException;
+import dev.alro127.tasksense.exception.ConflictException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.exception.UnauthorizedException;
-import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
-import dev.alro127.tasksense.repository.jpa.ProjectRepository;
-import dev.alro127.tasksense.repository.jpa.TaskRepository;
-import dev.alro127.tasksense.repository.jpa.UserRepository;
+import dev.alro127.tasksense.repository.jpa.*;
 import dev.alro127.tasksense.security.permission.PermissionChecker;
 import dev.alro127.tasksense.service.ReminderService;
 import dev.alro127.tasksense.service.SecurityService;
@@ -40,11 +36,13 @@ public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
+    private final SprintRepository sprintRepository;
     private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final SecurityService securityService;
     private final PermissionChecker permissionChecker;
     private final ReminderService reminderService;
+    private final TagRepository tagRepository;
 
     // ===== Helpers =====
 
@@ -93,6 +91,21 @@ public class TaskServiceImpl implements TaskService {
         return assignees;
     }
 
+    private SprintEntity resolveSprint(Long projectId, Long sprintId) {
+        if (sprintId == null) {
+            return null;
+        }
+
+        SprintEntity sprint = sprintRepository.findById(sprintId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found"));
+
+        if (!sprint.getProject().getId().equals(projectId)) {
+            throw new BadRequestException("Sprint does not belong to this project");
+        }
+
+        return sprint;
+    }
+
     // ===== CRUD =====
 
     @Override
@@ -110,6 +123,7 @@ public class TaskServiceImpl implements TaskService {
                 .priority(request.getPriority())
                 .startDate(request.getStartDate())
                 .dueDate(request.getDueDate())
+                .sprint(resolveSprint(projectId, request.getSprintId()))
                 .createdBy(currentUser).assignees(resolveAssignees(request.getAssigneeIds(), projectId));
 
         if (request.getParentTaskId() != null) {
@@ -204,6 +218,12 @@ public class TaskServiceImpl implements TaskService {
         if (request.getAssigneeIds() != null)
             task.setAssignees(resolveAssignees(request.getAssigneeIds(), projectId));
 
+        if (request.isRemoveSprint()) {
+            task.setSprint(null);
+        } else if (request.getSprintId() != null) {
+            task.setSprint(resolveSprint(projectId, request.getSprintId()));
+        }
+
         if (request.isRemoveParent()) {
             task.setParentTask(null);
         } else if (request.getParentTaskId() != null) {
@@ -270,6 +290,44 @@ public class TaskServiceImpl implements TaskService {
         taskRepository.softDeleteByParentTaskId(taskId, now);
 
         task.setDeletedAt(now);
+        taskRepository.save(task);
+    }
+
+    @Override
+    @Transactional
+    public void addTagsToTask(Long projectId, Long taskId, List<Long> tagIds) {
+
+        TaskEntity task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        if (!task.getProject().getId().equals(projectId)) {
+            throw new IllegalArgumentException("Task does not belong to project");
+        }
+
+        List<TagEntity> tags = tagRepository.findAllByIdInAndProjectId(tagIds, projectId);
+
+        if (tags.size() != tagIds.size()) {
+            throw new ResourceNotFoundException("Some tags not found in project");
+        }
+
+        task.getTags().addAll(tags);
+
+        taskRepository.save(task);
+    }
+
+    @Override
+    @Transactional
+    public void removeTagsFromTask(Long projectId, Long taskId, List<Long> tagIds) {
+
+        TaskEntity task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        if (!task.getProject().getId().equals(projectId)) {
+            throw new ConflictException("Task does not belong to project");
+        }
+
+        task.getTags().removeIf(tag -> tagIds.contains(tag.getId()));
+
         taskRepository.save(task);
     }
 }

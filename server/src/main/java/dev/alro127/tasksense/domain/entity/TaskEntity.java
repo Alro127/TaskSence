@@ -31,6 +31,10 @@ public class TaskEntity {
     private ProjectEntity project;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sprint_id")
+    private SprintEntity sprint;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_task_id")
     private TaskEntity parentTask;
 
@@ -70,6 +74,14 @@ public class TaskEntity {
     @JoinTable(name = "task_assignees", joinColumns = @JoinColumn(name = "task_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
     @Builder.Default
     private Set<UserEntity> assignees = new HashSet<>();
+
+    @ManyToMany
+    @JoinTable(
+            name = "task_tags",
+            joinColumns = @JoinColumn(name = "task_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private Set<TagEntity> tags = new HashSet<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
