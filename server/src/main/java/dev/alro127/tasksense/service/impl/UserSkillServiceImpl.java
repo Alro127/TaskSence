@@ -2,6 +2,7 @@ package dev.alro127.tasksense.service.impl;
 
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.entity.UserSkillEntity;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.UserSkillRequest;
 import dev.alro127.tasksense.dto.response.UserSkillResponse;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
@@ -11,10 +12,10 @@ import dev.alro127.tasksense.repository.jpa.UserSkillRepository;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.UserSkillService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -25,21 +26,31 @@ public class UserSkillServiceImpl implements UserSkillService {
     private final SecurityService securityService;
 
     @Override
-    public List<UserSkillResponse> getMySkills() {
+    public PageResponse<UserSkillResponse> getMySkills(Pageable pageable) {
         Long userId = securityService.getCurrentUserId();
 
-        return userSkillRepository.findByUserId(userId)
-                .stream()
-                .map(UserSkillResponse::mapToResponse)
-                .collect(Collectors.toList());
+        Page<UserSkillResponse> responsePage = userSkillRepository.findByUserId(userId, pageable)
+                .map(UserSkillResponse::mapToResponse);
+
+        return new PageResponse<>(
+                responsePage.getContent(),
+                responsePage.getNumber(),
+                responsePage.getSize(),
+                responsePage.getTotalElements(),
+                responsePage.getTotalPages());
     }
 
     @Override
-    public List<UserSkillResponse> getSkillsByUserId(Long userId) {
-        return userSkillRepository.findByUserId(userId)
-                .stream()
-                .map(UserSkillResponse::mapToResponse)
-                .collect(Collectors.toList());
+    public PageResponse<UserSkillResponse> getSkillsByUserId(Long userId, Pageable pageable) {
+        Page<UserSkillResponse> responsePage = userSkillRepository.findByUserId(userId, pageable)
+                .map(UserSkillResponse::mapToResponse);
+
+        return new PageResponse<>(
+                responsePage.getContent(),
+                responsePage.getNumber(),
+                responsePage.getSize(),
+                responsePage.getTotalElements(),
+                responsePage.getTotalPages());
     }
 
     @Override
@@ -91,6 +102,5 @@ public class UserSkillServiceImpl implements UserSkillService {
 
         userSkillRepository.delete(skill);
     }
-
 
 }
