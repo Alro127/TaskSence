@@ -2,6 +2,8 @@ package dev.alro127.tasksense.repository.jpa;
 
 import dev.alro127.tasksense.domain.entity.WorkspaceInviteEntity;
 import dev.alro127.tasksense.domain.enums.InviteStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,7 +18,7 @@ public interface WorkspaceInviteRepository extends JpaRepository<WorkspaceInvite
 
     boolean existsByWorkspaceIdAndEmailAndStatus(Long workspaceId, String email, InviteStatus inviteStatus);
 
-    List<WorkspaceInviteEntity> findByWorkspaceId(Long workspaceId);
+    Page<WorkspaceInviteEntity> findByWorkspaceId(Long workspaceId, Pageable pageable);
 
     @Modifying
     @Query("UPDATE WorkspaceInviteEntity wi SET wi.deletedAt = :now WHERE wi.workspace.id = :workspaceId AND wi.deletedAt IS NULL")

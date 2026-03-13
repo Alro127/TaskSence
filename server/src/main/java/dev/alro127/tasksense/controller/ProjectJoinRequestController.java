@@ -1,12 +1,14 @@
 package dev.alro127.tasksense.controller;
 
 import dev.alro127.tasksense.dto.common.ApiResponse;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.ProjectJoinRequest;
 import dev.alro127.tasksense.dto.request.ReviewProjectJoinRequest;
 import dev.alro127.tasksense.dto.response.ProjectJoinRequestResponse;
 import dev.alro127.tasksense.service.ProjectJoinRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,13 +36,14 @@ public class ProjectJoinRequestController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ProjectJoinRequestResponse>>> getJoinRequests(
-            @PathVariable Long projectId) {
+    public ResponseEntity<ApiResponse<PageResponse<ProjectJoinRequestResponse>>> getJoinRequests(
+            @PathVariable Long projectId,
+            Pageable pageable) {
 
-        ApiResponse<List<ProjectJoinRequestResponse>> response = new ApiResponse<>(
+        ApiResponse<PageResponse<ProjectJoinRequestResponse>> response = new ApiResponse<>(
                 "200",
                 "Get join requests successfully",
-                projectJoinRequestService.getJoinRequests(projectId),
+                projectJoinRequestService.getJoinRequests(projectId, pageable),
                 null);
 
         return ResponseEntity.ok(response);

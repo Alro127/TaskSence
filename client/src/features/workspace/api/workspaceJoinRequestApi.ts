@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import type {
   ApiResponse,
+  PageResponse,
   WorkspaceJoinRequest,
   CreateWorkspaceJoinRequestBody,
   ReviewWorkspaceJoinRequestBody,
@@ -26,12 +27,14 @@ export const workspaceJoinRequestApi = createApi({
   endpoints: (builder) => ({
     // GET all join requests for a workspace (OWNER/MANAGER)
     getWorkspaceJoinRequests: builder.query<
-      ApiResponse<WorkspaceJoinRequest[]>,
-      number
+      ApiResponse<PageResponse<WorkspaceJoinRequest>>,
+      { workspaceId: number; page?: number; size?: number }
     >({
-      query: (workspaceId) =>
-        `/workspace-join-requests/workspaces/${workspaceId}`,
-      providesTags: (_result, _error, workspaceId) => [
+      query: ({ workspaceId, page = 0, size = 10 }) => ({
+        url: `/workspace-join-requests/workspaces/${workspaceId}`,
+        params: { page, size },
+      }),
+      providesTags: (_result, _error, { workspaceId }) => [
         { type: "WorkspaceJoinRequest", id: workspaceId },
       ],
     }),

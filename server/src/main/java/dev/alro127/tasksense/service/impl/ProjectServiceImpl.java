@@ -5,6 +5,7 @@ import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.CreateProjectRequest;
 import dev.alro127.tasksense.dto.request.UpdateProjectRequest;
 import dev.alro127.tasksense.dto.response.ProjectResponse;
@@ -17,6 +18,10 @@ import dev.alro127.tasksense.service.ProjectService;
 import dev.alro127.tasksense.service.SecurityService;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,17 +81,39 @@ public class ProjectServiceImpl implements ProjectService {
         return ProjectResponse.mapToResponse(project);
     }
 
+    // @Override
+    // public List<ProjectResponse> getProjectsByWorkspace(Long workspaceId) {
+    // // @PreAuthorize đã kiểm tra workspace VIEW permission
+
+    // workspaceRepository.findById(workspaceId)
+    // .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+
+    // return projectRepository.findAllByWorkspaceId(workspaceId)
+    // .stream()
+    // .map(ProjectResponse::mapToResponse)
+    // .toList();
+    // }
+
     @Override
-    public List<ProjectResponse> getProjectsByWorkspace(Long workspaceId) {
-        // @PreAuthorize đã kiểm tra workspace VIEW permission
+    public PageResponse<ProjectResponse> getProjectsByWorkspace(
+            Long workspaceId, Pageable pageable) {
 
         workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
-        return projectRepository.findAllByWorkspaceId(workspaceId)
+        Page<ProjectEntity> projectPage = projectRepository.findAllByWorkspaceId(workspaceId, pageable);
+
+        List<ProjectResponse> data = projectPage.getContent()
                 .stream()
                 .map(ProjectResponse::mapToResponse)
                 .toList();
+
+        return new PageResponse<>(
+                data,
+                projectPage.getNumber(),
+                projectPage.getSize(),
+                projectPage.getTotalElements(),
+                projectPage.getTotalPages());
     }
 
     @Override

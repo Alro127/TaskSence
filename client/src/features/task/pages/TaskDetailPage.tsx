@@ -152,8 +152,11 @@ export function TaskDetailPage() {
   );
   const subtasks = subtasksData?.data ?? [];
 
-  const { data: membersData } = useGetMembersQuery(projectId, { skip: isNaN(projectId) });
-  const members = membersData?.data ?? [];
+  const { data: membersData } = useGetMembersQuery(
+    { projectId, page: 0, size: 100 },
+    { skip: isNaN(projectId) },
+  );
+  const members = membersData?.data?.data ?? [];
 
   const { data: workspaceData } = useGetWorkspaceByIdQuery(workspaceId, {
     skip: isNaN(workspaceId),

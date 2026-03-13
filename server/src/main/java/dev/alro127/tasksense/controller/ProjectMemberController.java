@@ -1,6 +1,7 @@
 package dev.alro127.tasksense.controller;
 
 import dev.alro127.tasksense.dto.common.ApiResponse;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.AddProjectMemberRequest;
 import dev.alro127.tasksense.dto.request.UpdateProjectMemberRoleRequest;
 import dev.alro127.tasksense.dto.response.AddProjectMemberResultItem;
@@ -8,6 +9,8 @@ import dev.alro127.tasksense.dto.response.ProjectMemberResponse;
 import dev.alro127.tasksense.service.ProjectMemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -38,13 +41,14 @@ public class ProjectMemberController {
 
         @GetMapping
         @PreAuthorize("@perm.project(#projectId, 'VIEW_MEMBERS')")
-        public ResponseEntity<ApiResponse<List<ProjectMemberResponse>>> getMembers(
-                        @PathVariable Long projectId) {
+        public ResponseEntity<ApiResponse<PageResponse<ProjectMemberResponse>>> getMembers(
+                        @PathVariable Long projectId,
+                        Pageable pageable) {
 
-                ApiResponse<List<ProjectMemberResponse>> response = new ApiResponse<>(
+                ApiResponse<PageResponse<ProjectMemberResponse>> response = new ApiResponse<>(
                                 "200",
                                 "Get project members successfully",
-                                projectMemberService.getMembers(projectId),
+                                projectMemberService.getMembers(projectId, pageable),
                                 null);
 
                 return ResponseEntity.ok(response);

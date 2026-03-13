@@ -21,6 +21,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { addRecent, removeFromPinnedAndRecent } from "../workspaceSlice";
 import {
   useGetWorkspaceByIdQuery,
@@ -53,6 +62,8 @@ export function WorkspaceDetailPage() {
   const dispatch = useAppDispatch();
   const workspaceId = Number(id);
   const defaultTab = searchParams.get("tab") ?? "projects";
+  const [projectPage, setProjectPage] = useState(0);
+  const PAGE_SIZE = 9;
 
   const { data, isLoading, isError } = useGetWorkspaceByIdQuery(workspaceId, {
     skip: isNaN(workspaceId),
@@ -60,15 +71,20 @@ export function WorkspaceDetailPage() {
   const workspace = data?.data ?? null;
 
   const { data: projectsData, isLoading: isProjectsLoading } =
-    useGetProjectsByWorkspaceQuery(workspaceId, { skip: isNaN(workspaceId) });
-  const projects = projectsData?.data ?? [];
+    useGetProjectsByWorkspaceQuery(
+      { workspaceId, page: projectPage, size: PAGE_SIZE },
+      { skip: isNaN(workspaceId) }
+    );
+  const projects = projectsData?.data?.data ?? [];
+  const totalProjects = projectsData?.data?.totalElements ?? 0;
+  const totalProjectPages = projectsData?.data?.totalPages ?? 1;
 
   // Determine current user's workspace role
   const currentUserId = useAppSelector((s) => s.user.currentUser?.id);
   const { data: membersData } = useGetWorkspaceMembersQuery(workspaceId, {
     skip: isNaN(workspaceId),
   });
-  const members = membersData?.data ?? [];
+  const members = membersData?.data?.data ?? [];
   const myMember = members.find((m) => m.user.id === currentUserId);
   const myRole = myMember?.role ?? null;
   const canManage = myRole === "OWNER" || myRole === "MANAGER";
@@ -169,7 +185,7 @@ export function WorkspaceDetailPage() {
             <LayoutGrid className="h-4 w-4" />
             Projects
             <Badge variant="secondary" className="text-xs">
-              {isProjectsLoading ? "…" : projects.length}
+              {isProjectsLoading ? "…" : totalProjects}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="members" className="gap-2">
@@ -207,12 +223,62 @@ export function WorkspaceDetailPage() {
                     workspaceName={workspace.name}
                   />
                 ))}
-                {canManage && (
+                {canManage && projectPage === totalProjectPages - 1 && (
                   <ProjectCardGhost
                     onClick={() => navigate(`/workspaces/${workspaceId}/projects/new`)}
                   />
                 )}
               </div>
+
+              {totalProjectPages > 1 && (
+                <Pagination className="mt-4">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setProjectPage((p) => Math.max(0, p - 1))}
+                        aria-disabled={projectPage === 0}
+                        className={projectPage === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: totalProjectPages }, (_, i) => {
+                      const showPage =
+                        i === 0 ||
+                        i === totalProjectPages - 1 ||
+                        Math.abs(i - projectPage) <= 1;
+                      if (!showPage) {
+                        if (i === 1 || i === totalProjectPages - 2) {
+                          return (
+                            <PaginationItem key={`ellipsis-${i}`}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      }
+                      return (
+                        <PaginationItem key={i}>
+                          <PaginationLink
+                            isActive={i === projectPage}
+                            onClick={() => setProjectPage(i)}
+                            className="cursor-pointer"
+                          >
+                            {i + 1}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => setProjectPage((p) => Math.min(totalProjectPages - 1, p + 1))}
+                        aria-disabled={projectPage === totalProjectPages - 1}
+                        className={projectPage === totalProjectPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
             </>
           )}
         </TabsContent>

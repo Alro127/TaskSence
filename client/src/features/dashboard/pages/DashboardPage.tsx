@@ -39,7 +39,7 @@ function WorkspaceSection() {
   const dispatch = useAppDispatch();
   const recentIds = useAppSelector((s) => s.workspace.recentIds);
   const { data, isLoading } = useGetMyWorkspacesQuery();
-  const allWorkspaces = data?.data ?? [];
+  const allWorkspaces = data?.data?.data ?? [];
 
   // Show recents first (up to 3), fill with newest if needed
   const sortedWorkspaces = [

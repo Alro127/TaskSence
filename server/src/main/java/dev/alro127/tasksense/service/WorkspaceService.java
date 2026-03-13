@@ -1,8 +1,11 @@
 package dev.alro127.tasksense.service;
 
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.CreateWorkspaceRequest;
 import dev.alro127.tasksense.dto.request.UpdateWorkspaceRequest;
 import dev.alro127.tasksense.dto.response.WorkspaceResponse;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,7 +17,7 @@ public interface WorkspaceService {
 
     WorkspaceResponse getWorkspaceById(Long id);
 
-    List<WorkspaceResponse> getMyWorkspaces();
+    PageResponse<WorkspaceResponse> getMyWorkspaces(Pageable pageable);
 
     WorkspaceResponse updateWorkspace(Long id, UpdateWorkspaceRequest request);
 
