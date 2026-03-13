@@ -2,6 +2,15 @@ import { useState } from "react";
 import { Users, Loader2 } from "lucide-react";
 
 import type { TeamTemplate } from "@/types/api";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { useGetMyTemplatesQuery } from "../api/teamTemplateApi";
 import {
   TeamTemplateCard,
@@ -11,9 +20,13 @@ import {
   DeleteTeamTemplateDialog,
 } from "../components";
 
+const PAGE_SIZE = 9;
+
 export function TeamTemplatesPage() {
-  const { data, isLoading, isError } = useGetMyTemplatesQuery();
-  const templates = data?.data ?? [];
+  const [page, setPage] = useState(0);
+  const { data, isLoading, isError } = useGetMyTemplatesQuery({ page, size: PAGE_SIZE });
+  const templates = data?.data?.data ?? [];
+  const totalPages = data?.data?.totalPages ?? 1;
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TeamTemplate | null>(null);
@@ -65,7 +78,8 @@ export function TeamTemplatesPage() {
           <TeamTemplateCardGhost onClick={() => setIsCreateOpen(true)} />
         </div>
       ) : (
-        /* ── Grid ── */
+        <>
+        {/* ── Grid ── */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {templates.map((template) => (
             <TeamTemplateCard
@@ -75,9 +89,63 @@ export function TeamTemplatesPage() {
               onDelete={setDeleteTarget}
             />
           ))}
-          {/* Ghost card to create new */}
-          <TeamTemplateCardGhost onClick={() => setIsCreateOpen(true)} />
+          {/* Ghost card to create new — only on last page */}
+          {page === totalPages - 1 && (
+            <TeamTemplateCardGhost onClick={() => setIsCreateOpen(true)} />
+          )}
         </div>
+
+        {/* ── Pagination ── */}
+        {totalPages > 1 && (
+          <Pagination className="mt-4">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  aria-disabled={page === 0}
+                  className={page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+
+              {Array.from({ length: totalPages }, (_, i) => {
+                const showPage =
+                  i === 0 ||
+                  i === totalPages - 1 ||
+                  Math.abs(i - page) <= 1;
+                if (!showPage) {
+                  if (i === 1 || i === totalPages - 2) {
+                    return (
+                      <PaginationItem key={`ellipsis-${i}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    );
+                  }
+                  return null;
+                }
+                return (
+                  <PaginationItem key={i}>
+                    <PaginationLink
+                      isActive={i === page}
+                      onClick={() => setPage(i)}
+                      className="cursor-pointer"
+                    >
+                      {i + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  aria-disabled={page === totalPages - 1}
+                  className={page === totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
+        </>
       )}
 
       {/* ── Modals ── */}
