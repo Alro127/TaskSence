@@ -20,6 +20,7 @@ import {
   XCircle,
   X,
   Clock,
+  Tags,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -55,6 +56,7 @@ import {
   STATUS_CONFIG,
   ROLE_LABEL,
   SprintManagementTab,
+  ProjectTagsTab,
 } from "../components";
 import {
   Pagination,
@@ -694,6 +696,10 @@ export function ProjectDetailPage() {
             <Flag className="h-4 w-4" />
             Sprints
           </TabsTrigger>
+          <TabsTrigger value="tags" className="gap-2">
+            <Tags className="h-4 w-4" />
+            Tags
+          </TabsTrigger>
           <TabsTrigger value="members" className="gap-2">
             <Users className="h-4 w-4" />
             Members
@@ -900,6 +906,11 @@ export function ProjectDetailPage() {
             projectId={projectId}
             isManager={isManager}
           />
+        </TabsContent>
+
+        {/* ── Tags Tab ── */}
+        <TabsContent value="tags" className="mt-6 space-y-6">
+          <ProjectTagsTab projectId={projectId} isManager={isManager} />
         </TabsContent>
 
         {/* ── Members Tab ── */}

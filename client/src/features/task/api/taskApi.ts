@@ -7,6 +7,7 @@ import type {
   UpdateTaskRequest,
   UpdateTaskStatusRequest,
   TaskSearchParams,
+  UpdateTaskTagsRequest,
 } from "@/types/api";
 
 const baseUrl =
@@ -135,6 +136,36 @@ export const taskApi = createApi({
         { type: "Task", id: taskId },
       ],
     }),
+
+    addTagsToTask: builder.mutation<
+      ApiResponse<void>,
+      { projectId: number; taskId: number } & UpdateTaskTagsRequest
+    >({
+      query: ({ projectId, taskId, ...body }) => ({
+        url: `/projects/${projectId}/tasks/${taskId}/tags`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { projectId, taskId }) => [
+        { type: "Task", id: taskId },
+        { type: "Task", id: `PROJECT_${projectId}` },
+      ],
+    }),
+
+    removeTagsFromTask: builder.mutation<
+      ApiResponse<void>,
+      { projectId: number; taskId: number } & UpdateTaskTagsRequest
+    >({
+      query: ({ projectId, taskId, ...body }) => ({
+        url: `/projects/${projectId}/tasks/${taskId}/tags`,
+        method: "DELETE",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { projectId, taskId }) => [
+        { type: "Task", id: taskId },
+        { type: "Task", id: `PROJECT_${projectId}` },
+      ],
+    }),
   }),
 });
 
@@ -147,4 +178,6 @@ export const {
   useUpdateTaskMutation,
   useUpdateTaskStatusMutation,
   useDeleteTaskMutation,
+  useAddTagsToTaskMutation,
+  useRemoveTagsFromTaskMutation,
 } = taskApi;

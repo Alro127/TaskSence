@@ -6,3 +6,4 @@ export { MemberCard } from "./MemberCard";
 export { AddMembersModal } from "./AddMembersModal";
 export { RequestJoinProjectDialog } from "./RequestJoinProjectDialog";
 export { SprintManagementTab } from "./SprintManagementTab";
+export { ProjectTagsTab } from "./ProjectTagsTab";

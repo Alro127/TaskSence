@@ -6,6 +6,7 @@ import dev.alro127.tasksense.domain.enums.TaskPriority;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
 import dev.alro127.tasksense.dto.request.UpdateTaskRequest;
 import dev.alro127.tasksense.dto.request.UpdateTaskStatusRequest;
+import dev.alro127.tasksense.dto.request.UpdateTaskTagsRequest;
 import dev.alro127.tasksense.dto.response.TaskResponse;
 import dev.alro127.tasksense.service.TaskService;
 import jakarta.validation.Valid;
@@ -145,6 +146,42 @@ public class TaskController {
                                 "Delete task successfully",
                                 null,
                                 null);
+
+                return ResponseEntity.ok(response);
+        }
+
+        @PostMapping("/{taskId}/tags")
+        @PreAuthorize("@perm.project(#projectId, 'UPDATE_TASK')")
+        public ResponseEntity<ApiResponse<Void>> addTagsToTask(
+                @PathVariable Long projectId,
+                @PathVariable Long taskId,
+                @Valid @RequestBody UpdateTaskTagsRequest request) {
+
+                taskService.addTagsToTask(projectId, taskId, request.getTagIds());
+
+                ApiResponse<Void> response = new ApiResponse<>(
+                        "200",
+                        "Add tags to task successfully",
+                        null,
+                        null);
+
+                return ResponseEntity.ok(response);
+        }
+
+        @DeleteMapping("/{taskId}/tags")
+        @PreAuthorize("@perm.project(#projectId, 'UPDATE_TASK')")
+        public ResponseEntity<ApiResponse<Void>> removeTagsFromTask(
+                @PathVariable Long projectId,
+                @PathVariable Long taskId,
+                @Valid @RequestBody UpdateTaskTagsRequest request) {
+
+                taskService.removeTagsFromTask(projectId, taskId, request.getTagIds());
+
+                ApiResponse<Void> response = new ApiResponse<>(
+                        "200",
+                        "Remove tags from task successfully",
+                        null,
+                        null);
 
                 return ResponseEntity.ok(response);
         }
