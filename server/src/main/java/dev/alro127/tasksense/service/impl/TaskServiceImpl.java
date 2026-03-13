@@ -5,6 +5,7 @@ import dev.alro127.tasksense.domain.entity.TaskEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.enums.TaskPriority;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.CreateTaskRequest;
 import dev.alro127.tasksense.dto.request.UpdateTaskRequest;
 import dev.alro127.tasksense.dto.request.UpdateTaskStatusRequest;
@@ -21,7 +22,10 @@ import dev.alro127.tasksense.service.ReminderService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.TaskService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -116,8 +120,7 @@ public class TaskServiceImpl implements TaskService {
         TaskEntity saved = taskRepository.save(builder.build());
 
         if (saved.getDueDate() != null) {
-            OffsetDateTime reminderTime =
-                    saved.getDueDate().minusMinutes(15);
+            OffsetDateTime reminderTime = saved.getDueDate().minusMinutes(15);
 
             reminderService.scheduleReminder(saved.getId(), reminderTime);
         }
@@ -133,11 +136,19 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<TaskResponse> getTasksByProject(Long projectId) {
+    public PageResponse<TaskResponse> getTasksByProject(Long projectId, Pageable pageable) {
         // @PreAuthorize đã kiểm tra VIEW_TASKS permission
-        return taskRepository.findByProjectId(projectId).stream()
-                .map(TaskResponse::mapToResponse)
-                .toList();
+
+        Page<TaskResponse> responsePage = taskRepository
+                .findByProjectId(projectId, pageable)
+                .map(TaskResponse::mapToResponse);
+
+        return new PageResponse<>(
+                responsePage.getContent(),
+                responsePage.getNumber(),
+                responsePage.getSize(),
+                responsePage.getTotalElements(),
+                responsePage.getTotalPages());
     }
 
     @Override
@@ -153,19 +164,25 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<TaskResponse> getSubTasks(Long projectId, Long parentTaskId) {
+    public PageResponse<TaskResponse> getSubTasks(Long projectId, Long parentTaskId, Pageable pageable) {
         // @PreAuthorize đã kiểm tra VIEW_TASKS permission
         getTaskOrThrow(projectId, parentTaskId);
 
-        return taskRepository.findByParentTaskId(parentTaskId).stream()
-                .map(TaskResponse::mapToResponse)
-                .toList();
+        Page<TaskResponse> responsePage = taskRepository
+                .findByParentTaskId(parentTaskId, pageable)
+                .map(TaskResponse::mapToResponse);
+
+        return new PageResponse<>(
+                responsePage.getContent(),
+                responsePage.getNumber(),
+                responsePage.getSize(),
+                responsePage.getTotalElements(),
+                responsePage.getTotalPages());
     }
 
     @Override
     @Transactional
     public TaskResponse updateTask(Long projectId, Long taskId, UpdateTaskRequest request) {
-        UserEntity currentUser = securityService.getCurrentUser();
         // @PreAuthorize đã kiểm tra UPDATE_TASK permission (role-based)
 
         TaskEntity task = getTaskOrThrow(projectId, taskId);
@@ -208,10 +225,10 @@ public class TaskServiceImpl implements TaskService {
 
         reminderService.removeReminder(taskId);
 
-        if (saved.getDueDate() != null && !saved.getStatus().equals(TaskStatus.DONE) && !saved.getStatus().equals(TaskStatus.REVIEW)) {
+        if (saved.getDueDate() != null && !saved.getStatus().equals(TaskStatus.DONE)
+                && !saved.getStatus().equals(TaskStatus.REVIEW)) {
 
-            OffsetDateTime reminderTime =
-                    saved.getDueDate().minusMinutes(15);
+            OffsetDateTime reminderTime = saved.getDueDate().minusMinutes(15);
             reminderService.scheduleReminder(saved.getId(), reminderTime);
         }
         return TaskResponse.mapToResponse(task);

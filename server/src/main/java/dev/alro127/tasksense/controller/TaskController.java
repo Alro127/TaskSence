@@ -1,6 +1,7 @@
 package dev.alro127.tasksense.controller;
 
 import dev.alro127.tasksense.dto.common.ApiResponse;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.CreateTaskRequest;
 import dev.alro127.tasksense.domain.enums.TaskPriority;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
@@ -10,6 +11,8 @@ import dev.alro127.tasksense.dto.response.TaskResponse;
 import dev.alro127.tasksense.service.TaskService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,12 +45,12 @@ public class TaskController {
 
         @GetMapping
         @PreAuthorize("@perm.project(#projectId, 'VIEW_TASKS')")
-        public ResponseEntity<ApiResponse<List<TaskResponse>>> getTasksByProject(
-                        @PathVariable Long projectId) {
-                ApiResponse<List<TaskResponse>> response = new ApiResponse<>(
+        public ResponseEntity<ApiResponse<PageResponse<TaskResponse>>> getTasksByProject(
+                        @PathVariable Long projectId, Pageable pageable) {
+                ApiResponse<PageResponse<TaskResponse>> response = new ApiResponse<>(
                                 "200",
                                 "Get tasks successfully",
-                                taskService.getTasksByProject(projectId),
+                                taskService.getTasksByProject(projectId, pageable),
                                 null);
 
                 return ResponseEntity.ok(response);
@@ -91,13 +94,14 @@ public class TaskController {
 
         @GetMapping("/{taskId}/subtasks")
         @PreAuthorize("@perm.project(#projectId, 'VIEW_TASKS')")
-        public ResponseEntity<ApiResponse<List<TaskResponse>>> getSubTasks(
+        public ResponseEntity<ApiResponse<PageResponse<TaskResponse>>> getSubTasks(
                         @PathVariable Long projectId,
-                        @PathVariable Long taskId) {
-                ApiResponse<List<TaskResponse>> response = new ApiResponse<>(
+                        @PathVariable Long taskId,
+                        Pageable pageable) {
+                ApiResponse<PageResponse<TaskResponse>> response = new ApiResponse<>(
                                 "200",
                                 "Get subtasks successfully",
-                                taskService.getSubTasks(projectId, taskId),
+                                taskService.getSubTasks(projectId, taskId, pageable),
                                 null);
 
                 return ResponseEntity.ok(response);
