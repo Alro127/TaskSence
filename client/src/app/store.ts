@@ -19,6 +19,7 @@ import notificationReducer from "@/features/notification/notificationSlice";
 import { taskApi } from "@/features/task/api/taskApi";
 import { commentApi } from "@/features/task/api/commentApi";
 import { attachmentApi } from "@/features/task/api/attachmentApi";
+import { sprintApi } from "@/features/sprint/api/sprintApi";
 
 const combinedReducer = combineReducers({
   auth: authReducer,
@@ -41,6 +42,7 @@ const combinedReducer = combineReducers({
   [taskApi.reducerPath]: taskApi.reducer,
   [commentApi.reducerPath]: commentApi.reducer,
   [attachmentApi.reducerPath]: attachmentApi.reducer,
+  [sprintApi.reducerPath]: sprintApi.reducer,
 });
 
 type RootReducerState = ReturnType<typeof combinedReducer>;
@@ -77,7 +79,8 @@ export const store = configureStore({
       .concat(notificationApi.middleware)
       .concat(taskApi.middleware)
       .concat(commentApi.middleware)
-      .concat(attachmentApi.middleware),
+      .concat(attachmentApi.middleware)
+      .concat(sprintApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

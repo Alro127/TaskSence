@@ -31,6 +31,10 @@ public class TaskEntity {
     private ProjectEntity project;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sprint_id")
+    private SprintEntity sprint;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_task_id")
     private TaskEntity parentTask;
 

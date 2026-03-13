@@ -40,6 +40,8 @@ public class TaskResponse {
 
     private List<UserSummaryResponse> assignees;
 
+    private Long sprintId;
+
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;
@@ -61,6 +63,7 @@ public class TaskResponse {
                 .assignees(task.getAssignees().stream()
                         .map(UserSummaryResponse::mapToResponse)
                         .collect(Collectors.toList()))
+                .sprintId(task.getSprint() != null ? task.getSprint().getId() : null)
                 .createdAt(task.getCreatedAt())
                 .updatedAt(task.getUpdatedAt())
                 .build();

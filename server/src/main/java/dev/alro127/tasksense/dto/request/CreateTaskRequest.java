@@ -29,5 +29,7 @@ public class CreateTaskRequest {
 
     private Long parentTaskId;
 
+    private Long sprintId;
+
     private List<Long> assigneeIds;
 }

@@ -1,10 +1,12 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
+  CalendarDays,
   ChevronDown,
   ChevronRight,
   Filter,
+  Flag,
   GripVertical,
   LayoutGrid,
   List,
@@ -62,6 +64,7 @@ import { TaskFormSheet } from "../components/TaskFormSheet";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
 import { useGetProjectByIdQuery } from "@/features/project/api/projectApi";
 import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
+import { useGetProjectSprintsQuery } from "@/features/sprint/api/sprintApi";
 
 // ─── Config ──────────────────────────────────────────────────────────────────────
 const STATUS_COLUMNS: {
@@ -452,6 +455,8 @@ export function TaskBoardPage() {
   } = useParams<{ id: string; projectId: string }>();
   const workspaceId = Number(workspaceIdStr);
   const projectId = Number(projectIdStr);
+  const [searchParams] = useSearchParams();
+  const isInitializedFromUrl = useRef(false);
 
   // ─── Filter state ────────────────────────────────────────────────────────────
   type ViewMode = "list" | "board";
@@ -459,6 +464,8 @@ export function TaskBoardPage() {
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "ALL">("ALL");
   const [filterPriority, setFilterPriority] = useState<TaskPriority | "ALL">("ALL");
   const [filterAssigneeId, setFilterAssigneeId] = useState<number | "ALL">("ALL");
+  const [filterSprintId, setFilterSprintId] = useState<number | "ALL" | "NONE">("ALL");
+  const [onlyActiveSprint, setOnlyActiveSprint] = useState(false);
   const [filterDueDateFrom, setFilterDueDateFrom] = useState("");
   const [filterDueDateTo, setFilterDueDateTo] = useState("");
   const [keywordInput, setKeywordInput] = useState("");
@@ -466,6 +473,13 @@ export function TaskBoardPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   // Board-only: which columns are hidden (client-side)
   const [hiddenColumns, setHiddenColumns] = useState<Set<TaskStatus>>(new Set());
+
+  const todayDate = new Date();
+  const todayLocal = new Date(
+    todayDate.getFullYear(),
+    todayDate.getMonth(),
+    todayDate.getDate(),
+  );
 
   // Debounce keyword 400ms
   useEffect(() => {
@@ -485,6 +499,7 @@ export function TaskBoardPage() {
   const advancedFilterCount = [
     filterPriority !== "ALL",
     filterAssigneeId !== "ALL",
+    filterSprintId !== "ALL",
     !!filterDueDateFrom,
     !!filterDueDateTo,
   ].filter(Boolean).length;
@@ -493,12 +508,15 @@ export function TaskBoardPage() {
   const hasAnyFilter =
     (viewMode === "list" && filterStatus !== "ALL") ||
     advancedFilterCount > 0 ||
+    onlyActiveSprint ||
     !!debouncedKeyword.trim();
 
   const clearAllFilters = useCallback(() => {
     setFilterStatus("ALL");
     setFilterPriority("ALL");
     setFilterAssigneeId("ALL");
+    setFilterSprintId("ALL");
+    setOnlyActiveSprint(false);
     setFilterDueDateFrom("");
     setFilterDueDateTo("");
     setKeywordInput("");
@@ -538,7 +556,37 @@ export function TaskBoardPage() {
     skip: isNaN(projectId),
   });
   // Only show root tasks on the board — subtasks are managed inside TaskDetailPage
-  const tasks = (tasksData?.data ?? []).filter((t) => t.parentTaskId == null);
+  const tasks = (tasksData?.data ?? []).filter((t) => {
+    if (t.parentTaskId != null) {
+      return false;
+    }
+
+    if (typeof filterSprintId === "number") {
+      return t.sprintId === filterSprintId;
+    }
+
+    if (filterSprintId === "NONE") {
+      return t.sprintId == null;
+    }
+
+    if (onlyActiveSprint) {
+      return t.sprintId != null && activeSprintIds.includes(t.sprintId);
+    }
+
+    return true;
+  });
+
+  const noSprintStats = useMemo(() => {
+    if (filterSprintId !== "NONE") {
+      return null;
+    }
+
+    const done = tasks.filter((t) => t.status === "DONE").length;
+    const total = tasks.length;
+    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+
+    return { done, total, pct };
+  }, [filterSprintId, tasks]);
 
   const { data: workspaceData } = useGetWorkspaceByIdQuery(workspaceId, {
     skip: isNaN(workspaceId),
@@ -556,6 +604,93 @@ export function TaskBoardPage() {
     { skip: isNaN(projectId) },
   );
   const members = membersData?.data?.data ?? [];
+
+  const { data: sprintsData } = useGetProjectSprintsQuery(
+    { projectId, page: 0, size: 100 },
+    { skip: isNaN(projectId) },
+  );
+  const sprints = sprintsData?.data?.data ?? [];
+
+  const activeSprintIds = useMemo(() => {
+    const today = new Date(
+      todayDate.getFullYear(),
+      todayDate.getMonth(),
+      todayDate.getDate(),
+    );
+
+    return sprints
+      .filter((s) => {
+        if (s.status === "CANCELLED") {
+          return false;
+        }
+
+        const start = new Date(`${s.startDate}T00:00:00`);
+        const end = new Date(`${s.endDate}T00:00:00`);
+        return today >= start && today <= end;
+      })
+      .map((s) => s.id);
+  }, [sprints, todayDate]);
+
+  useEffect(() => {
+    if (isInitializedFromUrl.current) {
+      return;
+    }
+
+    const sprint = searchParams.get("sprint");
+    const active = searchParams.get("activeSprint");
+
+    if (sprint === "none") {
+      setFilterSprintId("NONE");
+    } else if (sprint) {
+      const numeric = Number(sprint);
+      if (!Number.isNaN(numeric)) {
+        setFilterSprintId(numeric);
+      }
+    }
+
+    if (active === "1") {
+      setOnlyActiveSprint(true);
+    }
+
+    isInitializedFromUrl.current = true;
+  }, [searchParams]);
+
+  const focusedSprint =
+    typeof filterSprintId === "number"
+      ? sprints.find((s) => s.id === filterSprintId) ?? null
+      : null;
+
+  const focusedSprintTimeline = useMemo(() => {
+    if (!focusedSprint) {
+      return null;
+    }
+
+    const start = new Date(`${focusedSprint.startDate}T00:00:00`);
+    const end = new Date(`${focusedSprint.endDate}T00:00:00`);
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    if (todayLocal < start) {
+      const startsIn = Math.floor((start.getTime() - todayLocal.getTime()) / dayMs);
+      return {
+        label: `Starts in ${startsIn} day${startsIn === 1 ? "" : "s"}`,
+        className: "text-blue-600 bg-blue-50 border-blue-200",
+      };
+    }
+
+    if (todayLocal > end) {
+      const overdue = Math.floor((todayLocal.getTime() - end.getTime()) / dayMs);
+      return {
+        label: `Overdue ${overdue} day${overdue === 1 ? "" : "s"}`,
+        className: "text-destructive bg-destructive/10 border-destructive/20",
+      };
+    }
+
+    const remaining = Math.floor((end.getTime() - todayLocal.getTime()) / dayMs) + 1;
+    return {
+      label: `Remaining ${remaining} day${remaining === 1 ? "" : "s"}`,
+      className: "text-green-700 bg-green-50 border-green-200",
+    };
+  }, [focusedSprint, todayLocal]);
 
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
@@ -730,6 +865,48 @@ export function TaskBoardPage() {
             </Select>
           )}
 
+          {/* Sprint selector */}
+          <div className="flex items-center gap-2 rounded-md border bg-background px-2 h-9">
+            <Flag className="h-3.5 w-3.5 text-muted-foreground" />
+            <Select
+              value={String(filterSprintId)}
+              onValueChange={(v) => {
+                if (v === "ALL" || v === "NONE") {
+                  setFilterSprintId(v);
+                  return;
+                }
+                setFilterSprintId(Number(v));
+              }}
+            >
+              <SelectTrigger className="h-7 w-[170px] border-0 bg-transparent px-0 text-sm shadow-none focus:ring-0">
+                <SelectValue placeholder="Any sprint" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Any Sprint</SelectItem>
+                <SelectItem value="NONE">No Sprint</SelectItem>
+                {sprints.map((sprint) => (
+                  <SelectItem key={sprint.id} value={String(sprint.id)}>
+                    {sprint.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button
+            variant={onlyActiveSprint ? "default" : "outline"}
+            size="sm"
+            className="h-9"
+            onClick={() => {
+              setOnlyActiveSprint((prev) => !prev);
+              setFilterSprintId("ALL");
+            }}
+            disabled={activeSprintIds.length === 0}
+          >
+            Active Sprint Only
+            <span className="ml-2 text-xs opacity-90">{activeSprintIds.length}</span>
+          </Button>
+
           {/* Column toggles — Board view only */}
           {viewMode === "board" && (
             <div className="flex flex-wrap gap-1.5">
@@ -897,6 +1074,7 @@ export function TaskBoardPage() {
                 onClick={() => {
                   setFilterPriority("ALL");
                   setFilterAssigneeId("ALL");
+                  setFilterSprintId("ALL");
                   setFilterDueDateFrom("");
                   setFilterDueDateTo("");
                 }}
@@ -905,6 +1083,52 @@ export function TaskBoardPage() {
                 Clear filters
               </Button>
             )}
+          </div>
+        )}
+
+        {/* Sprint focus summary */}
+        {focusedSprint && focusedSprintTimeline && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2">
+            <div className="flex items-center gap-1.5 text-sm font-medium">
+              <Flag className="h-3.5 w-3.5 text-primary" />
+              <span>{focusedSprint.name}</span>
+            </div>
+            <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+              <CalendarDays className="h-3 w-3" />
+              {new Date(`${focusedSprint.startDate}T00:00:00`).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+              {" - "}
+              {new Date(`${focusedSprint.endDate}T00:00:00`).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+            </span>
+            <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-xs font-medium", focusedSprintTimeline.className)}>
+              {focusedSprintTimeline.label}
+            </span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {focusedSprint.completedTaskCount}/{focusedSprint.taskCount} done
+            </span>
+          </div>
+        )}
+
+        {noSprintStats && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2">
+            <div className="flex items-center gap-1.5 text-sm font-medium">
+              <Flag className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>No Sprint</span>
+            </div>
+            <span className="inline-flex rounded-full border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+              Backlog style tasks
+            </span>
+            <span className="inline-flex rounded-full border px-2 py-0.5 text-xs font-medium text-slate-700 bg-slate-100 border-slate-200">
+              {noSprintStats.pct}% complete
+            </span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {noSprintStats.done}/{noSprintStats.total} done
+            </span>
           </div>
         )}
       </div>
