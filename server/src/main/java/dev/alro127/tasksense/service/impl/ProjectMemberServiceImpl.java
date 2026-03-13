@@ -19,6 +19,7 @@ import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
+import dev.alro127.tasksense.security.permission.EffectivePermissionResolver;
 import dev.alro127.tasksense.service.ProjectMemberService;
 import dev.alro127.tasksense.service.SecurityService;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         private final ProjectRepository projectRepository;
         private final UserRepository userRepository;
         private final SecurityService securityService;
+        private final EffectivePermissionResolver permissionResolver;
 
         @Override
         @Transactional
@@ -133,6 +135,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
                 if (!toSave.isEmpty()) {
                         projectMemberRepository.saveAll(toSave);
+                        permissionResolver.evictAllPermissionCache();
                 }
 
                 return results;
@@ -142,9 +145,16 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         public PageResponse<ProjectMemberResponse> getMembers(Long projectId, Pageable pageable) {
                 // @PreAuthorize đã kiểm tra VIEW_MEMBERS permission
 
+                Long currentUserId = securityService.getCurrentUserId();
+                var currentUserPermissions = permissionResolver.resolveProjectPermissions(currentUserId, projectId);
+
                 Page<ProjectMemberResponse> responsePage = projectMemberRepository
                                 .findAllByProjectId(projectId, pageable)
-                                .map(ProjectMemberResponse::mapToResponse);
+                                .map(entity -> {
+                                        ProjectMemberResponse response = ProjectMemberResponse.mapToResponse(entity);
+                                        response.setPermissions(currentUserPermissions);
+                                        return response;
+                                });
                 return new PageResponse<>(
                                 responsePage.getContent(),
                                 responsePage.getNumber(),
@@ -163,8 +173,12 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
                 member.setRole(request.getRole());
                 projectMemberRepository.save(member);
+                permissionResolver.evictAllPermissionCache();
 
-                return ProjectMemberResponse.mapToResponse(member);
+                Long currentUserId = securityService.getCurrentUserId();
+                ProjectMemberResponse response = ProjectMemberResponse.mapToResponse(member);
+                response.setPermissions(permissionResolver.resolveProjectPermissions(currentUserId, projectId));
+                return response;
         }
 
         @Override
@@ -181,6 +195,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
                 member.setDeletedAt(OffsetDateTime.now());
                 projectMemberRepository.save(member);
+                permissionResolver.evictAllPermissionCache();
         }
 
         @Override

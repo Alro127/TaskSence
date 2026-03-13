@@ -13,7 +13,9 @@ import dev.alro127.tasksense.exception.ConflictException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.exception.UnauthorizedException;
 import dev.alro127.tasksense.repository.jpa.*;
+import dev.alro127.tasksense.security.permission.EffectivePermissionResolver;
 import dev.alro127.tasksense.security.permission.PermissionChecker;
+import dev.alro127.tasksense.security.permission.TaskPermission;
 import dev.alro127.tasksense.service.ReminderService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.TaskService;
@@ -41,6 +43,7 @@ public class TaskServiceImpl implements TaskService {
     private final ProjectMemberRepository projectMemberRepository;
     private final SecurityService securityService;
     private final PermissionChecker permissionChecker;
+    private final EffectivePermissionResolver permissionResolver;
     private final ReminderService reminderService;
     private final TagRepository tagRepository;
 
@@ -91,6 +94,13 @@ public class TaskServiceImpl implements TaskService {
         return assignees;
     }
 
+    private TaskResponse toResponseWithPermissions(TaskEntity task, Long projectId) {
+        Long userId = securityService.getCurrentUserId();
+        TaskResponse response = TaskResponse.mapToResponse(task);
+        response.setPermissions(permissionResolver.resolveTaskPermissions(userId, projectId, task));
+        return response;
+    }
+
     private SprintEntity resolveSprint(Long projectId, Long sprintId) {
         if (sprintId == null) {
             return null;
@@ -139,23 +149,28 @@ public class TaskServiceImpl implements TaskService {
             reminderService.scheduleReminder(saved.getId(), reminderTime);
         }
 
-        return TaskResponse.mapToResponse(saved);
+        return toResponseWithPermissions(saved, projectId);
     }
 
     @Override
     public TaskResponse getTaskById(Long projectId, Long taskId) {
         // @PreAuthorize đã kiểm tra VIEW_TASKS permission
         TaskEntity task = getTaskOrThrow(projectId, taskId);
-        return TaskResponse.mapToResponse(task);
+        return toResponseWithPermissions(task, projectId);
     }
 
     @Override
     public PageResponse<TaskResponse> getTasksByProject(Long projectId, Pageable pageable) {
         // @PreAuthorize đã kiểm tra VIEW_TASKS permission
 
+        Long userId = securityService.getCurrentUserId();
         Page<TaskResponse> responsePage = taskRepository
                 .findByProjectId(projectId, pageable)
-                .map(TaskResponse::mapToResponse);
+                .map(task -> {
+                    TaskResponse response = TaskResponse.mapToResponse(task);
+                    response.setPermissions(permissionResolver.resolveTaskPermissions(userId, projectId, task));
+                    return response;
+                });
 
         return new PageResponse<>(
                 responsePage.getContent(),
@@ -174,7 +189,7 @@ public class TaskServiceImpl implements TaskService {
                 priority != null ? priority.name() : null,
                 assigneeId, keyword, dueDateFrom, dueDateTo,
                 PageRequest.of(page - 1, size))
-                .stream().map(TaskResponse::mapToResponse).toList();
+                .stream().map(task -> toResponseWithPermissions(task, projectId)).toList();
     }
 
     @Override
@@ -182,9 +197,14 @@ public class TaskServiceImpl implements TaskService {
         // @PreAuthorize đã kiểm tra VIEW_TASKS permission
         getTaskOrThrow(projectId, parentTaskId);
 
+        Long userId = securityService.getCurrentUserId();
         Page<TaskResponse> responsePage = taskRepository
                 .findByParentTaskId(parentTaskId, pageable)
-                .map(TaskResponse::mapToResponse);
+                .map(task -> {
+                    TaskResponse response = TaskResponse.mapToResponse(task);
+                    response.setPermissions(permissionResolver.resolveTaskPermissions(userId, projectId, task));
+                    return response;
+                });
 
         return new PageResponse<>(
                 responsePage.getContent(),
@@ -201,7 +221,7 @@ public class TaskServiceImpl implements TaskService {
 
         TaskEntity task = getTaskOrThrow(projectId, taskId);
         // Resource-level: MANAGER edit bất kỳ, MEMBER chỉ edit task mình tạo
-        permissionChecker.requireTaskEditPermission(projectId, task);
+        permissionChecker.requireTaskPermission(projectId, task, TaskPermission.EDIT);
 
         if (request.getTitle() != null)
             task.setTitle(request.getTitle().trim());
@@ -251,7 +271,7 @@ public class TaskServiceImpl implements TaskService {
             OffsetDateTime reminderTime = saved.getDueDate().minusMinutes(15);
             reminderService.scheduleReminder(saved.getId(), reminderTime);
         }
-        return TaskResponse.mapToResponse(task);
+        return toResponseWithPermissions(task, projectId);
     }
 
     @Override
@@ -260,9 +280,8 @@ public class TaskServiceImpl implements TaskService {
         // @PreAuthorize đã kiểm tra UPDATE_TASK_STATUS permission (role-based)
 
         TaskEntity task = getTaskOrThrow(projectId, taskId);
-        // Resource-level: MANAGER update bất kỳ, MEMBER chỉ update task mình tạo/được
-        // assign
-        permissionChecker.requireTaskStatusPermission(projectId, task);
+        // Resource-level: MANAGER update bất kỳ, MEMBER chỉ update task mình tạo/được assign
+        permissionChecker.requireTaskPermission(projectId, task, TaskPermission.UPDATE_STATUS);
 
         task.setStatus(request.getStatus());
         if (request.getStatus() == TaskStatus.DONE) {
@@ -272,7 +291,7 @@ public class TaskServiceImpl implements TaskService {
         }
 
         taskRepository.save(task);
-        return TaskResponse.mapToResponse(task);
+        return toResponseWithPermissions(task, projectId);
     }
 
     @Override
@@ -282,7 +301,7 @@ public class TaskServiceImpl implements TaskService {
 
         TaskEntity task = getTaskOrThrow(projectId, taskId);
         // Resource-level: MANAGER delete bất kỳ, MEMBER chỉ delete task mình tạo
-        permissionChecker.requireTaskEditPermission(projectId, task);
+        permissionChecker.requireTaskPermission(projectId, task, TaskPermission.DELETE);
 
         OffsetDateTime now = OffsetDateTime.now();
 

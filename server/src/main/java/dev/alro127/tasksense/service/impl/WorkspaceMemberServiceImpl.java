@@ -18,6 +18,7 @@ import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
+import dev.alro127.tasksense.security.permission.EffectivePermissionResolver;
 import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.WorkspaceMemberService;
@@ -43,6 +44,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
         private final NotificationService notificationService;
         private final SecurityService securityService;
         private final UserRepository userRepository;
+        private final EffectivePermissionResolver permissionResolver;
 
         @Override
         public PageResponse<WorkspaceMemberResponse> getWorkspaceMembers(Long workspaceId, Pageable pageable) {
@@ -50,9 +52,17 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
                 workspaceRepository.findById(workspaceId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
+                Long currentUserId = securityService.getCurrentUserId();
+                var currentUserPermissions = permissionResolver.resolveWorkspacePermissions(currentUserId, workspaceId);
+
                 Page<WorkspaceMemberResponse> responsePage = workspaceMemberRepository
                                 .findByWorkspaceId(workspaceId, pageable)
-                                .map(WorkspaceMemberResponse::mapToResponse);
+                                .map(entity -> {
+                                        WorkspaceMemberResponse response = WorkspaceMemberResponse
+                                                        .mapToResponse(entity);
+                                        response.setPermissions(currentUserPermissions);
+                                        return response;
+                                });
 
                 return new PageResponse<>(
                                 responsePage.getContent(),
@@ -84,6 +94,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
                 member.setRole(WorkspaceRole.MEMBER);
 
                 workspaceMemberRepository.save(member);
+                permissionResolver.evictAllPermissionCache();
         }
 
         @Override
@@ -106,6 +117,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
                 }
 
                 member.setRole(newRole);
+                permissionResolver.evictAllPermissionCache();
 
                 notificationService.saveAndPublish(NotificationMessage.builder()
                                 .receiverId(member.getUser().getId())
@@ -116,7 +128,10 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
                                 .payload(Map.of("referenceName", member.getWorkspace().getName()))
                                 .build());
 
-                return WorkspaceMemberResponse.mapToResponse(member);
+                Long currentUserId = securityService.getCurrentUserId();
+                WorkspaceMemberResponse response = WorkspaceMemberResponse.mapToResponse(member);
+                response.setPermissions(permissionResolver.resolveWorkspacePermissions(currentUserId, workspaceId));
+                return response;
         }
 
         @Override
@@ -142,6 +157,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
                 projectMemberRepository.softDeleteByWorkspaceIdAndUserId(workspaceId, member.getUser().getId(), now);
                 workspaceMemberRepository.save(member);
+                permissionResolver.evictAllPermissionCache();
 
                 notificationService.saveAndPublish(NotificationMessage.builder()
                                 .receiverId(member.getUser().getId())

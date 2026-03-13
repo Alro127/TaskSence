@@ -60,6 +60,32 @@ public class PermissionPolicy {
                     ProjectPermission.VIEW_MEMBERS,
                     ProjectPermission.VIEW_TASKS));
 
+    // ========================= TASK =========================
+
+    /**
+     * Base task permissions theo project role (chưa tính context).
+     * Context modifiers (creator, assignee) được xử lý trong EffectivePermissionResolver.
+     */
+    private static final Map<ProjectMemberRole, Set<TaskPermission>> TASK_BASE_POLICY = Map.of(
+            ProjectMemberRole.MANAGER, EnumSet.allOf(TaskPermission.class),
+
+            ProjectMemberRole.MEMBER, EnumSet.of(
+                    TaskPermission.VIEW),
+
+            ProjectMemberRole.VIEWER, EnumSet.of(
+                    TaskPermission.VIEW));
+
+    /**
+     * Context-based task permissions.
+     * Creator/Assignee sẽ được merge thêm quyền bên dưới.
+     */
+    private static final Set<TaskPermission> TASK_CREATOR_PERMISSIONS = EnumSet.of(
+            TaskPermission.EDIT,
+            TaskPermission.DELETE);
+
+    private static final Set<TaskPermission> TASK_ASSIGNEE_PERMISSIONS = EnumSet.of(
+            TaskPermission.UPDATE_STATUS);
+
     // ========================= Query methods =========================
 
     public boolean hasWorkspacePermission(WorkspaceRole role, WorkspacePermission permission) {
@@ -76,5 +102,17 @@ public class PermissionPolicy {
 
     public Set<ProjectPermission> getProjectPermissions(ProjectMemberRole role) {
         return PROJECT_POLICY.getOrDefault(role, Set.of());
+    }
+
+    public Set<TaskPermission> getTaskBasePermissions(ProjectMemberRole role) {
+        return TASK_BASE_POLICY.getOrDefault(role, Set.of());
+    }
+
+    public Set<TaskPermission> getTaskCreatorPermissions() {
+        return TASK_CREATOR_PERMISSIONS;
+    }
+
+    public Set<TaskPermission> getTaskAssigneePermissions() {
+        return TASK_ASSIGNEE_PERMISSIONS;
     }
 }

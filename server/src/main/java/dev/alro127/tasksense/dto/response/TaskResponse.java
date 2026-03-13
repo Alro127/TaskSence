@@ -8,6 +8,7 @@ import lombok.Data;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Data
@@ -47,6 +48,8 @@ public class TaskResponse {
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;
+
+    private Set<String> permissions;
 
     public static TaskResponse mapToResponse(TaskEntity task) {
         return TaskResponse.builder()
