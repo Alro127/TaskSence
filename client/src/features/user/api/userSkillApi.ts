@@ -1,6 +1,12 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import type { ApiResponse, UserSkill, UserSkillRequest } from "@/types/api";
+import type { PageResponse } from "@/types/api";
+
+export interface SkillsPageParams {
+  page?: number;
+  size?: number;
+}
 
 const baseUrl =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
@@ -20,17 +26,26 @@ export const userSkillApi = createApi({
   tagTypes: ["UserSkill"],
   endpoints: (builder) => ({
     // GET /users/me/skills
-    getMySkills: builder.query<ApiResponse<UserSkill[]>, void>({
-      query: () => "/users/me/skills",
+      getMySkills: builder.query<ApiResponse<PageResponse<UserSkill>>, SkillsPageParams | void>({
+        query: (params) => ({
+          url: "/users/me/skills",
+          params: { page: (params as SkillsPageParams)?.page ?? 0, size: (params as SkillsPageParams)?.size ?? 20 },
+        }),
       providesTags: ["UserSkill"],
     }),
 
     // GET /users/{userId}/skills — view-only for other users
-    getUserSkills: builder.query<ApiResponse<UserSkill[]>, number>({
-      query: (userId) => `/users/${userId}/skills`,
-      providesTags: (_result, _error, userId) => [
-        { type: "UserSkill", id: `user-${userId}` },
-      ],
+      getUserSkills: builder.query<
+        ApiResponse<PageResponse<UserSkill>>,
+        { userId: number } & SkillsPageParams
+      >({
+        query: ({ userId, page = 0, size = 20 }) => ({
+          url: `/users/${userId}/skills`,
+          params: { page, size },
+        }),
+        providesTags: (_result, _error, { userId }) => [
+          { type: "UserSkill", id: `user-${userId}` },
+        ],
     }),
 
     // POST /users/me/skills

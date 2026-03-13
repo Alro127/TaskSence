@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, Trash2, Plus, Check, X, Loader2, Sparkles } from "lucide-react";
+import { Pencil, Trash2, Plus, Check, X, Loader2, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -245,12 +245,15 @@ interface SkillsSectionProps {
 export function SkillsSection({ userId }: SkillsSectionProps) {
   const isOwnProfile = !userId;
 
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(0);
+
   const { data: ownData, isLoading: isLoadingOwn } = useGetMySkillsQuery(
-    undefined,
+    { page, size: PAGE_SIZE },
     { skip: !isOwnProfile }
   );
   const { data: otherData, isLoading: isLoadingOther } = useGetUserSkillsQuery(
-    userId ?? 0,
+    { userId: userId ?? 0, page, size: PAGE_SIZE },
     { skip: isOwnProfile }
   );
 
@@ -258,9 +261,10 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
   const [updateSkill] = useUpdateSkillMutation();
   const [deleteSkill] = useDeleteSkillMutation();
 
-  const skills: UserSkill[] = isOwnProfile
-    ? (ownData?.data ?? [])
-    : (otherData?.data ?? []);
+  const pageResponse = isOwnProfile ? ownData?.data : otherData?.data;
+  const skills: UserSkill[] = pageResponse?.data ?? [];
+  const totalElements = pageResponse?.totalElements ?? 0;
+  const totalPages = pageResponse?.totalPages ?? 1;
   const isLoading = isOwnProfile ? isLoadingOwn : isLoadingOther;
 
   // Edit state
@@ -366,7 +370,13 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
               : "Skills declared by this user."}
           </p>
         </div>
-        {isOwnProfile && (
+          <div className="flex items-center gap-2">
+            {totalElements > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {totalElements} skill{totalElements !== 1 ? "s" : ""}
+              </span>
+            )}
+            {isOwnProfile && (
           <Button
             type="button"
             size="sm"
@@ -376,7 +386,8 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
             <Plus className="mr-1.5 h-4 w-4" />
             Add Skill
           </Button>
-        )}
+            )}
+          </div>
       </div>
 
       <Separator />
@@ -464,6 +475,39 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
           )}
         </div>
       )}
+
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-1">
+            <p className="text-xs text-muted-foreground">
+              Page {page + 1} of {totalPages}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                className="h-7 w-7"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                className="h-7 w-7"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                aria-label="Next page"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        )}
     </Card>
   );
 }
