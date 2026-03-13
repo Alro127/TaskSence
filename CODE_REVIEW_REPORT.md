@@ -4,6 +4,8 @@
 
 > **Ngày review lần 1:** 2026-03-10
 > **Ngày review lần 2 (cập nhật):** 2026-03-13
+> **Ngày review lần 1:** 2026-03-10
+> **Ngày review lần 2 (cập nhật):** 2026-03-13
 > **Phạm vi:** Toàn bộ source code Server (Spring Boot) + Client (React/TypeScript)
 > **Mục tiêu:** Đánh giá tính production-ready, bảo mật, nghiệp vụ, và chất lượng code
 
@@ -20,6 +22,7 @@
 7. [LOW - Testing & DevOps](#7-low---testing--devops)
 8. [Tổng kết & Đề xuất Roadmap](#8-tổng-kết--đề-xuất-roadmap)
 9. [Câu hỏi phản biện dự kiến & Gợi ý trả lời](#9-câu-hỏi-phản-biện-dự-kiến--gợi-ý-trả-lời)
+10. [Câu hỏi phản biện dự kiến & Gợi ý trả lời](#9-câu-hỏi-phản-biện-dự-kiến--gợi-ý-trả-lời)
 
 ---
 
@@ -69,6 +72,8 @@ Các endpoint sau không có bất kỳ rate limiting nào:
 **File:** `server/.../dto/request/AuthRequest.java`
 
 ```java
+@NonNull
+private String email;
 @NonNull
 private String email;
 @NonNull
@@ -177,6 +182,10 @@ return AuthResponse.builder()
     .accessToken(newAccessToken)
     .refreshToken(request.getToken()) // ← TRẢ LẠI REFRESH TOKEN CŨ!
     .build();
+return AuthResponse.builder()
+    .accessToken(newAccessToken)
+    .refreshToken(request.getToken()) // ← TRẢ LẠI REFRESH TOKEN CŨ!
+    .build();
 ```
 
 **Vấn đề:** Refresh token không được rotate (tạo mới) sau mỗi lần sử dụng. Nếu refresh token bị steal, attacker và user thật đều dùng được vô thời hạn.
@@ -202,6 +211,33 @@ private LocalDate endDate;      // ← Không có validation
 - `endDate` không được trong quá khứ (tùy nghiệp vụ)
 
 **Gợi ý:** Thêm custom validator hoặc check trong service layer.
+
+---
+
+### 2.8. ⚡ MỚI — **BUG CRITICAL: `resetPassword` dùng sai Redis key**
+
+**File:** `server/.../service/impl/AuthServiceImpl.java:199`
+
+```java
+// forgotPassword() LƯU vào:
+RedisKeys.resetToken(hashedToken)   // → "reset:token:xxx"
+
+// resetPassword() ĐỌC từ:
+RedisKeys.refreshToken(hashedToken) // → "refresh:token:xxx"  ← SAI!
+```
+
+**Vấn đề:** `forgotPassword()` lưu token vào key `reset:token:xxx` (line 187), nhưng `resetPassword()` lại đọc từ key `refresh:token:xxx` (line 199). **Kết quả: chức năng reset password HOÀN TOÀN KHÔNG HOẠT ĐỘNG.**
+
+Đây là bug **sống còn** — nếu giảng viên test thử flow forgot password trong lúc bảo vệ, nó sẽ fail.
+
+**Fix:**
+
+```java
+// Line 199: đổi từ
+String redisKey = RedisKeys.refreshToken(hashedToken);
+// thành
+String redisKey = RedisKeys.resetToken(hashedToken);
+```
 
 ---
 
@@ -303,6 +339,7 @@ private boolean isWorkspaceOwnerOfProject(Long projectId, Long userId) {
 **Vấn đề:** Redis Pub/Sub là **fire-and-forget**. Nếu subscriber offline → message mất.
 
 **Gợi ý:** Dùng **Redis Streams** hoặc RabbitMQ.
+**Gợi ý:** Dùng **Redis Streams** hoặc RabbitMQ.
 
 ---
 
@@ -310,6 +347,7 @@ private boolean isWorkspaceOwnerOfProject(Long projectId, Long userId) {
 
 **Vấn đề:** Google OAuth API, SMTP, AWS S3 — nếu chậm/down → thread bị block.
 
+**Gợi ý:** Dùng Resilience4j `@CircuitBreaker` + `@TimeLimiter`.
 **Gợi ý:** Dùng Resilience4j `@CircuitBreaker` + `@TimeLimiter`.
 
 ---
@@ -475,6 +513,7 @@ function PlaceholderPage({ title }: { title: string }) {
 | `SocketSubscriber.java`        | 24   | `"SocketSubscriber received message"`          |
 
 **Gợi ý:** Thay tất cả bằng SLF4J Logger (`@Slf4j` annotation từ Lombok).
+**Gợi ý:** Thay tất cả bằng SLF4J Logger (`@Slf4j` annotation từ Lombok).
 
 ---
 
@@ -531,6 +570,8 @@ void contextLoads() { }  // ← Test duy nhất trong toàn bộ project
 
 **Lưu ý:** `pom.xml` đã có test dependencies (spring-boot-starter-data-redis-test, spring-boot-starter-mail-test, spring-boot-starter-security-test, spring-boot-starter-webmvc-test) → framework test đã sẵn sàng, chỉ thiếu test code thực tế.
 
+**Lưu ý:** `pom.xml` đã có test dependencies (spring-boot-starter-data-redis-test, spring-boot-starter-mail-test, spring-boot-starter-security-test, spring-boot-starter-webmvc-test) → framework test đã sẵn sàng, chỉ thiếu test code thực tế.
+
 ---
 
 ### 7.2. Swagger UI enabled mà không phân biệt environment
@@ -573,6 +614,8 @@ Chỉ có 1 file `application.yaml` dùng cho mọi environment. Production cầ
 ---
 
 ## 8. Tổng kết & Đề xuất Roadmap
+
+### Ma trận đánh giá (Cập nhật lần 2)
 
 ### Ma trận đánh giá (Cập nhật lần 2)
 
@@ -620,6 +663,9 @@ Chỉ có 1 file `application.yaml` dùng cho mọi environment. Production cầ
 - [ ] Xóa tất cả `System.out.println` → dùng `@Slf4j`
 - [ ] Thêm `@Valid` vào AuthController
 - [ ] Fix package typo `subcriber` → `subscriber`
+- [ ] Xóa tất cả `System.out.println` → dùng `@Slf4j`
+- [ ] Thêm `@Valid` vào AuthController
+- [ ] Fix package typo `subcriber` → `subscriber`
 
 #### Giai đoạn 2: Cải thiện trải nghiệm (1-2 ngày)
 
@@ -630,6 +676,7 @@ Chỉ có 1 file `application.yaml` dùng cho mọi environment. Production cầ
 - [ ] Thêm date validation cho CreateProjectRequest
 - [ ] Refresh token rotation
 - [ ] Thêm rate limiting cho auth endpoints
+- [ ] Thêm rate limiting cho auth endpoints
 
 #### Giai đoạn 3: Production-ready (3-5 ngày)
 
@@ -637,12 +684,15 @@ Chỉ có 1 file `application.yaml` dùng cho mọi environment. Production cầ
 - [ ] Thêm Spring Retry cho email sending
 - [ ] Profile separation (dev/staging/prod)
 - [ ] Restrict CORS configuration
+- [ ] Restrict CORS configuration
 - [ ] Tắt Swagger cho production
 - [ ] Optimize N+1 queries
+- [ ] Tạo constants file cho client
 - [ ] Tạo constants file cho client
 
 ---
 
+> **Ghi chú:** Mặc dù có nhiều vấn đề cần sửa, project đã có những cải thiện đáng kể: Comment system, Sprint/Tag/Attachment features, Pagination, IDOR fix. Kiến trúc tổng thể vẫn tốt (clean architecture, permission matrix, Redis caching, WebSocket, Outbox pattern). Tuy nhiên, **bug resetPassword là critical** và cần fix ngay lập tức trước khi bảo vệ.
 > **Ghi chú:** Mặc dù có nhiều vấn đề cần sửa, project đã có những cải thiện đáng kể: Comment system, Sprint/Tag/Attachment features, Pagination, IDOR fix. Kiến trúc tổng thể vẫn tốt (clean architecture, permission matrix, Redis caching, WebSocket, Outbox pattern). Tuy nhiên, **bug resetPassword là critical** và cần fix ngay lập tức trước khi bảo vệ.
 
 ---
@@ -684,6 +734,24 @@ So với review lần 1, TaskSense đã bổ sung thêm nhiều tính năng:
 | User skill profiles | ❌ | ❌ | ✅ |
 | Sprint management | ✅ | ❌ | ✅ (mới) |
 | Comment reactions | ❌ | ❌ | ✅ (mới) |
+**Những gì TaskSense VẪN THIẾU so với Jira/Trello:**
+| Tính năng | Jira | Trello | TaskSense |
+|-----------|------|--------|-----------|
+| Burndown chart | ✅ | ❌ | ❌ |
+| Time tracking | ✅ | ✅ (Power-Up) | ❌ |
+| Gantt chart | ✅ | ❌ | ❌ |
+| Custom fields | ✅ | ✅ | ❌ |
+| Automation rules | ✅ | ✅ (Butler) | ❌ |
+| Integration (Slack, GitHub) | ✅ | ✅ | ❌ |
+| Reporting/Analytics | ✅ | ❌ | ❌ (placeholder) |
+| Calendar view | ✅ | ✅ | ❌ (placeholder) |
+| Workflow customization | ✅ | ❌ | ❌ (cố định 4 status) |
+| Activity log/History | ✅ | ✅ | ❌ |
+| Public workspace explore | ❌ | ❌ | ✅ |
+| Team templates | ❌ | ❌ | ✅ |
+| User skill profiles | ❌ | ❌ | ✅ |
+| Sprint management | ✅ | ❌ | ✅ (mới) |
+| Comment reactions | ❌ | ❌ | ✅ (mới) |
 
 **Gợi ý trả lời:**
 
@@ -701,6 +769,7 @@ So với review lần 1, TaskSense đã bổ sung thêm nhiều tính năng:
 - **THỰC TẾ: Không có bất kỳ tính năng AI/ML nào** trong toàn bộ codebase
 - Route `/analytics` chỉ là placeholder
 - ElasticSearch dependency có nhưng không rõ đã integrate chưa
+- ElasticSearch dependency có nhưng không rõ đã integrate chưa
 
 **Đây là câu hỏi RẤT KHÓ trả lời** nếu không có kế hoạch AI rõ ràng.
 
@@ -711,8 +780,13 @@ So với review lần 1, TaskSense đã bổ sung thêm nhiều tính năng:
   - **Smart task assignment**: dựa vào `UserSkill` → suggest assignee phù hợp
   - **Task priority suggestion**: phân tích deadline, workload
   - **Overdue prediction**: dự đoán task nào sẽ trễ deadline
+  - **Smart task assignment**: dựa vào `UserSkill` → suggest assignee phù hợp
+  - **Task priority suggestion**: phân tích deadline, workload
+  - **Overdue prediction**: dự đoán task nào sẽ trễ deadline
 
 ---
+
+#### Q3: "Đóng góp mới (contribution) của khóa luận này là gì?"
 
 #### Q3: "Đóng góp mới (contribution) của khóa luận này là gì?"
 
@@ -732,6 +806,8 @@ So với review lần 1, TaskSense đã bổ sung thêm nhiều tính năng:
 
 #### Q4: "Tại sao chọn Redis Pub/Sub mà không dùng RabbitMQ hoặc Kafka?"
 
+#### Q4: "Tại sao chọn Redis Pub/Sub mà không dùng RabbitMQ hoặc Kafka?"
+
 **Gợi ý trả lời:**
 
 - Trade-off: Redis Pub/Sub đơn giản, phù hợp MVP
@@ -743,10 +819,15 @@ So với review lần 1, TaskSense đã bổ sung thêm nhiều tính năng:
 
 #### Q5: "Outbox Pattern xử lý idempotency thế nào? Notification có bị gửi 2 lần không?"
 
+#### Q5: "Outbox Pattern xử lý idempotency thế nào? Notification có bị gửi 2 lần không?"
+
 **Phân tích thực tế:**
 
 ```java
 // OutboxEventProcessor.java
+notificationPublisher.publish(notificationMessage);  // ← step 1
+event.setDeliveryStatus(DeliveryStatus.SUCCESS);      // ← step 2
+outboxEventRepository.save(event);                     // ← step 3
 notificationPublisher.publish(notificationMessage);  // ← step 1
 event.setDeliveryStatus(DeliveryStatus.SUCCESS);      // ← step 2
 outboxEventRepository.save(event);                     // ← step 3
@@ -760,8 +841,12 @@ outboxEventRepository.save(event);                     // ← step 3
 - Thừa nhận: hiện tại là **at-least-once delivery**, chưa phải exactly-once
 - Duplicate notification không gây hại nghiêm trọng
 - Cải thiện: consumer track processed event IDs (idempotency key)
+- Duplicate notification không gây hại nghiêm trọng
+- Cải thiện: consumer track processed event IDs (idempotency key)
 
 ---
+
+#### Q6: "ElasticSearch dependency dùng để làm gì? Tại sao không dùng PostgreSQL full-text search?"
 
 #### Q6: "ElasticSearch dependency dùng để làm gì? Tại sao không dùng PostgreSQL full-text search?"
 
@@ -777,7 +862,13 @@ outboxEventRepository.save(event);                     // ← step 3
 
 **Gợi ý:** Kiểm tra lại version trong pom.xml, chuẩn bị giải thích lý do chọn version. Spring Boot 4.0.x là phiên bản mới, ít tài liệu community.
 
+#### Q7: "Tại sao dùng Spring Boot 4.0.3?"
+
+**Gợi ý:** Kiểm tra lại version trong pom.xml, chuẩn bị giải thích lý do chọn version. Spring Boot 4.0.x là phiên bản mới, ít tài liệu community.
+
 ---
+
+#### Q8: "Giải thích authentication flow. Tại sao CSRF bị tắt?"
 
 #### Q8: "Giải thích authentication flow. Tại sao CSRF bị tắt?"
 
@@ -787,10 +878,15 @@ outboxEventRepository.save(event);                     // ← step 3
 2. Server validate → generate access token + refresh token (JWT, HS256)
 3. Client lưu token vào localStorage (nên nói đã biết rủi ro XSS)
 4. Mỗi request: `Authorization: Bearer {token}`
-5. `JwtAuthenticationFilter` validate token, set `SecurityContext`
-6. CSRF tắt vì: stateless REST API, không dùng cookie → CSRF không áp dụng
+5. Client lưu token vào localStorage (nên nói đã biết rủi ro XSS)
+6. Mỗi request: `Authorization: Bearer {token}`
+7. `JwtAuthenticationFilter` validate token, set `SecurityContext`
+8. CSRF tắt vì: stateless REST API, không dùng cookie → CSRF không áp dụng
+9. CSRF tắt vì: stateless REST API, không dùng cookie → CSRF không áp dụng
 
 ---
+
+#### Q9: "Hệ thống phân quyền 2 cấp hoạt động thế nào? Workspace OWNER vào project mà không phải member thì sao?"
 
 #### Q9: "Hệ thống phân quyền 2 cấp hoạt động thế nào? Workspace OWNER vào project mà không phải member thì sao?"
 
@@ -806,6 +902,8 @@ outboxEventRepository.save(event);                     // ← step 3
 
 #### Q10: "Hệ thống handle bao nhiêu concurrent users? Đã test performance chưa?"
 
+#### Q10: "Hệ thống handle bao nhiêu concurrent users? Đã test performance chưa?"
+
 **Phân tích:**
 
 - Không có performance test (JMeter, Gatling, k6)
@@ -813,6 +911,8 @@ outboxEventRepository.save(event);                     // ← step 3
 - Ước tính: ~100-500 concurrent users với architecture hiện tại
 
 ---
+
+#### Q11: "OutboxWorker chạy mỗi 10 giây. Đây có phải real-time không?"
 
 #### Q11: "OutboxWorker chạy mỗi 10 giây. Đây có phải real-time không?"
 
@@ -825,6 +925,8 @@ outboxEventRepository.save(event);                     // ← step 3
 
 #### Q12: "Task search dùng native SQL. Tại sao không dùng Specification/Criteria API?"
 
+#### Q12: "Task search dùng native SQL. Tại sao không dùng Specification/Criteria API?"
+
 **Gợi ý trả lời:**
 
 - Native query cho performance tốt. Đã dùng parameterized query → an toàn SQL injection
@@ -832,6 +934,12 @@ outboxEventRepository.save(event);                     // ← step 3
 - Nên dùng Criteria API hoặc QueryDSL cho maintainability
 
 ---
+
+### 9.4. NHÓM CÂU HỎI: CHỨC NĂNG
+
+#### Q13: "Route My Tasks, Calendar, Analytics, Settings đều là placeholder. Tại sao?"
+
+**Gợi ý:** Thừa nhận là roadmap features, chưa kịp implement. Ưu tiên My Tasks vì đơn giản nhất.
 
 ### 9.4. NHÓM CÂU HỎI: CHỨC NĂNG
 
@@ -885,6 +993,7 @@ outboxEventRepository.save(event);                     // ← step 3
 
 - Đã test thủ công qua Swagger UI/Postman
 - Thừa nhận thiếu automated test là hạn chế lớn
+- Test dependencies đã có sẵn trong pom.xml
 - Test dependencies đã có sẵn trong pom.xml
 
 ---
@@ -947,6 +1056,8 @@ outboxEventRepository.save(event);                     // ← step 3
 
 ### 9.9. NHÓM CÂU HỎI: BẢO TRÌ & MỞ RỘNG
 
+### 9.9. NHÓM CÂU HỎI: BẢO TRÌ & MỞ RỘNG
+
 #### Q28: "18 file createApi riêng. Thêm global interceptor phải sửa bao nhiêu file?"
 
 **Trả lời:** Thừa nhận technical debt nghiêm trọng. Plan: shared baseQueryWithAuth + injectEndpoints.
@@ -968,6 +1079,8 @@ outboxEventRepository.save(event);                     // ← step 3
 - Business rule: không cho DONE nếu predecessor chưa DONE
 
 ---
+
+### 9.10. CÂU HỎI TỔNG HỢP NHANH
 
 ### 9.10. CÂU HỎI TỔNG HỢP NHANH
 
@@ -1014,6 +1127,13 @@ outboxEventRepository.save(event);                     // ← step 3
 
 ### 9.12. CHECKLIST CHUẨN BỊ TRƯỚC BẢO VỆ
 
+### 9.12. CHECKLIST CHUẨN BỊ TRƯỚC BẢO VỆ
+
+- [ ] **FIX NGAY: Bug resetPassword** (đổi `RedisKeys.refreshToken` → `resetToken`)
+- [ ] **FIX NGAY: Xóa System.out.println** (15 chỗ)
+- [ ] **FIX NGAY: Thêm @Valid** vào AuthController
+- [ ] Chuẩn bị demo flow: Register → OTP → Login → Create Workspace → Create Project → Sprint → Task → Comment → Drag Kanban → Real-time Notification
+- [ ] **Test thử flow forgot password** sau khi fix bug
 - [ ] **FIX NGAY: Bug resetPassword** (đổi `RedisKeys.refreshToken` → `resetToken`)
 - [ ] **FIX NGAY: Xóa System.out.println** (15 chỗ)
 - [ ] **FIX NGAY: Thêm @Valid** vào AuthController
@@ -1023,6 +1143,11 @@ outboxEventRepository.save(event);                     // ← step 3
 - [ ] Chuẩn bị slide Outbox Pattern flow diagram
 - [ ] Chuẩn bị slide Permission Matrix (table)
 - [ ] Export Postman collection (manual test evidence)
+- [ ] Chuẩn bị answer cho "TaskSense khác gì Jira?" (Q1)
+- [ ] Chuẩn bị answer cho "Tại sao không có test?" (Q19)
+- [ ] Chuẩn bị answer cho "Đóng góp mới là gì?" (Q3)
+- [ ] Chuẩn bị answer cho "Sense có nghĩa gì?" (Q2)
+- [ ] Fix ít nhất các CRITICAL issues ở Section 1 + 2 trước ngày bảo vệ
 - [ ] Chuẩn bị answer cho "TaskSense khác gì Jira?" (Q1)
 - [ ] Chuẩn bị answer cho "Tại sao không có test?" (Q19)
 - [ ] Chuẩn bị answer cho "Đóng góp mới là gì?" (Q3)
