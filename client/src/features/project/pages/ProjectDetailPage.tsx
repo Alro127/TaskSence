@@ -366,10 +366,10 @@ export function ProjectDetailPage() {
   const pendingCount = joinRequestsTotalElements;
 
   const { data: tasksData, isLoading: isTasksLoading } = useGetTasksByProjectQuery(
-    projectId,
+    { projectId, page: 0, size: 200 },
     { skip: skipMemberOnlyQueries },
   );
-  const tasks = tasksData?.data ?? [];
+  const tasks = tasksData?.data?.data ?? [];
 
   // ── Modal states ──
   const [isEditOpen, setIsEditOpen] = useState(false);

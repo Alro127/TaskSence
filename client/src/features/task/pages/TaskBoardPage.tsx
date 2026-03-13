@@ -466,6 +466,14 @@ export function TaskBoardPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   // Board-only: which columns are hidden (client-side)
   const [hiddenColumns, setHiddenColumns] = useState<Set<TaskStatus>>(new Set());
+  const [boardVisibleCount, setBoardVisibleCount] = useState<Record<TaskStatus, number>>({
+    TODO: 8,
+    IN_PROGRESS: 8,
+    REVIEW: 8,
+    DONE: 8,
+  });
+  const [listPage, setListPage] = useState(1);
+  const LIST_PAGE_SIZE = 20;
 
   // Debounce keyword 400ms
   useEffect(() => {
@@ -504,15 +512,27 @@ export function TaskBoardPage() {
     setKeywordInput("");
     setDebouncedKeyword("");
     setHiddenColumns(new Set());
+    setListPage(1);
   }, []);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [
+    viewMode,
+    filterStatus,
+    filterPriority,
+    filterAssigneeId,
+    debouncedKeyword,
+    filterDueDateFrom,
+    filterDueDateTo,
+  ]);
 
   // ─── Build search query args ─────────────────────────────────────────────────
   // Board view: status is NEVER sent — all columns must always be fetchable for DnD
   // List view: status sent when a specific status is selected
-  const searchArgs = useMemo(
+  const boardSearchArgs = useMemo(
     () => ({
       projectId,
-      ...(viewMode === "list" && filterStatus !== "ALL" && { status: filterStatus }),
       ...(filterPriority !== "ALL" && { priority: filterPriority }),
       ...(filterAssigneeId !== "ALL" && { assigneeId: filterAssigneeId }),
       ...(debouncedKeyword.trim() && { keyword: debouncedKeyword.trim() }),
@@ -522,9 +542,7 @@ export function TaskBoardPage() {
       size: 200,
     }),
     [
-      viewMode,
       projectId,
-      filterStatus,
       filterPriority,
       filterAssigneeId,
       debouncedKeyword,
@@ -533,12 +551,51 @@ export function TaskBoardPage() {
     ],
   );
 
+  const listSearchArgs = useMemo(
+    () => ({
+      projectId,
+      ...(filterStatus !== "ALL" && { status: filterStatus }),
+      ...(filterPriority !== "ALL" && { priority: filterPriority }),
+      ...(filterAssigneeId !== "ALL" && { assigneeId: filterAssigneeId }),
+      ...(debouncedKeyword.trim() && { keyword: debouncedKeyword.trim() }),
+      ...(filterDueDateFrom && { dueDateFrom: filterDueDateFrom }),
+      ...(filterDueDateTo && { dueDateTo: filterDueDateTo }),
+      page: listPage,
+      size: LIST_PAGE_SIZE,
+    }),
+    [
+      projectId,
+      filterStatus,
+      filterPriority,
+      filterAssigneeId,
+      debouncedKeyword,
+      filterDueDateFrom,
+      filterDueDateTo,
+      listPage,
+    ],
+  );
+
   // ─── Data ───────────────────────────────────────────────────────────────────
-  const { data: tasksData, isLoading, isFetching } = useSearchTasksQuery(searchArgs, {
-    skip: isNaN(projectId),
+  const {
+    data: boardTasksData,
+    isLoading: isBoardLoading,
+    isFetching: isBoardFetching,
+  } = useSearchTasksQuery(boardSearchArgs, {
+    skip: isNaN(projectId) || viewMode !== "board",
   });
+  const {
+    data: listTasksData,
+    isLoading: isListLoading,
+    isFetching: isListFetching,
+  } = useSearchTasksQuery(listSearchArgs, {
+    skip: isNaN(projectId) || viewMode !== "list",
+  });
+
   // Only show root tasks on the board — subtasks are managed inside TaskDetailPage
-  const tasks = (tasksData?.data ?? []).filter((t) => t.parentTaskId == null);
+  const boardTasks = (boardTasksData?.data ?? []).filter((t) => t.parentTaskId == null);
+  const listTasks = (listTasksData?.data ?? []).filter((t) => t.parentTaskId == null);
+  const isLoading = viewMode === "board" ? isBoardLoading : isListLoading;
+  const isFetching = viewMode === "board" ? isBoardFetching : isListFetching;
 
   const { data: workspaceData } = useGetWorkspaceByIdQuery(workspaceId, {
     skip: isNaN(workspaceId),
@@ -582,11 +639,14 @@ export function TaskBoardPage() {
   const grouped = useMemo(() => {
     const map = new Map<TaskStatus, TaskResponse[]>();
     STATUS_COLUMNS.forEach((col) => map.set(col.value, []));
-    tasks.forEach((t) => {
+    boardTasks.forEach((t) => {
       map.get(t.status)?.push(t);
     });
     return map;
-  }, [tasks]);
+  }, [boardTasks]);
+
+  const listTotalItems = listTasksData?.data?.length ?? 0;
+  const listTotalPages = Math.max(1, Math.ceil(listTotalItems / LIST_PAGE_SIZE));
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const handleOpenCreate = useCallback(() => {
@@ -917,7 +977,7 @@ export function TaskBoardPage() {
       )}
 
       {/* ── Empty state (no tasks in project at all) ── */}
-      {!isLoading && tasks.length === 0 && !hasAnyFilter && (
+      {!isLoading && viewMode === "board" && boardTasks.length === 0 && !hasAnyFilter && (
         <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/30 text-center">
           <p className="text-sm font-medium">No tasks yet</p>
           <p className="text-xs text-muted-foreground">
@@ -931,81 +991,75 @@ export function TaskBoardPage() {
       )}
 
       {/* ── LIST VIEW ── */}
-      {!isLoading && tasks.length > 0 && viewMode === "list" && (
+      {!isLoading && listTasks.length > 0 && viewMode === "list" && (
         <div className="space-y-4">
-          {STATUS_COLUMNS.map((col) => {
-            const colTasks = grouped.get(col.value) ?? [];
-            const isCollapsed = collapsedGroups.has(col.value);
-            return (
-              <Card key={col.value} className="overflow-hidden">
-                {/* Group header */}
-                <button
-                  onClick={() => toggleGroup(col.value)}
-                  className="flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
-                >
-                  {isCollapsed ? (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <span
-                    className={cn(
-                      "rounded-full border px-2.5 py-0.5 text-xs font-medium",
-                      col.badgeClass,
-                    )}
-                  >
-                    {col.label}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {colTasks.length} task{colTasks.length !== 1 ? "s" : ""}
-                  </span>
-                </button>
+          <Card className="overflow-hidden">
+            <div className="hidden border-b px-4 py-2 sm:flex">
+              <span className="flex-1 text-xs font-medium text-muted-foreground">Title</span>
+              <span className="hidden w-24 shrink-0 text-xs font-medium text-muted-foreground sm:block">
+                Status
+              </span>
+              <span className="hidden w-20 shrink-0 text-xs font-medium text-muted-foreground sm:block">
+                Priority
+              </span>
+              <span className="hidden w-24 shrink-0 text-xs font-medium text-muted-foreground md:block">
+                Due
+              </span>
+              <span className="hidden w-16 shrink-0 text-xs font-medium text-muted-foreground sm:block">
+                Assignees
+              </span>
+              <span className="w-8 shrink-0" />
+            </div>
 
-                {/* Column header row */}
-                {!isCollapsed && colTasks.length > 0 && (
-                  <div className="hidden border-b px-4 py-1.5 sm:flex">
-                    <span className="flex-1 text-xs font-medium text-muted-foreground">Title</span>
-                    <span className="hidden w-20 shrink-0 text-xs font-medium text-muted-foreground sm:block">
-                      Priority
-                    </span>
-                    <span className="hidden w-24 shrink-0 text-xs font-medium text-muted-foreground md:block">
-                      Due
-                    </span>
-                    <span className="hidden w-16 shrink-0 text-xs font-medium text-muted-foreground sm:block">
-                      Assignees
-                    </span>
-                    <span className="w-8 shrink-0" />
-                  </div>
-                )}
+            <div className="divide-y px-1 py-1">
+              {listTasks.map((t) => (
+                <TaskListRow
+                  key={t.id}
+                  task={t}
+                  projectId={projectId}
+                  workspaceId={workspaceId}
+                  onEdit={handleOpenEdit}
+                  onDelete={handleDeleteRequest}
+                />
+              ))}
+            </div>
+          </Card>
 
-                {!isCollapsed && (
-                  <div className="divide-y px-1 py-1">
-                    {colTasks.length === 0 ? (
-                      <p className="px-3 py-4 text-xs text-center text-muted-foreground">
-                        No tasks here
-                      </p>
-                    ) : (
-                      colTasks.map((t) => (
-                        <TaskListRow
-                          key={t.id}
-                          task={t}
-                          projectId={projectId}
-                          workspaceId={workspaceId}
-                          onEdit={handleOpenEdit}
-                          onDelete={handleDeleteRequest}
-                        />
-                      ))
-                    )}
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3">
+            <p className="text-xs text-muted-foreground">
+              Showing {Math.min((listPage - 1) * LIST_PAGE_SIZE + 1, listTotalItems)}-
+              {Math.min(listPage * LIST_PAGE_SIZE, listTotalItems)} of {listTotalItems} tasks
+            </p>
+
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                disabled={listPage <= 1}
+                onClick={() => setListPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <span className="px-2 text-xs text-muted-foreground">
+                Page {listPage} / {listTotalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                disabled={listPage >= listTotalPages}
+                onClick={() => setListPage((p) => Math.min(listTotalPages, p + 1))}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* ── BOARD VIEW ── */}
-      {!isLoading && tasks.length > 0 && viewMode === "board" && (
+      {!isLoading && boardTasks.length > 0 && viewMode === "board" && (
         <DndContext
           sensors={sensors}
           onDragStart={handleDragStart}
@@ -1015,18 +1069,37 @@ export function TaskBoardPage() {
           <div className="grid min-h-[400px] grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {STATUS_COLUMNS.filter((col) => !hiddenColumns.has(col.value)).map((col) => {
               const colTasks = grouped.get(col.value) ?? [];
+              const visibleTasks = colTasks.slice(0, boardVisibleCount[col.value]);
+              const remaining = Math.max(0, colTasks.length - visibleTasks.length);
               return (
-                <KanbanColumn
-                  key={col.value}
-                  col={col}
-                  tasks={colTasks}
-                  projectId={projectId}
-                  workspaceId={workspaceId}
-                  onEdit={handleOpenEdit}
-                  onDelete={handleDeleteRequest}
-                  onAddTask={handleOpenCreate}
-                  isOver={overColumnId === col.value}
-                />
+                <div key={col.value} className="flex flex-col gap-2">
+                  <KanbanColumn
+                    col={col}
+                    tasks={visibleTasks}
+                    projectId={projectId}
+                    workspaceId={workspaceId}
+                    onEdit={handleOpenEdit}
+                    onDelete={handleDeleteRequest}
+                    onAddTask={handleOpenCreate}
+                    isOver={overColumnId === col.value}
+                  />
+
+                  {remaining > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() =>
+                        setBoardVisibleCount((prev) => ({
+                          ...prev,
+                          [col.value]: prev[col.value] + 8,
+                        }))
+                      }
+                    >
+                      Load more ({remaining})
+                    </Button>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -1048,7 +1121,20 @@ export function TaskBoardPage() {
       )}
 
       {/* ── No results from filter ── */}
-      {!isLoading && tasks.length === 0 && hasAnyFilter && (
+      {!isLoading && viewMode === "board" && boardTasks.length === 0 && hasAnyFilter && (
+        <div className="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/30 text-center">
+          <p className="text-sm font-medium">No tasks match your filters</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearAllFilters}
+          >
+            Clear filters
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && viewMode === "list" && listTasks.length === 0 && hasAnyFilter && (
         <div className="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/30 text-center">
           <p className="text-sm font-medium">No tasks match your filters</p>
           <Button
