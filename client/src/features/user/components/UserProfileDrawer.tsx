@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { AlertCircle, CalendarDays, FolderKanban, Loader2, Mail, Phone, UserRound } from "lucide-react";
 import { format } from "date-fns";
 
@@ -9,10 +10,19 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { SkillsSection } from "./SkillsSection";
 import { useGetUserByIdQuery } from "../api/userApi";
-import { useGetPublicWorkspacesQuery } from "@/features/workspace/api/workspaceApi";
-import { useGetMyWorkspacesQuery } from "@/features/workspace/api/workspaceApi";
+import {
+  useGetMyWorkspacesQuery,
+  useGetPublicWorkspacesQuery,
+} from "@/features/workspace/api/workspaceApi";
 import { WorkspaceExploreCard } from "@/features/workspace/components/WorkspaceExploreCard";
 import type { User } from "@/types/api";
 
@@ -32,6 +42,8 @@ const GENDER_LABELS: Record<string, string> = {
   FEMALE: "Female",
   OTHER: "Other",
 };
+
+const PUBLIC_WORKSPACES_PAGE_SIZE = 6;
 
 // ─── Helper: single info row ─────────────────────────────────────────────────
 
@@ -57,18 +69,41 @@ function InfoRow({ icon: Icon, label, value }: InfoRowProps) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function UserProfileDrawer({ userId, open, onClose }: UserProfileDrawerProps) {
+  const [workspacePage, setWorkspacePage] = useState(0);
+
+  useEffect(() => {
+    if (open) {
+      setWorkspacePage(0);
+    }
+  }, [open, userId]);
+
   const { data, isLoading, isError } = useGetUserByIdQuery(userId!, {
     skip: !userId,
   });
 
-  const { data: publicWsData, isLoading: isWsLoading } = useGetPublicWorkspacesQuery(userId!, {
-    skip: !userId,
-  });
+  const {
+    data: publicWsData,
+    isLoading: isWsLoading,
+    isFetching: isWsFetching,
+  } = useGetPublicWorkspacesQuery(
+    {
+      userId: userId!,
+      page: workspacePage,
+      size: PUBLIC_WORKSPACES_PAGE_SIZE,
+    },
+    {
+      skip: !userId || !open,
+    }
+  );
 
   const { data: myWsData } = useGetMyWorkspacesQuery();
   const myWorkspaceIds = new Set((myWsData?.data?.data ?? []).map((w) => w.id));
 
-  const publicWorkspaces = (publicWsData?.data ?? []).filter(
+  const publicWorkspacePage = publicWsData?.data;
+  const totalWorkspacePages = publicWorkspacePage?.totalPages ?? 0;
+  const currentWorkspacePage = publicWorkspacePage?.page ?? workspacePage;
+
+  const publicWorkspaces = (publicWorkspacePage?.data ?? []).filter(
     (ws) => !myWorkspaceIds.has(ws.id)
   );
 
@@ -201,7 +236,7 @@ export function UserProfileDrawer({ userId, open, onClose }: UserProfileDrawerPr
               value="workspaces"
               className="mt-0 flex-1 overflow-y-auto px-6 py-4"
             >
-              {isWsLoading ? (
+              {isWsLoading || isWsFetching ? (
                 <div className="flex items-center justify-center py-10">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
@@ -213,11 +248,51 @@ export function UserProfileDrawer({ userId, open, onClose }: UserProfileDrawerPr
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {publicWorkspaces.map((ws) => (
-                    <WorkspaceExploreCard key={ws.id} workspace={ws} />
-                  ))}
-                </div>
+                <>
+                  <div className="space-y-3">
+                    {publicWorkspaces.map((ws) => (
+                      <WorkspaceExploreCard key={ws.id} workspace={ws} />
+                    ))}
+                  </div>
+
+                  {totalWorkspacePages > 1 && (
+                    <Pagination className="mt-4">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => setWorkspacePage((p) => Math.max(0, p - 1))}
+                            aria-disabled={currentWorkspacePage === 0}
+                            className={
+                              currentWorkspacePage === 0
+                                ? "pointer-events-none opacity-50"
+                                : "cursor-pointer"
+                            }
+                          />
+                        </PaginationItem>
+
+                        <PaginationItem>
+                          <p className="px-2 text-xs text-muted-foreground">
+                            Page {currentWorkspacePage + 1} / {totalWorkspacePages}
+                          </p>
+                        </PaginationItem>
+
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() =>
+                              setWorkspacePage((p) => Math.min(totalWorkspacePages - 1, p + 1))
+                            }
+                            aria-disabled={currentWorkspacePage >= totalWorkspacePages - 1}
+                            className={
+                              currentWorkspacePage >= totalWorkspacePages - 1
+                                ? "pointer-events-none opacity-50"
+                                : "cursor-pointer"
+                            }
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </>
               )}
             </TabsContent>
           </Tabs>

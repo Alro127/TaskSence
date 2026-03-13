@@ -97,7 +97,7 @@
   - `DELETE /workspaces/:workspaceId/join-requests/:requestId` → huỷ join request
 - **Workspace Explore Endpoints**:
   - `GET /workspaces/search?name=...&cursor=...&limit=...` → tìm kiếm public workspaces → `WorkspaceResponse[]`
-  - `GET /workspaces/public/:userId` → danh sách public workspaces của user khác → `WorkspaceResponse[]`
+  - `GET /workspaces/public/:userId?page=0&size=10&sort=createdAt,desc` → danh sách public workspaces của user khác (pageable) → `PageResponse<WorkspaceResponse>`
 - **Notification Endpoints**:
   - `GET /notifications/unread-count` → số thông báo chưa đọc → `number`
   - `POST /notifications/:id/read` → đánh dấu 1 thông báo là đã đọc
@@ -543,6 +543,7 @@ client/
 > Comment section gắn cố định bên dưới nội dung task trong `TaskDetailPage`. 1-level reply (không nest thêm), emoji reactions (1 reaction per user, click again = remove, click khác = switch), @mention, cursor pagination.
 
 **Design decisions:**
+
 - Vị trí: fixed section bên dưới 2-column grid của task detail
 - Threading: 1 cấp reply (như GitHub/Jira) — reply không có nút Reply tiếp
 - Reactions: có emoji picker + 1-per-user constraint
@@ -681,7 +682,7 @@ client/
   - `cancelJoinRequest({requestId, workspaceId})` — `DELETE .../join-requests/:requestId`
 - ✅ **workspaceApi** — thêm 2 endpoints mới:
   - `searchWorkspaces({name, cursor?, limit?})` → `GET /workspaces/search` (tìm kiếm public workspaces)
-  - `getPublicWorkspaces(userId)` → `GET /workspaces/public/:userId` (public workspaces của user khác)
+  - `getPublicWorkspaces({userId, page?, size?, sort?})` → `GET /workspaces/public/:userId` (pageable public workspaces của user khác)
 - ✅ **WorkspaceExploreCard** (`features/workspace/components/WorkspaceExploreCard.tsx`):
   - Card hiển thị public workspace: tên, Globe icon, description, created date
   - Action button logic: không có request → "Request to join"; PENDING → "Cancel request" (gọi `cancelJoinRequest`); APPROVED → Badge xanh; REJECTED → Badge đỏ
