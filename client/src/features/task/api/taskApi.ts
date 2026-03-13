@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import type {
   ApiResponse,
+  PageResponse,
   TaskResponse,
   CreateTaskRequest,
   UpdateTaskRequest,
@@ -27,9 +28,15 @@ export const taskApi = createApi({
   }),
   tagTypes: ["Task"],
   endpoints: (builder) => ({
-    getTasksByProject: builder.query<ApiResponse<TaskResponse[]>, number>({
-      query: (projectId) => `/projects/${projectId}/tasks`,
-      providesTags: (_result, _error, projectId) => [
+    getTasksByProject: builder.query<
+      ApiResponse<PageResponse<TaskResponse>>,
+      { projectId: number; page?: number; size?: number; sort?: string }
+    >({
+      query: ({ projectId, page = 0, size = 20, sort }) => ({
+        url: `/projects/${projectId}/tasks`,
+        params: { page, size, ...(sort ? { sort } : {}) },
+      }),
+      providesTags: (_result, _error, { projectId }) => [
         { type: "Task", id: `PROJECT_${projectId}` },
       ],
     }),
@@ -59,11 +66,13 @@ export const taskApi = createApi({
     }),
 
     getSubTasks: builder.query<
-      ApiResponse<TaskResponse[]>,
-      { projectId: number; taskId: number }
+      ApiResponse<PageResponse<TaskResponse>>,
+      { projectId: number; taskId: number; page?: number; size?: number }
     >({
-      query: ({ projectId, taskId }) =>
-        `/projects/${projectId}/tasks/${taskId}/subtasks`,
+      query: ({ projectId, taskId, page = 0, size = 50 }) => ({
+        url: `/projects/${projectId}/tasks/${taskId}/subtasks`,
+        params: { page, size },
+      }),
       providesTags: (_result, _error, { taskId }) => [
         { type: "Task", id: `SUBTASKS_${taskId}` },
       ],

@@ -1,15 +1,16 @@
 package dev.alro127.tasksense.service;
 
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.UserSkillRequest;
 import dev.alro127.tasksense.dto.response.UserSkillResponse;
 
-import java.util.List;
+import org.springframework.data.domain.Pageable;
 
 public interface UserSkillService {
 
-    List<UserSkillResponse> getMySkills();
+    PageResponse<UserSkillResponse> getMySkills(Pageable pageable);
 
-    List<UserSkillResponse> getSkillsByUserId(Long userId);
+    PageResponse<UserSkillResponse> getSkillsByUserId(Long userId, Pageable pageable);
 
     UserSkillResponse addSkill(UserSkillRequest request);
 

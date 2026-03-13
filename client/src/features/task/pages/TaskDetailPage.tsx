@@ -148,10 +148,10 @@ export function TaskDetailPage() {
 
   const [subtasksExpanded, setSubtasksExpanded] = useState(true);
   const { data: subtasksData } = useGetSubTasksQuery(
-    { projectId, taskId },
+    { projectId, taskId, page: 0, size: 50 },
     { skip: isNaN(projectId) || isNaN(taskId) },
   );
-  const subtasks = subtasksData?.data ?? [];
+  const subtasks = subtasksData?.data?.data ?? [];
 
   const { data: membersData } = useGetMembersQuery(
     { projectId, page: 0, size: 100 },

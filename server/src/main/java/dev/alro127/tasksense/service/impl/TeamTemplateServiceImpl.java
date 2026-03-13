@@ -1,8 +1,8 @@
 package dev.alro127.tasksense.service.impl;
 
-
 import dev.alro127.tasksense.domain.entity.TeamTemplateEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
+import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.TeamTemplateRequest;
 import dev.alro127.tasksense.dto.response.TeamMemberTemplateResponse;
 import dev.alro127.tasksense.dto.response.TeamTemplateResponse;
@@ -13,6 +13,9 @@ import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.TeamTemplateService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -45,36 +48,34 @@ public class TeamTemplateServiceImpl implements TeamTemplateService {
     }
 
     @Override
-    public List<TeamTemplateResponse> getMyTemplates() {
+    public PageResponse<TeamTemplateResponse> getMyTemplates(Pageable pageable) {
 
         UserEntity currentUser = securityService.getCurrentUser();
 
-        List<TeamTemplateEntity> templates =
-                teamTemplateRepository.findByOwnerId(currentUser.getId());
+        Page<TeamTemplateEntity> templatePage = teamTemplateRepository.findByOwnerId(currentUser.getId(), pageable);
 
-        if (templates.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        List<Long> templateIds = templates.stream()
+        List<Long> templateIds = templatePage.getContent()
+                .stream()
                 .map(TeamTemplateEntity::getId)
                 .toList();
 
-        List<Object[]> countResults =
-                teamMemberTemplateRepository.countMembersByTemplateIds(templateIds);
-
-        Map<Long, Long> memberCountMap = countResults.stream()
+        Map<Long, Long> memberCountMap = teamMemberTemplateRepository
+                .countMembersByTemplateIds(templateIds)
+                .stream()
                 .collect(Collectors.toMap(
                         row -> (Long) row[0],
-                        row -> (Long) row[1]
-                ));
+                        row -> (Long) row[1]));
 
-        return templates.stream()
-                .map(template -> TeamTemplateResponse.mapToResponse(
-                        template,
-                        memberCountMap.getOrDefault(template.getId(), 0L)
-                ))
-                .toList();
+        Page<TeamTemplateResponse> responsePage = templatePage.map(template -> TeamTemplateResponse.mapToResponse(
+                template,
+                memberCountMap.getOrDefault(template.getId(), 0L)));
+
+        return new PageResponse<>(
+                responsePage.getContent(),
+                responsePage.getNumber(),
+                responsePage.getSize(),
+                responsePage.getTotalElements(),
+                responsePage.getTotalPages());
     }
 
     @Override
@@ -135,6 +136,5 @@ public class TeamTemplateServiceImpl implements TeamTemplateService {
 
         teamTemplateRepository.save(entity);
     }
-
 
 }

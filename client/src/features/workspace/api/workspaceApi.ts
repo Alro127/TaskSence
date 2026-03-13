@@ -8,6 +8,13 @@ import type {
   UpdateWorkspaceRequest,
 } from "@/types/api";
 
+type GetPublicWorkspacesParams = {
+  userId: number;
+  page?: number;
+  size?: number;
+  sort?: string;
+};
+
 const baseUrl =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
 
@@ -74,8 +81,18 @@ export const workspaceApi = createApi({
       }),
     }),
 
-    getPublicWorkspaces: builder.query<ApiResponse<Workspace[]>, number>({
-      query: (userId) => `/workspaces/public/${userId}`,
+    getPublicWorkspaces: builder.query<
+      ApiResponse<PageResponse<Workspace>>,
+      GetPublicWorkspacesParams
+    >({
+      query: ({ userId, page = 0, size = 10, sort }) => ({
+        url: `/workspaces/public/${userId}`,
+        params: {
+          page,
+          size,
+          ...(sort ? { sort } : {}),
+        },
+      }),
     }),
   }),
 });

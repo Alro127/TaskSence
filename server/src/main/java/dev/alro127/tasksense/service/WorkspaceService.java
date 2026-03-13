@@ -25,5 +25,5 @@ public interface WorkspaceService {
 
     List<WorkspaceResponse> searchWorkspaces(String name, Long cursor, int limit);
 
-    List<WorkspaceResponse> getPublicWorkspaces(Long userId);
+    PageResponse<WorkspaceResponse> getPublicWorkspaces(Long userId, Pageable pageable);
 }

@@ -102,13 +102,13 @@ public class WorkspaceController {
         }
 
         @GetMapping("/public/{userId}")
-        public ResponseEntity<ApiResponse<List<WorkspaceResponse>>> getPublicWorkspaces(
-                        @PathVariable Long userId) {
+        public ResponseEntity<ApiResponse<PageResponse<WorkspaceResponse>>> getPublicWorkspaces(
+                        @PathVariable Long userId, Pageable pageable) {
 
-                ApiResponse<List<WorkspaceResponse>> response = new ApiResponse<>(
+                ApiResponse<PageResponse<WorkspaceResponse>> response = new ApiResponse<>(
                                 "200",
                                 "Get public workspaces successfully",
-                                workspaceService.getPublicWorkspaces(userId),
+                                workspaceService.getPublicWorkspaces(userId, pageable),
                                 null);
 
                 return ResponseEntity.ok(response);

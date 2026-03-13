@@ -1,12 +1,10 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  CalendarDays,
   ChevronDown,
   ChevronRight,
   Filter,
-  Flag,
   GripVertical,
   LayoutGrid,
   List,
@@ -58,15 +56,12 @@ import {
 } from "@/components/ui/dialog";
 import { cn, getApiErrorMessage } from "@/lib/utils";
 import type { TaskPriority, TaskResponse, TaskStatus } from "@/types/api";
-import { TagBadge } from "@/features/tag/components";
-import { useGetTagsByProjectQuery } from "@/features/tag/api";
 
 import { useSearchTasksQuery, useDeleteTaskMutation, useUpdateTaskStatusMutation } from "../api/taskApi";
 import { TaskFormSheet } from "../components/TaskFormSheet";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
 import { useGetProjectByIdQuery } from "@/features/project/api/projectApi";
 import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
-import { useGetProjectSprintsQuery } from "@/features/sprint/api/sprintApi";
 
 // ─── Config ──────────────────────────────────────────────────────────────────────
 const STATUS_COLUMNS: {
@@ -206,12 +201,6 @@ function TaskCard({
           >
             {PRIORITY_BADGE[task.priority].label}
           </span>
-        )}
-        {(task.tags ?? []).slice(0, 2).map((tag) => (
-          <TagBadge key={tag.id} tag={tag} className="text-[10px] px-1.5 py-0.5" />
-        ))}
-        {(task.tags ?? []).length > 2 && (
-          <span className="text-[10px] text-muted-foreground">+{(task.tags ?? []).length - 2}</span>
         )}
         {task.dueDate && (
           <span
@@ -392,15 +381,6 @@ function TaskListRow({
         )}
       </div>
 
-      <div className="hidden w-44 shrink-0 md:flex flex-wrap gap-1">
-        {(task.tags ?? []).slice(0, 2).map((tag) => (
-          <TagBadge key={tag.id} tag={tag} />
-        ))}
-        {(task.tags ?? []).length > 2 && (
-          <span className="text-xs text-muted-foreground">+{(task.tags ?? []).length - 2}</span>
-        )}
-      </div>
-
       {/* Due date */}
       <div className="hidden w-24 shrink-0 text-xs md:block">
         {task.dueDate ? (
@@ -472,18 +452,13 @@ export function TaskBoardPage() {
   } = useParams<{ id: string; projectId: string }>();
   const workspaceId = Number(workspaceIdStr);
   const projectId = Number(projectIdStr);
-  const [searchParams] = useSearchParams();
-  const isInitializedFromUrl = useRef(false);
 
   // ─── Filter state ────────────────────────────────────────────────────────────
   type ViewMode = "list" | "board";
   const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "ALL">("ALL");
   const [filterPriority, setFilterPriority] = useState<TaskPriority | "ALL">("ALL");
-  const [filterTagIds, setFilterTagIds] = useState<number[]>([]);
   const [filterAssigneeId, setFilterAssigneeId] = useState<number | "ALL">("ALL");
-  const [filterSprintId, setFilterSprintId] = useState<number | "ALL" | "NONE">("ALL");
-  const [onlyActiveSprint, setOnlyActiveSprint] = useState(false);
   const [filterDueDateFrom, setFilterDueDateFrom] = useState("");
   const [filterDueDateTo, setFilterDueDateTo] = useState("");
   const [keywordInput, setKeywordInput] = useState("");
@@ -491,13 +466,14 @@ export function TaskBoardPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   // Board-only: which columns are hidden (client-side)
   const [hiddenColumns, setHiddenColumns] = useState<Set<TaskStatus>>(new Set());
-
-  const todayDate = new Date();
-  const todayLocal = new Date(
-    todayDate.getFullYear(),
-    todayDate.getMonth(),
-    todayDate.getDate(),
-  );
+  const [boardVisibleCount, setBoardVisibleCount] = useState<Record<TaskStatus, number>>({
+    TODO: 8,
+    IN_PROGRESS: 8,
+    REVIEW: 8,
+    DONE: 8,
+  });
+  const [listPage, setListPage] = useState(1);
+  const LIST_PAGE_SIZE = 20;
 
   // Debounce keyword 400ms
   useEffect(() => {
@@ -516,9 +492,7 @@ export function TaskBoardPage() {
   // Count active advanced filters for badge
   const advancedFilterCount = [
     filterPriority !== "ALL",
-    filterTagIds.length > 0,
     filterAssigneeId !== "ALL",
-    filterSprintId !== "ALL",
     !!filterDueDateFrom,
     !!filterDueDateTo,
   ].filter(Boolean).length;
@@ -527,30 +501,38 @@ export function TaskBoardPage() {
   const hasAnyFilter =
     (viewMode === "list" && filterStatus !== "ALL") ||
     advancedFilterCount > 0 ||
-    onlyActiveSprint ||
     !!debouncedKeyword.trim();
 
   const clearAllFilters = useCallback(() => {
     setFilterStatus("ALL");
     setFilterPriority("ALL");
-    setFilterTagIds([]);
     setFilterAssigneeId("ALL");
-    setFilterSprintId("ALL");
-    setOnlyActiveSprint(false);
     setFilterDueDateFrom("");
     setFilterDueDateTo("");
     setKeywordInput("");
     setDebouncedKeyword("");
     setHiddenColumns(new Set());
+    setListPage(1);
   }, []);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [
+    viewMode,
+    filterStatus,
+    filterPriority,
+    filterAssigneeId,
+    debouncedKeyword,
+    filterDueDateFrom,
+    filterDueDateTo,
+  ]);
 
   // ─── Build search query args ─────────────────────────────────────────────────
   // Board view: status is NEVER sent — all columns must always be fetchable for DnD
   // List view: status sent when a specific status is selected
-  const searchArgs = useMemo(
+  const boardSearchArgs = useMemo(
     () => ({
       projectId,
-      ...(viewMode === "list" && filterStatus !== "ALL" && { status: filterStatus }),
       ...(filterPriority !== "ALL" && { priority: filterPriority }),
       ...(filterAssigneeId !== "ALL" && { assigneeId: filterAssigneeId }),
       ...(debouncedKeyword.trim() && { keyword: debouncedKeyword.trim() }),
@@ -560,9 +542,7 @@ export function TaskBoardPage() {
       size: 200,
     }),
     [
-      viewMode,
       projectId,
-      filterStatus,
       filterPriority,
       filterAssigneeId,
       debouncedKeyword,
@@ -571,10 +551,51 @@ export function TaskBoardPage() {
     ],
   );
 
+  const listSearchArgs = useMemo(
+    () => ({
+      projectId,
+      ...(filterStatus !== "ALL" && { status: filterStatus }),
+      ...(filterPriority !== "ALL" && { priority: filterPriority }),
+      ...(filterAssigneeId !== "ALL" && { assigneeId: filterAssigneeId }),
+      ...(debouncedKeyword.trim() && { keyword: debouncedKeyword.trim() }),
+      ...(filterDueDateFrom && { dueDateFrom: filterDueDateFrom }),
+      ...(filterDueDateTo && { dueDateTo: filterDueDateTo }),
+      page: listPage,
+      size: LIST_PAGE_SIZE,
+    }),
+    [
+      projectId,
+      filterStatus,
+      filterPriority,
+      filterAssigneeId,
+      debouncedKeyword,
+      filterDueDateFrom,
+      filterDueDateTo,
+      listPage,
+    ],
+  );
+
   // ─── Data ───────────────────────────────────────────────────────────────────
-  const { data: tasksData, isLoading, isFetching } = useSearchTasksQuery(searchArgs, {
-    skip: isNaN(projectId),
+  const {
+    data: boardTasksData,
+    isLoading: isBoardLoading,
+    isFetching: isBoardFetching,
+  } = useSearchTasksQuery(boardSearchArgs, {
+    skip: isNaN(projectId) || viewMode !== "board",
   });
+  const {
+    data: listTasksData,
+    isLoading: isListLoading,
+    isFetching: isListFetching,
+  } = useSearchTasksQuery(listSearchArgs, {
+    skip: isNaN(projectId) || viewMode !== "list",
+  });
+
+  // Only show root tasks on the board — subtasks are managed inside TaskDetailPage
+  const boardTasks = (boardTasksData?.data ?? []).filter((t) => t.parentTaskId == null);
+  const listTasks = (listTasksData?.data ?? []).filter((t) => t.parentTaskId == null);
+  const isLoading = viewMode === "board" ? isBoardLoading : isListLoading;
+  const isFetching = viewMode === "board" ? isBoardFetching : isListFetching;
 
   const { data: workspaceData } = useGetWorkspaceByIdQuery(workspaceId, {
     skip: isNaN(workspaceId),
@@ -592,154 +613,6 @@ export function TaskBoardPage() {
     { skip: isNaN(projectId) },
   );
   const members = membersData?.data?.data ?? [];
-
-  const { data: tagsData } = useGetTagsByProjectQuery(projectId, {
-    skip: isNaN(projectId),
-  });
-  const projectTags = tagsData?.data ?? [];
-
-  const { data: sprintsData } = useGetProjectSprintsQuery(
-    { projectId, page: 0, size: 100 },
-    { skip: isNaN(projectId) },
-  );
-  const sprints = sprintsData?.data?.data ?? [];
-
-  const activeSprintIds = useMemo(() => {
-    const today = new Date(
-      todayDate.getFullYear(),
-      todayDate.getMonth(),
-      todayDate.getDate(),
-    );
-
-    return sprints
-      .filter((s) => {
-        if (s.status === "CANCELLED") {
-          return false;
-        }
-
-        const start = new Date(`${s.startDate}T00:00:00`);
-        const end = new Date(`${s.endDate}T00:00:00`);
-        return today >= start && today <= end;
-      })
-      .map((s) => s.id);
-  }, [sprints, todayDate]);
-
-  // Only show root tasks on the board — subtasks are managed inside TaskDetailPage
-  const tasks = useMemo(
-    () =>
-      (tasksData?.data ?? []).filter((t) => {
-        if (t.parentTaskId != null) {
-          return false;
-        }
-
-        if (typeof filterSprintId === "number") {
-          return t.sprintId === filterSprintId;
-        }
-
-        if (filterSprintId === "NONE") {
-          return t.sprintId == null;
-        }
-
-        if (onlyActiveSprint) {
-          return t.sprintId != null && activeSprintIds.includes(t.sprintId);
-        }
-
-        if (filterTagIds.length > 0) {
-          const taskTagIds = new Set((t.tags ?? []).map((tag) => tag.id));
-          const hasAllTags = filterTagIds.every((tagId) => taskTagIds.has(tagId));
-          if (!hasAllTags) {
-            return false;
-          }
-        }
-
-        return true;
-      }),
-    [tasksData, filterSprintId, onlyActiveSprint, activeSprintIds, filterTagIds],
-  );
-
-  const noSprintStats = useMemo(() => {
-    if (filterSprintId !== "NONE") {
-      return null;
-    }
-
-    const done = tasks.filter((t) => t.status === "DONE").length;
-    const total = tasks.length;
-    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-
-    return { done, total, pct };
-  }, [filterSprintId, tasks]);
-
-  useEffect(() => {
-    if (isInitializedFromUrl.current) {
-      return;
-    }
-
-    const sprint = searchParams.get("sprint");
-    const active = searchParams.get("activeSprint");
-    const tags = searchParams.get("tags");
-
-    if (sprint === "none") {
-      setFilterSprintId("NONE");
-    } else if (sprint) {
-      const numeric = Number(sprint);
-      if (!Number.isNaN(numeric)) {
-        setFilterSprintId(numeric);
-      }
-    }
-
-    if (active === "1") {
-      setOnlyActiveSprint(true);
-    }
-
-    if (tags) {
-      const parsedTagIds = tags
-        .split(",")
-        .map((raw) => Number(raw.trim()))
-        .filter((value) => !Number.isNaN(value) && value > 0);
-      if (parsedTagIds.length > 0) {
-        setFilterTagIds(parsedTagIds);
-      }
-    }
-
-    isInitializedFromUrl.current = true;
-  }, [searchParams]);
-
-  const focusedSprint =
-    typeof filterSprintId === "number"
-      ? sprints.find((s) => s.id === filterSprintId) ?? null
-      : null;
-
-  const focusedSprintTimeline = useMemo(() => {
-    if (!focusedSprint) {
-      return null;
-    }
-
-    const start = new Date(`${focusedSprint.startDate}T00:00:00`);
-    const end = new Date(`${focusedSprint.endDate}T00:00:00`);
-    const dayMs = 24 * 60 * 60 * 1000;
-
-    if (todayLocal < start) {
-      const startsIn = Math.floor((start.getTime() - todayLocal.getTime()) / dayMs);
-      return {
-        label: `Starts in ${startsIn} day${startsIn === 1 ? "" : "s"}`,
-        className: "text-blue-600 bg-blue-50 border-blue-200",
-      };
-    }
-
-    if (todayLocal > end) {
-      const overdue = Math.floor((todayLocal.getTime() - end.getTime()) / dayMs);
-      return {
-        label: `Overdue ${overdue} day${overdue === 1 ? "" : "s"}`,
-        className: "text-destructive bg-destructive/10 border-destructive/20",
-      };
-    }
-
-    const remaining = Math.floor((end.getTime() - todayLocal.getTime()) / dayMs) + 1;
-    return {
-      label: `Remaining ${remaining} day${remaining === 1 ? "" : "s"}`,
-      className: "text-green-700 bg-green-50 border-green-200",
-    };
-  }, [focusedSprint, todayLocal]);
 
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
@@ -766,11 +639,14 @@ export function TaskBoardPage() {
   const grouped = useMemo(() => {
     const map = new Map<TaskStatus, TaskResponse[]>();
     STATUS_COLUMNS.forEach((col) => map.set(col.value, []));
-    tasks.forEach((t) => {
+    boardTasks.forEach((t) => {
       map.get(t.status)?.push(t);
     });
     return map;
-  }, [tasks]);
+  }, [boardTasks]);
+
+  const listTotalItems = listTasksData?.data?.length ?? 0;
+  const listTotalPages = Math.max(1, Math.ceil(listTotalItems / LIST_PAGE_SIZE));
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const handleOpenCreate = useCallback(() => {
@@ -914,48 +790,6 @@ export function TaskBoardPage() {
             </Select>
           )}
 
-          {/* Sprint selector */}
-          <div className="flex items-center gap-2 rounded-md border bg-background px-2 h-9">
-            <Flag className="h-3.5 w-3.5 text-muted-foreground" />
-            <Select
-              value={String(filterSprintId)}
-              onValueChange={(v) => {
-                if (v === "ALL" || v === "NONE") {
-                  setFilterSprintId(v);
-                  return;
-                }
-                setFilterSprintId(Number(v));
-              }}
-            >
-              <SelectTrigger className="h-7 w-[170px] border-0 bg-transparent px-0 text-sm shadow-none focus:ring-0">
-                <SelectValue placeholder="Any sprint" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Any Sprint</SelectItem>
-                <SelectItem value="NONE">No Sprint</SelectItem>
-                {sprints.map((sprint) => (
-                  <SelectItem key={sprint.id} value={String(sprint.id)}>
-                    {sprint.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button
-            variant={onlyActiveSprint ? "default" : "outline"}
-            size="sm"
-            className="h-9"
-            onClick={() => {
-              setOnlyActiveSprint((prev) => !prev);
-              setFilterSprintId("ALL");
-            }}
-            disabled={activeSprintIds.length === 0}
-          >
-            Active Sprint Only
-            <span className="ml-2 text-xs opacity-90">{activeSprintIds.length}</span>
-          </Button>
-
           {/* Column toggles — Board view only */}
           {viewMode === "board" && (
             <div className="flex flex-wrap gap-1.5">
@@ -1093,41 +927,6 @@ export function TaskBoardPage() {
               </Select>
             </div>
 
-            {/* Tags (match all selected tags) */}
-            <div className="flex flex-col gap-1.5 min-w-[220px]">
-              <label className="text-xs font-medium text-muted-foreground">Tags (match all)</label>
-              <div className="max-h-28 overflow-y-auto rounded-md border bg-background px-2 py-1.5">
-                {projectTags.length === 0 ? (
-                  <p className="py-1 text-xs text-muted-foreground">No tags available</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {projectTags.map((tag) => {
-                      const selected = filterTagIds.includes(tag.id);
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() =>
-                            setFilterTagIds((prev) =>
-                              prev.includes(tag.id)
-                                ? prev.filter((id) => id !== tag.id)
-                                : [...prev, tag.id],
-                            )
-                          }
-                          className={cn(
-                            "rounded-full transition-transform",
-                            selected ? "scale-[1.01]" : "opacity-80 hover:opacity-100",
-                          )}
-                        >
-                          <TagBadge tag={tag} />
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Due date from */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">Due after</label>
@@ -1157,9 +956,7 @@ export function TaskBoardPage() {
                 className="h-8 text-xs text-muted-foreground hover:text-foreground mt-5"
                 onClick={() => {
                   setFilterPriority("ALL");
-                  setFilterTagIds([]);
                   setFilterAssigneeId("ALL");
-                  setFilterSprintId("ALL");
                   setFilterDueDateFrom("");
                   setFilterDueDateTo("");
                 }}
@@ -1168,52 +965,6 @@ export function TaskBoardPage() {
                 Clear filters
               </Button>
             )}
-          </div>
-        )}
-
-        {/* Sprint focus summary */}
-        {focusedSprint && focusedSprintTimeline && (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2">
-            <div className="flex items-center gap-1.5 text-sm font-medium">
-              <Flag className="h-3.5 w-3.5 text-primary" />
-              <span>{focusedSprint.name}</span>
-            </div>
-            <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-              <CalendarDays className="h-3 w-3" />
-              {new Date(`${focusedSprint.startDate}T00:00:00`).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-              {" - "}
-              {new Date(`${focusedSprint.endDate}T00:00:00`).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
-            <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-xs font-medium", focusedSprintTimeline.className)}>
-              {focusedSprintTimeline.label}
-            </span>
-            <span className="ml-auto text-xs text-muted-foreground">
-              {focusedSprint.completedTaskCount}/{focusedSprint.taskCount} done
-            </span>
-          </div>
-        )}
-
-        {noSprintStats && (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2">
-            <div className="flex items-center gap-1.5 text-sm font-medium">
-              <Flag className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>No Sprint</span>
-            </div>
-            <span className="inline-flex rounded-full border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-              Backlog style tasks
-            </span>
-            <span className="inline-flex rounded-full border px-2 py-0.5 text-xs font-medium text-slate-700 bg-slate-100 border-slate-200">
-              {noSprintStats.pct}% complete
-            </span>
-            <span className="ml-auto text-xs text-muted-foreground">
-              {noSprintStats.done}/{noSprintStats.total} done
-            </span>
           </div>
         )}
       </div>
@@ -1226,7 +977,7 @@ export function TaskBoardPage() {
       )}
 
       {/* ── Empty state (no tasks in project at all) ── */}
-      {!isLoading && tasks.length === 0 && !hasAnyFilter && (
+      {!isLoading && viewMode === "board" && boardTasks.length === 0 && !hasAnyFilter && (
         <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/30 text-center">
           <p className="text-sm font-medium">No tasks yet</p>
           <p className="text-xs text-muted-foreground">
@@ -1240,84 +991,75 @@ export function TaskBoardPage() {
       )}
 
       {/* ── LIST VIEW ── */}
-      {!isLoading && tasks.length > 0 && viewMode === "list" && (
+      {!isLoading && listTasks.length > 0 && viewMode === "list" && (
         <div className="space-y-4">
-          {STATUS_COLUMNS.map((col) => {
-            const colTasks = grouped.get(col.value) ?? [];
-            const isCollapsed = collapsedGroups.has(col.value);
-            return (
-              <Card key={col.value} className="overflow-hidden">
-                {/* Group header */}
-                <button
-                  onClick={() => toggleGroup(col.value)}
-                  className="flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
-                >
-                  {isCollapsed ? (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <span
-                    className={cn(
-                      "rounded-full border px-2.5 py-0.5 text-xs font-medium",
-                      col.badgeClass,
-                    )}
-                  >
-                    {col.label}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {colTasks.length} task{colTasks.length !== 1 ? "s" : ""}
-                  </span>
-                </button>
+          <Card className="overflow-hidden">
+            <div className="hidden border-b px-4 py-2 sm:flex">
+              <span className="flex-1 text-xs font-medium text-muted-foreground">Title</span>
+              <span className="hidden w-24 shrink-0 text-xs font-medium text-muted-foreground sm:block">
+                Status
+              </span>
+              <span className="hidden w-20 shrink-0 text-xs font-medium text-muted-foreground sm:block">
+                Priority
+              </span>
+              <span className="hidden w-24 shrink-0 text-xs font-medium text-muted-foreground md:block">
+                Due
+              </span>
+              <span className="hidden w-16 shrink-0 text-xs font-medium text-muted-foreground sm:block">
+                Assignees
+              </span>
+              <span className="w-8 shrink-0" />
+            </div>
 
-                {/* Column header row */}
-                {!isCollapsed && colTasks.length > 0 && (
-                  <div className="hidden border-b px-4 py-1.5 sm:flex">
-                    <span className="flex-1 text-xs font-medium text-muted-foreground">Title</span>
-                    <span className="hidden w-20 shrink-0 text-xs font-medium text-muted-foreground sm:block">
-                      Priority
-                    </span>
-                    <span className="hidden w-44 shrink-0 text-xs font-medium text-muted-foreground md:block">
-                      Tags
-                    </span>
-                    <span className="hidden w-24 shrink-0 text-xs font-medium text-muted-foreground md:block">
-                      Due
-                    </span>
-                    <span className="hidden w-16 shrink-0 text-xs font-medium text-muted-foreground sm:block">
-                      Assignees
-                    </span>
-                    <span className="w-8 shrink-0" />
-                  </div>
-                )}
+            <div className="divide-y px-1 py-1">
+              {listTasks.map((t) => (
+                <TaskListRow
+                  key={t.id}
+                  task={t}
+                  projectId={projectId}
+                  workspaceId={workspaceId}
+                  onEdit={handleOpenEdit}
+                  onDelete={handleDeleteRequest}
+                />
+              ))}
+            </div>
+          </Card>
 
-                {!isCollapsed && (
-                  <div className="divide-y px-1 py-1">
-                    {colTasks.length === 0 ? (
-                      <p className="px-3 py-4 text-xs text-center text-muted-foreground">
-                        No tasks here
-                      </p>
-                    ) : (
-                      colTasks.map((t) => (
-                        <TaskListRow
-                          key={t.id}
-                          task={t}
-                          projectId={projectId}
-                          workspaceId={workspaceId}
-                          onEdit={handleOpenEdit}
-                          onDelete={handleDeleteRequest}
-                        />
-                      ))
-                    )}
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3">
+            <p className="text-xs text-muted-foreground">
+              Showing {Math.min((listPage - 1) * LIST_PAGE_SIZE + 1, listTotalItems)}-
+              {Math.min(listPage * LIST_PAGE_SIZE, listTotalItems)} of {listTotalItems} tasks
+            </p>
+
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                disabled={listPage <= 1}
+                onClick={() => setListPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <span className="px-2 text-xs text-muted-foreground">
+                Page {listPage} / {listTotalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                disabled={listPage >= listTotalPages}
+                onClick={() => setListPage((p) => Math.min(listTotalPages, p + 1))}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* ── BOARD VIEW ── */}
-      {!isLoading && tasks.length > 0 && viewMode === "board" && (
+      {!isLoading && boardTasks.length > 0 && viewMode === "board" && (
         <DndContext
           sensors={sensors}
           onDragStart={handleDragStart}
@@ -1327,18 +1069,37 @@ export function TaskBoardPage() {
           <div className="grid min-h-[400px] grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {STATUS_COLUMNS.filter((col) => !hiddenColumns.has(col.value)).map((col) => {
               const colTasks = grouped.get(col.value) ?? [];
+              const visibleTasks = colTasks.slice(0, boardVisibleCount[col.value]);
+              const remaining = Math.max(0, colTasks.length - visibleTasks.length);
               return (
-                <KanbanColumn
-                  key={col.value}
-                  col={col}
-                  tasks={colTasks}
-                  projectId={projectId}
-                  workspaceId={workspaceId}
-                  onEdit={handleOpenEdit}
-                  onDelete={handleDeleteRequest}
-                  onAddTask={handleOpenCreate}
-                  isOver={overColumnId === col.value}
-                />
+                <div key={col.value} className="flex flex-col gap-2">
+                  <KanbanColumn
+                    col={col}
+                    tasks={visibleTasks}
+                    projectId={projectId}
+                    workspaceId={workspaceId}
+                    onEdit={handleOpenEdit}
+                    onDelete={handleDeleteRequest}
+                    onAddTask={handleOpenCreate}
+                    isOver={overColumnId === col.value}
+                  />
+
+                  {remaining > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() =>
+                        setBoardVisibleCount((prev) => ({
+                          ...prev,
+                          [col.value]: prev[col.value] + 8,
+                        }))
+                      }
+                    >
+                      Load more ({remaining})
+                    </Button>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -1360,7 +1121,20 @@ export function TaskBoardPage() {
       )}
 
       {/* ── No results from filter ── */}
-      {!isLoading && tasks.length === 0 && hasAnyFilter && (
+      {!isLoading && viewMode === "board" && boardTasks.length === 0 && hasAnyFilter && (
+        <div className="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/30 text-center">
+          <p className="text-sm font-medium">No tasks match your filters</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearAllFilters}
+          >
+            Clear filters
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && viewMode === "list" && listTasks.length === 0 && hasAnyFilter && (
         <div className="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/30 text-center">
           <p className="text-sm font-medium">No tasks match your filters</p>
           <Button
