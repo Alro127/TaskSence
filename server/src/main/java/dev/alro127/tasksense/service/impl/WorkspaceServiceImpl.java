@@ -152,12 +152,16 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     }
 
     @Override
-    public List<WorkspaceResponse> getPublicWorkspaces(Long userId) {
+    public PageResponse<WorkspaceResponse> getPublicWorkspaces(Long userId, Pageable pageable) {
 
-        List<WorkspaceEntity> workspaces = workspaceRepository.findPublicWorkspacesByOwner(userId);
+        Page<WorkspaceResponse> responsePage = workspaceRepository.findPublicWorkspacesByOwner(userId, pageable)
+                .map(WorkspaceResponse::mapToResponse);
 
-        return workspaces.stream()
-                .map(WorkspaceResponse::mapToResponse)
-                .toList();
+        return new PageResponse<>(
+                responsePage.getContent(),
+                responsePage.getNumber(),
+                responsePage.getSize(),
+                responsePage.getTotalElements(),
+                responsePage.getTotalPages());
     }
 }
