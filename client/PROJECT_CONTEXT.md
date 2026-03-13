@@ -1,7 +1,7 @@
 # TaskSense - Frontend Project Context
 
 > File này dùng để giữ context cho AI và developers. Cập nhật sau mỗi sprint/thay đổi lớn.
-> **Cập nhật lần cuối**: Sprint 10 - Comment System (CRUD + Reactions + @mention + Cursor Pagination + Notification Deep-link)
+> **Cập nhật lần cuối**: Sprint 11 - Sprint Planning & Task Board Sprint Focus
 
 ## 📋 Thông tin dự án
 
@@ -72,6 +72,11 @@
   - `GET /projects/:projectId/join-requests` → danh sách join requests → `ProjectJoinRequest[]`
   - `PATCH /projects/:projectId/join-requests/:requestId/review` → body: `{status: "APPROVED"|"REJECTED"}` → `ProjectJoinRequest`
   - `DELETE /projects/:projectId/join-requests/:requestId` → huỷ join request
+- **Sprint Endpoints**:
+  - `POST /sprints` → body: `{projectId, name, goal?, startDate, endDate}` → `SprintResponse`
+  - `PUT /sprints/:sprintId` → body: `{name, goal?, startDate?, endDate?}` → `SprintResponse`
+  - `DELETE /sprints/:sprintId` → xóa mềm sprint
+  - `GET /sprints/project/:projectId?page=&size=` → danh sách sprint theo project (paged) → `PageResponse<SprintResponse>`
 - **Task Endpoints**:
   - `POST /projects/:projectId/tasks` → body: `CreateTaskRequest` → `TaskResponse` _(MANAGER, MEMBER)_
   - `GET /projects/:projectId/tasks` → danh sách tasks của project → `TaskResponse[]` _(tất cả roles)_
@@ -195,12 +200,16 @@ client/
 │   │   │   │   ├── EditProjectModal.tsx   ← Edit project dialog (name, desc, status, dates)
 │   │   │   │   ├── DeleteProjectDialog.tsx← Type-to-confirm delete
 │   │   │   │   ├── MemberCard.tsx         ← Member card với role badge + change role/remove
+│   │   │   │   ├── SprintManagementTab.tsx← Sprint tab: CRUD + compact cards + timeline + deep-link task board
 │   │   │   │   ├── AddMembersModal.tsx    ← Thêm member từ workspace members list
 │   │   │   │   └── index.ts
 │   │   │   └── pages/
 │   │   │       ├── CreateProjectPage.tsx  ← /workspaces/:id/projects/new (full form)
-│   │   │       ├── ProjectDetailPage.tsx  ← /workspaces/:id/projects/:projectId (4 tabs)
+│   │   │       ├── ProjectDetailPage.tsx  ← /workspaces/:id/projects/:projectId (5 tabs: + Sprints)
 │   │   │       └── index.ts
+│   │   ├── sprint/
+│   │   │   └── api/
+│   │   │       └── sprintApi.ts           ← RTK Query Sprint CRUD + list by project
 │   │   ├── task/                            ← Sprint 9 FE — Task Board & Detail | Sprint 10 — Comments
 │   │   │   ├── api/
 │   │   │   │   ├── taskApi.ts              ← RTK Query: 8 endpoints (CRUD + search + subtasks + updateTaskStatus)
@@ -593,6 +602,31 @@ client/
 - ✅ **TaskDetailPage** — thêm `<CommentSection taskId={taskId} projectId={projectId} />` sau 2-column grid
 - ✅ Cập nhật **store.ts**: đăng ký `commentApi` reducer + middleware
 
+### Sprint 11 - Sprint Planning & Task Board Focus ✅ COMPLETED
+
+- ✅ **Sprint optional model**: task vẫn hoạt động đầy đủ khi không gán sprint (`No Sprint` mode)
+- ✅ **Types/API FE**:
+  - Thêm `SprintStatus`, `SprintResponse`, `CreateSprintRequest`, `UpdateSprintRequest` trong `types/api.ts`
+  - Tạo `sprintApi` (`features/sprint/api/sprintApi.ts`) với 4 endpoints: `getProjectSprints`, `createSprint`, `updateSprint`, `deleteSprint`
+  - Đăng ký `sprintApi` vào `store.ts`
+- ✅ **ProjectDetailPage**:
+  - Thêm tab **Sprints** (nâng từ 4 lên 5 tabs)
+  - Gắn `SprintManagementTab`
+- ✅ **SprintManagementTab**:
+  - CRUD Sprint (manager)
+  - Card compact + progress bar + timeline badge (`Starts in / Remaining / Overdue`)
+  - Sort mode: `End date (soonest)` và `Overdue first`
+  - Click Sprint card → deep-link sang Task Board theo sprint (`?sprint=<id>`)
+- ✅ **TaskFormSheet**:
+  - Thêm Sprint select (`No Sprint` + danh sách sprint)
+  - Hỗ trợ gỡ sprint khi edit task (qua `removeSprint`)
+- ✅ **TaskBoardPage**:
+  - Sprint selector nổi bật trên filter bar (`Any Sprint / No Sprint / Sprint cụ thể`)
+  - Sprint focus summary card cho sprint đang chọn
+  - Quick toggle `Active Sprint Only`
+  - Summary card cho `No Sprint`
+  - Hỗ trợ đọc query params: `?sprint=<id|none>` và `?activeSprint=1`
+
 ### Sprint 7 - Project CRUD & Member Management ✅ COMPLETED
 
 - ✅ **Types** — thêm vào `types/api.ts`:
@@ -728,8 +762,8 @@ client/
 | `/workspaces/invitation`                            | `WorkspaceInvitationPage` | **phải đứng trước `:id`**                                                        |
 | `/workspaces/:id`                                   | `WorkspaceDetailPage`     | 3 tabs: Projects / Members / Settings; hỗ trợ `?tab=` query param                |
 | `/workspaces/:id/projects/new`                      | `CreateProjectPage`       |                                                                                  |
-| `/workspaces/:id/projects/:projectId`               | `ProjectDetailPage`       | 4 tabs                                                                           |
-| `/workspaces/:id/projects/:projectId/tasks`         | `TaskBoardPage`           | Kanban board + List view; drag-and-drop đổi status                               |
+| `/workspaces/:id/projects/:projectId`               | `ProjectDetailPage`       | 5 tabs: Overview / Tasks / Sprints / Members / Join Requests                      |
+| `/workspaces/:id/projects/:projectId/tasks`         | `TaskBoardPage`           | Kanban + List + Sprint focus (`?sprint=<id|none>`, `?activeSprint=1`)            |
 | `/workspaces/:id/projects/:projectId/tasks/:taskId` | `TaskDetailPage`          | Chi tiết task + inline edit + subtasks                                           |
 | `/team-templates`                                   | `TeamTemplatesPage`       |                                                                                  |
 | `/team-templates/:id`                               | `TeamTemplateDetailPage`  | 2 tabs: Members + Settings                                                       |
@@ -773,8 +807,8 @@ client/
 10. **Delete workflow (workspace/project)**: Bắt buộc gõ lại đúng tên (paste bị chặn bằng `onPaste preventDefault`). Nút delete disabled cho đến khi text khớp.
 11. **Project Detail** (`/workspaces/:id/projects/:projectId`):
     - Breadcrumb: `Workspaces > [workspaceName] > [projectName]`. `workspaceName` truyền qua `location.state` từ card click hoặc fetch fallback.
-    - 4 tabs: Overview / Tasks / Members / Join Requests.
-    - **Tasks tab**: placeholder, chờ sprint sau.
+  - 5 tabs: Overview / Tasks / Sprints / Members / Join Requests.
+  - **Sprints tab**: sprint optional, manager có thể CRUD, card compact có timeline + deep-link vào Task Board theo sprint.
     - **Join Requests tab**: chỉ hiện cho MANAGER. Badge đếm pending.
     - Role detection: gọi `GET /projects/:id/members/me/role` riêng (không embed trong project response).
 12. **AddMembersModal (Project)** khác với **BulkInviteModal (Workspace)**:
@@ -941,10 +975,14 @@ npm run preview
   - FE gọi `updateTaskStatus` tại: drag-and-drop (TaskBoardPage), status dropdown (TaskDetailPage), subtask checkbox toggle (TaskDetailPage).
   - FE gọi `updateTask` tại: inline edit title/desc/dates/assignees/priority (TaskDetailPage), TaskFormSheet submit.
 - **`_parentTaskId` pattern**: `updateTaskStatus` mutation nhận optional `_parentTaskId` (prefixed `_` để không gửi lên server) → dùng trong `invalidatesTags` để refresh subtasks list của parent task khi toggle subtask status.
-- **TaskBoardPage** — 2 views:
+- **TaskBoardPage** — 2 views + sprint focus:
   - **Board view**: Kanban 4 cột (`TODO`, `IN_PROGRESS`, `REVIEW`, `DONE`). Drag-and-drop dùng `@dnd-kit/core` (`DndContext`, `useDroppable`, `useDraggable`, `DragOverlay`).
   - **List view**: Grouped by status, mỗi group collapsible. Rows hiển thị title, priority badge, due date, assignees.
   - Chỉ hiển thị root tasks (filter `parentTaskId == null`).
+  - Sprint selector top-bar: `Any Sprint`, `No Sprint`, sprint cụ thể.
+  - Quick toggle `Active Sprint Only` để lọc task thuộc sprint đang active.
+  - Hỗ trợ deep-link query params: `?sprint=<id|none>` và `?activeSprint=1`.
+  - Hiển thị summary card cho sprint đang focus hoặc `No Sprint`.
 - **TaskDetailPage** — 2-column layout:
   - Left: title (click-to-edit), description (click-to-edit), subtasks (progress bar + list + quick-add).
   - Right sidebar: status Select, priority Select, start/end date (click-to-edit input[type=date]), assignees (add from project members, remove per-user), metadata (creator, timestamps).
@@ -976,7 +1014,6 @@ npm run preview
 - ~~**Tasks (Sprint tiếp)**~~: ✅ Task Board (Kanban + List) + Task Detail đã implement. Route `/workspaces/:id/projects/:projectId/tasks` và `/:taskId`. FE đã tách đúng `updateTask` vs `updateTaskStatus` endpoint theo permission model.
 - ~~**Comment System (Sprint 10)**~~: ✅ Đã hoàn thành. CommentSection, CommentItem (reactions + 1-per-user + hover tooltip + @mention + mentionUserIds + notification deep-link highlight), CommentInput, commentApi (8 endpoints), cursor pagination, COMMENT_REACTION + COMMENT_TASK notification types.
 - **Workspace Join Request — backend alignment**: `WorkspaceJoinRequestResponse.java` cần embed `UserSummaryResponse` (thay vì chỉ `userId: Long`) để FE hiển thị tên/avatar trong Join Requests section của `WorkspaceMembersTab`.
-- **Workspace Join Request UI — từ ProjectDetailPage**: Non-member của project cũng có thể cần thấy "Request to Join" button tương tự pattern workspace; hiện chỉ có FE API hook, chưa có UI trigger.
 - **Notification — Project Join Request deep-link**: `PROJECT_JOIN_REQUEST` notification nên navigate đến tab Join Requests của ProjectDetailPage (đã có pattern với `?tab=` cho workspace, cần làm tương tự cho project).
 - **Khi backend user API sẵn sàng**:
   - Thay mock data bằng `GET /users/me` (đã tích hợp sẵn trong `MainLayout` qua `useGetCurrentUserQuery`)
