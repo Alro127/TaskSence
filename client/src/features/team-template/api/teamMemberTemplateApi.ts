@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import type {
   ApiResponse,
+  PageResponse,
   TeamMemberTemplate,
   AddTeamMemberTemplateRequest,
   AddTeamMemberResultItem,
@@ -28,10 +29,16 @@ export const teamMemberTemplateApi = createApi({
   tagTypes: ["TeamMember"],
   endpoints: (builder) => ({
     // GET /team-templates/:templateId/members
-    getMembers: builder.query<ApiResponse<TeamMemberTemplate[]>, number>({
-      query: (templateId) => `/team-templates/${templateId}/members`,
-      providesTags: (_result, _error, templateId) => [
-        { type: "TeamMember", id: templateId },
+    getMembers: builder.query<
+      ApiResponse<PageResponse<TeamMemberTemplate>>,
+      { templateId: number; page?: number; size?: number }
+    >({
+      query: ({ templateId, page = 0, size = 10 }) => ({
+        url: `/team-templates/${templateId}/members`,
+        params: { page, size },
+      }),
+      providesTags: (_result, _error, arg) => [
+        { type: "TeamMember", id: arg.templateId },
       ],
     }),
 

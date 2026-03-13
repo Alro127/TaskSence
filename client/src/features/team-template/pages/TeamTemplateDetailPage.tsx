@@ -23,6 +23,13 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetTemplateByIdQuery, useUpdateTemplateMutation } from "../api/teamTemplateApi";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { useGetMembersQuery, useRemoveMemberMutation } from "../api/teamMemberTemplateApi";
 import { AddMembersModal } from "../components/AddMembersModal";
 import { DeleteTeamTemplateDialog } from "../components/DeleteTeamTemplateDialog";
@@ -48,7 +55,8 @@ function MembersTab({ templateId }: { templateId: number }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const { data, isLoading } = useGetMembersQuery(templateId);
+  const [memberPage, setMemberPage] = useState(0);
+  const { data, isLoading, isFetching } = useGetMembersQuery({ templateId, page: memberPage });
   const [removeMember, { isLoading: isRemoving }] = useRemoveMemberMutation();
   const [removingId, setRemovingId] = useState<number | null>(null);
 
@@ -57,7 +65,11 @@ function MembersTab({ templateId }: { templateId: number }) {
     setIsProfileOpen(true);
   };
 
-  const members = data?.data ?? [];
+  const pageData = data?.data;
+  const members = pageData?.data ?? [];
+  const totalMembers = pageData?.totalElements ?? 0;
+  const totalPages = pageData?.totalPages ?? 0;
+  const currentPage = pageData?.page ?? memberPage;
 
   const handleRemove = async (userId: number) => {
     setRemovingId(userId);
@@ -136,7 +148,7 @@ function MembersTab({ templateId }: { templateId: number }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {members.length} {members.length === 1 ? "member" : "members"} in
+          {totalMembers} {totalMembers === 1 ? "member" : "members"} in
           this template
         </p>
         <Button size="sm" onClick={() => setIsAddOpen(true)}>
@@ -145,7 +157,7 @@ function MembersTab({ templateId }: { templateId: number }) {
         </Button>
       </div>
 
-      {isLoading ? (
+      {isLoading || isFetching ? (
         <div className="flex items-center justify-center py-10">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
@@ -158,7 +170,35 @@ function MembersTab({ templateId }: { templateId: number }) {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">{renderMemberList()}</div>
+        <>
+          <div className="space-y-2">{renderMemberList()}</div>
+
+          {totalPages > 1 && (
+            <Pagination className="mt-4">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setMemberPage((p) => Math.max(0, p - 1))}
+                    aria-disabled={currentPage === 0}
+                    className={currentPage === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <p className="px-2 text-xs text-muted-foreground">
+                    Page {currentPage + 1} / {totalPages}
+                  </p>
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setMemberPage((p) => Math.min(totalPages - 1, p + 1))}
+                    aria-disabled={currentPage >= totalPages - 1}
+                    className={currentPage >= totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </>
       )}
 
       <AddMembersModal
@@ -324,7 +364,7 @@ function SettingsTab({
         onOpenChange={setIsDeleteOpen}
         template={
           isDeleteOpen
-            ? { id: templateId, name: initialName, ownerId: 0, description: initialDescription, createdAt: "", updatedAt: "" }
+            ? { id: templateId, name: initialName, ownerId: 0, description: initialDescription, memberCount: 0, createdAt: "", updatedAt: "" }
             : null
         }
         navigateAfterDelete
