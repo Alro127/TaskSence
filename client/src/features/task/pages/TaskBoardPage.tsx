@@ -58,6 +58,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn, getApiErrorMessage } from "@/lib/utils";
 import type { TaskPriority, TaskResponse, TaskStatus } from "@/types/api";
+import { TagBadge } from "@/features/tag/components";
+import { useGetTagsByProjectQuery } from "@/features/tag/api";
 
 import { useSearchTasksQuery, useDeleteTaskMutation, useUpdateTaskStatusMutation } from "../api/taskApi";
 import { TaskFormSheet } from "../components/TaskFormSheet";
@@ -204,6 +206,12 @@ function TaskCard({
           >
             {PRIORITY_BADGE[task.priority].label}
           </span>
+        )}
+        {(task.tags ?? []).slice(0, 2).map((tag) => (
+          <TagBadge key={tag.id} tag={tag} className="text-[10px] px-1.5 py-0.5" />
+        ))}
+        {(task.tags ?? []).length > 2 && (
+          <span className="text-[10px] text-muted-foreground">+{(task.tags ?? []).length - 2}</span>
         )}
         {task.dueDate && (
           <span
@@ -384,6 +392,15 @@ function TaskListRow({
         )}
       </div>
 
+      <div className="hidden w-44 shrink-0 md:flex flex-wrap gap-1">
+        {(task.tags ?? []).slice(0, 2).map((tag) => (
+          <TagBadge key={tag.id} tag={tag} />
+        ))}
+        {(task.tags ?? []).length > 2 && (
+          <span className="text-xs text-muted-foreground">+{(task.tags ?? []).length - 2}</span>
+        )}
+      </div>
+
       {/* Due date */}
       <div className="hidden w-24 shrink-0 text-xs md:block">
         {task.dueDate ? (
@@ -463,6 +480,7 @@ export function TaskBoardPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "ALL">("ALL");
   const [filterPriority, setFilterPriority] = useState<TaskPriority | "ALL">("ALL");
+  const [filterTagIds, setFilterTagIds] = useState<number[]>([]);
   const [filterAssigneeId, setFilterAssigneeId] = useState<number | "ALL">("ALL");
   const [filterSprintId, setFilterSprintId] = useState<number | "ALL" | "NONE">("ALL");
   const [onlyActiveSprint, setOnlyActiveSprint] = useState(false);
@@ -498,6 +516,7 @@ export function TaskBoardPage() {
   // Count active advanced filters for badge
   const advancedFilterCount = [
     filterPriority !== "ALL",
+    filterTagIds.length > 0,
     filterAssigneeId !== "ALL",
     filterSprintId !== "ALL",
     !!filterDueDateFrom,
@@ -514,6 +533,7 @@ export function TaskBoardPage() {
   const clearAllFilters = useCallback(() => {
     setFilterStatus("ALL");
     setFilterPriority("ALL");
+    setFilterTagIds([]);
     setFilterAssigneeId("ALL");
     setFilterSprintId("ALL");
     setOnlyActiveSprint(false);
@@ -555,38 +575,6 @@ export function TaskBoardPage() {
   const { data: tasksData, isLoading, isFetching } = useSearchTasksQuery(searchArgs, {
     skip: isNaN(projectId),
   });
-  // Only show root tasks on the board — subtasks are managed inside TaskDetailPage
-  const tasks = (tasksData?.data ?? []).filter((t) => {
-    if (t.parentTaskId != null) {
-      return false;
-    }
-
-    if (typeof filterSprintId === "number") {
-      return t.sprintId === filterSprintId;
-    }
-
-    if (filterSprintId === "NONE") {
-      return t.sprintId == null;
-    }
-
-    if (onlyActiveSprint) {
-      return t.sprintId != null && activeSprintIds.includes(t.sprintId);
-    }
-
-    return true;
-  });
-
-  const noSprintStats = useMemo(() => {
-    if (filterSprintId !== "NONE") {
-      return null;
-    }
-
-    const done = tasks.filter((t) => t.status === "DONE").length;
-    const total = tasks.length;
-    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-
-    return { done, total, pct };
-  }, [filterSprintId, tasks]);
 
   const { data: workspaceData } = useGetWorkspaceByIdQuery(workspaceId, {
     skip: isNaN(workspaceId),
@@ -604,6 +592,11 @@ export function TaskBoardPage() {
     { skip: isNaN(projectId) },
   );
   const members = membersData?.data?.data ?? [];
+
+  const { data: tagsData } = useGetTagsByProjectQuery(projectId, {
+    skip: isNaN(projectId),
+  });
+  const projectTags = tagsData?.data ?? [];
 
   const { data: sprintsData } = useGetProjectSprintsQuery(
     { projectId, page: 0, size: 100 },
@@ -631,6 +624,51 @@ export function TaskBoardPage() {
       .map((s) => s.id);
   }, [sprints, todayDate]);
 
+  // Only show root tasks on the board — subtasks are managed inside TaskDetailPage
+  const tasks = useMemo(
+    () =>
+      (tasksData?.data ?? []).filter((t) => {
+        if (t.parentTaskId != null) {
+          return false;
+        }
+
+        if (typeof filterSprintId === "number") {
+          return t.sprintId === filterSprintId;
+        }
+
+        if (filterSprintId === "NONE") {
+          return t.sprintId == null;
+        }
+
+        if (onlyActiveSprint) {
+          return t.sprintId != null && activeSprintIds.includes(t.sprintId);
+        }
+
+        if (filterTagIds.length > 0) {
+          const taskTagIds = new Set((t.tags ?? []).map((tag) => tag.id));
+          const hasAllTags = filterTagIds.every((tagId) => taskTagIds.has(tagId));
+          if (!hasAllTags) {
+            return false;
+          }
+        }
+
+        return true;
+      }),
+    [tasksData, filterSprintId, onlyActiveSprint, activeSprintIds, filterTagIds],
+  );
+
+  const noSprintStats = useMemo(() => {
+    if (filterSprintId !== "NONE") {
+      return null;
+    }
+
+    const done = tasks.filter((t) => t.status === "DONE").length;
+    const total = tasks.length;
+    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+
+    return { done, total, pct };
+  }, [filterSprintId, tasks]);
+
   useEffect(() => {
     if (isInitializedFromUrl.current) {
       return;
@@ -638,6 +676,7 @@ export function TaskBoardPage() {
 
     const sprint = searchParams.get("sprint");
     const active = searchParams.get("activeSprint");
+    const tags = searchParams.get("tags");
 
     if (sprint === "none") {
       setFilterSprintId("NONE");
@@ -650,6 +689,16 @@ export function TaskBoardPage() {
 
     if (active === "1") {
       setOnlyActiveSprint(true);
+    }
+
+    if (tags) {
+      const parsedTagIds = tags
+        .split(",")
+        .map((raw) => Number(raw.trim()))
+        .filter((value) => !Number.isNaN(value) && value > 0);
+      if (parsedTagIds.length > 0) {
+        setFilterTagIds(parsedTagIds);
+      }
     }
 
     isInitializedFromUrl.current = true;
@@ -1044,6 +1093,41 @@ export function TaskBoardPage() {
               </Select>
             </div>
 
+            {/* Tags (match all selected tags) */}
+            <div className="flex flex-col gap-1.5 min-w-[220px]">
+              <label className="text-xs font-medium text-muted-foreground">Tags (match all)</label>
+              <div className="max-h-28 overflow-y-auto rounded-md border bg-background px-2 py-1.5">
+                {projectTags.length === 0 ? (
+                  <p className="py-1 text-xs text-muted-foreground">No tags available</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {projectTags.map((tag) => {
+                      const selected = filterTagIds.includes(tag.id);
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() =>
+                            setFilterTagIds((prev) =>
+                              prev.includes(tag.id)
+                                ? prev.filter((id) => id !== tag.id)
+                                : [...prev, tag.id],
+                            )
+                          }
+                          className={cn(
+                            "rounded-full transition-transform",
+                            selected ? "scale-[1.01]" : "opacity-80 hover:opacity-100",
+                          )}
+                        >
+                          <TagBadge tag={tag} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Due date from */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">Due after</label>
@@ -1073,6 +1157,7 @@ export function TaskBoardPage() {
                 className="h-8 text-xs text-muted-foreground hover:text-foreground mt-5"
                 onClick={() => {
                   setFilterPriority("ALL");
+                  setFilterTagIds([]);
                   setFilterAssigneeId("ALL");
                   setFilterSprintId("ALL");
                   setFilterDueDateFrom("");
@@ -1191,6 +1276,9 @@ export function TaskBoardPage() {
                     <span className="flex-1 text-xs font-medium text-muted-foreground">Title</span>
                     <span className="hidden w-20 shrink-0 text-xs font-medium text-muted-foreground sm:block">
                       Priority
+                    </span>
+                    <span className="hidden w-44 shrink-0 text-xs font-medium text-muted-foreground md:block">
+                      Tags
                     </span>
                     <span className="hidden w-24 shrink-0 text-xs font-medium text-muted-foreground md:block">
                       Due

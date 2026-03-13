@@ -419,6 +419,29 @@ export interface UpdateSprintRequest {
   endDate?: string;
 }
 
+// ─── Tag ─────────────────────────────────────────────────────────────────────
+export interface TagResponse {
+  id: number;
+  name: string;
+  color: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTagRequest {
+  name: string;
+  color?: string;
+}
+
+export interface UpdateTagRequest {
+  name: string;
+  color?: string;
+}
+
+export interface UpdateTaskTagsRequest {
+  tagIds: number[];
+}
+
 // ─── Task ────────────────────────────────────────────────────────────────────
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE";
@@ -437,6 +460,7 @@ export interface TaskResponse {
   position: number | null;
   createdBy: UserSummaryResponse;
   assignees: UserSummaryResponse[];
+  tags: TagResponse[];
   sprintId: number | null;
   createdAt: string;
   updatedAt: string;

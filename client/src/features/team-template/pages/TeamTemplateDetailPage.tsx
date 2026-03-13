@@ -324,7 +324,7 @@ function SettingsTab({
         onOpenChange={setIsDeleteOpen}
         template={
           isDeleteOpen
-            ? { id: templateId, name: initialName, ownerId: 0, description: initialDescription, createdAt: "", updatedAt: "" }
+            ? { id: templateId, name: initialName, ownerId: 0, description: initialDescription, memberCount: 0, createdAt: "", updatedAt: "" }
             : null
         }
         navigateAfterDelete
