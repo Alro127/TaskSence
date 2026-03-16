@@ -2,9 +2,9 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  ChevronDown,
   ChevronRight,
   Filter,
+  GanttChart,
   GripVertical,
   LayoutGrid,
   List,
@@ -59,6 +59,7 @@ import type { TaskPriority, TaskResponse, TaskStatus } from "@/types/api";
 
 import { useSearchTasksQuery, useDeleteTaskMutation, useUpdateTaskStatusMutation } from "../api/taskApi";
 import { TaskFormSheet } from "../components/TaskFormSheet";
+import { TimelineView } from "../components/TimelineView";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
 import { useGetProjectByIdQuery } from "@/features/project/api/projectApi";
 import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
@@ -454,7 +455,7 @@ export function TaskBoardPage() {
   const projectId = Number(projectIdStr);
 
   // ─── Filter state ────────────────────────────────────────────────────────────
-  type ViewMode = "list" | "board";
+  type ViewMode = "list" | "board" | "timeline";
   const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "ALL">("ALL");
   const [filterPriority, setFilterPriority] = useState<TaskPriority | "ALL">("ALL");
@@ -581,7 +582,7 @@ export function TaskBoardPage() {
     isLoading: isBoardLoading,
     isFetching: isBoardFetching,
   } = useSearchTasksQuery(boardSearchArgs, {
-    skip: isNaN(projectId) || viewMode !== "board",
+    skip: isNaN(projectId) || (viewMode !== "board" && viewMode !== "timeline"),
   });
   const {
     data: listTasksData,
@@ -594,8 +595,9 @@ export function TaskBoardPage() {
   // Only show root tasks on the board — subtasks are managed inside TaskDetailPage
   const boardTasks = (boardTasksData?.data ?? []).filter((t) => t.parentTaskId == null);
   const listTasks = (listTasksData?.data ?? []).filter((t) => t.parentTaskId == null);
-  const isLoading = viewMode === "board" ? isBoardLoading : isListLoading;
-  const isFetching = viewMode === "board" ? isBoardFetching : isListFetching;
+  const timelineTasks = boardTasksData?.data ?? [];
+  const isLoading = viewMode === "list" ? isListLoading : isBoardLoading;
+  const isFetching = viewMode === "list" ? isListFetching : isBoardFetching;
 
   const { data: workspaceData } = useGetWorkspaceByIdQuery(workspaceId, {
     skip: isNaN(workspaceId),
@@ -618,8 +620,6 @@ export function TaskBoardPage() {
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
 
   // ─── UI state ───────────────────────────────────────────────────────────────
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<TaskStatus>>(new Set());
-
   // Sheet state
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskResponse | undefined>();
@@ -682,14 +682,6 @@ export function TaskBoardPage() {
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to delete task"));
     }
-  };
-
-  const toggleGroup = (status: TaskStatus) => {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      next.has(status) ? next.delete(status) : next.add(status);
-      return next;
-    });
   };
 
   // ─── Drag handlers ──────────────────────────────────────────────────────────
@@ -790,7 +782,7 @@ export function TaskBoardPage() {
             </Select>
           )}
 
-          {/* Column toggles — Board view only */}
+          {/* Column toggles — Board view only (not timeline) */}
           {viewMode === "board" && (
             <div className="flex flex-wrap gap-1.5">
               {STATUS_COLUMNS.map((col) => {
@@ -853,6 +845,7 @@ export function TaskBoardPage() {
             <Button
               variant="ghost"
               size="sm"
+              title="List view"
               className={cn(
                 "h-7 px-2.5",
                 viewMode === "list" && "bg-background shadow-sm",
@@ -864,6 +857,7 @@ export function TaskBoardPage() {
             <Button
               variant="ghost"
               size="sm"
+              title="Board view"
               className={cn(
                 "h-7 px-2.5",
                 viewMode === "board" && "bg-background shadow-sm",
@@ -871,6 +865,18 @@ export function TaskBoardPage() {
               onClick={() => setViewMode("board")}
             >
               <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Timeline view"
+              className={cn(
+                "h-7 px-2.5",
+                viewMode === "timeline" && "bg-background shadow-sm",
+              )}
+              onClick={() => setViewMode("timeline")}
+            >
+              <GanttChart className="h-4 w-4" />
             </Button>
           </div>
 
@@ -1145,6 +1151,16 @@ export function TaskBoardPage() {
             Clear filters
           </Button>
         </div>
+      )}
+
+      {/* ── TIMELINE VIEW ── */}
+      {!isLoading && viewMode === "timeline" && (
+        <TimelineView
+          tasks={timelineTasks}
+          project={projectData?.data ?? null}
+          workspaceId={workspaceId}
+          projectId={projectId}
+        />
       )}
 
       {/* ── Create/Edit Sheet ── */}
