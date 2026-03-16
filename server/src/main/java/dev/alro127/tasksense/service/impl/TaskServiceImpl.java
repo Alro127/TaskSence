@@ -94,6 +94,19 @@ public class TaskServiceImpl implements TaskService {
         return assignees;
     }
 
+    private Set<TagEntity> resolveTags(List<Long> tagIds, Long projectId) {
+        if (tagIds == null || tagIds.isEmpty()) {
+            return new HashSet<>();
+        }
+
+        List<TagEntity> tags = tagRepository.findAllByIdInAndProjectId(tagIds, projectId);
+        if (tags.size() != tagIds.size()) {
+            throw new ResourceNotFoundException("Some tags not found in project");
+        }
+
+        return new HashSet<>(tags);
+    }
+
     private TaskResponse toResponseWithPermissions(TaskEntity task, Long projectId) {
         Long userId = securityService.getCurrentUserId();
         TaskResponse response = TaskResponse.mapToResponse(task);
@@ -134,6 +147,7 @@ public class TaskServiceImpl implements TaskService {
                 .startDate(request.getStartDate())
                 .dueDate(request.getDueDate())
                 .sprint(resolveSprint(projectId, request.getSprintId()))
+                .tags(resolveTags(request.getTagIds(), projectId))
                 .createdBy(currentUser).assignees(resolveAssignees(request.getAssigneeIds(), projectId));
 
         if (request.getParentTaskId() != null) {
@@ -193,8 +207,8 @@ public class TaskServiceImpl implements TaskService {
                 .searchTasks(projectId,
                         status != null ? status.name() : null,
                         priority != null ? priority.name() : null,
-                assigneeId, sprintId, filterByTags, normalizedTagIds,
-                keyword, dueDateFrom, dueDateTo,
+                        assigneeId, sprintId, filterByTags, normalizedTagIds,
+                        keyword, dueDateFrom, dueDateTo,
                         pageable)
                 .map(task -> toResponseWithPermissions(task, projectId));
 
