@@ -79,6 +79,7 @@ export interface Workspace {
   name: string;
   description: string | null;
   ownerId: number;
+  permissions?: string[];
   isPublic?: boolean;
   createdAt: string;
   updatedAt: string;
