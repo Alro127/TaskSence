@@ -4,9 +4,12 @@ import dev.alro127.tasksense.domain.entity.ProjectEntity;
 import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
+import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.MemberAddStatus;
+import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
 import dev.alro127.tasksense.dto.common.PageResponse;
+import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.dto.request.AddProjectMemberRequest;
 import dev.alro127.tasksense.dto.request.ProjectMemberItem;
 import dev.alro127.tasksense.dto.request.UpdateProjectMemberRoleRequest;
@@ -20,6 +23,7 @@ import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.security.permission.EffectivePermissionResolver;
+import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.ProjectMemberService;
 import dev.alro127.tasksense.service.SecurityService;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +49,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         private final ProjectRepository projectRepository;
         private final UserRepository userRepository;
         private final SecurityService securityService;
+        private final NotificationService notificationService;
         private final EffectivePermissionResolver permissionResolver;
 
         @Override
@@ -138,6 +143,17 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                         permissionResolver.evictAllPermissionCache();
                 }
 
+                for (AddProjectMemberResultItem r : results) {
+                        notificationService.saveAndPublish(NotificationMessage.builder()
+                                .receiverId(r.getUserId())
+                                .actorId(securityService.getCurrentUserId())
+                                .type(NotificationType.PROJECT_ADD_MEMBER)
+                                .referenceType(EntityType.PROJECT)
+                                .referenceId(projectId)
+                                .payload(Map.of("referenceName", project.getName()))
+                                .build());
+                }
+
                 return results;
         }
 
@@ -168,6 +184,9 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                         UpdateProjectMemberRoleRequest request) {
                 // @PreAuthorize đã kiểm tra MANAGE_MEMBERS permission
 
+                ProjectEntity project = projectRepository.findById(projectId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
                 ProjectMemberEntity member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project member not found"));
 
@@ -178,6 +197,16 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 Long currentUserId = securityService.getCurrentUserId();
                 ProjectMemberResponse response = ProjectMemberResponse.mapToResponse(member);
                 response.setPermissions(permissionResolver.resolveProjectPermissions(currentUserId, projectId));
+
+                notificationService.saveAndPublish(NotificationMessage.builder()
+                        .receiverId(userId)
+                        .actorId(securityService.getCurrentUserId())
+                        .type(NotificationType.PROJECT_ROLE_CHANGE)
+                        .referenceType(EntityType.PROJECT)
+                        .referenceId(projectId)
+                        .payload(Map.of("referenceName", project.getName()))
+                        .build());
+
                 return response;
         }
 
@@ -185,6 +214,9 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         @Transactional
         public void removeMember(Long projectId, Long userId) {
                 // @PreAuthorize đã kiểm tra MANAGE_MEMBERS permission
+
+                ProjectEntity project = projectRepository.findById(projectId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
                 ProjectMemberEntity member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project member not found"));
@@ -196,6 +228,15 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 member.setDeletedAt(OffsetDateTime.now());
                 projectMemberRepository.save(member);
                 permissionResolver.evictAllPermissionCache();
+
+                notificationService.saveAndPublish(NotificationMessage.builder()
+                        .receiverId(userId)
+                        .actorId(securityService.getCurrentUserId())
+                        .type(NotificationType.PROJECT_REMOVE_MEMBER)
+                        .referenceType(EntityType.PROJECT)
+                        .referenceId(projectId)
+                        .payload(Map.of("referenceName", project.getName()))
+                        .build());
         }
 
         @Override

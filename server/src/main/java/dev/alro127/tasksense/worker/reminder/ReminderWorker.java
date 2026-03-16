@@ -1,7 +1,9 @@
 package dev.alro127.tasksense.worker.reminder;
 
+import dev.alro127.tasksense.domain.entity.ProjectEntity;
 import dev.alro127.tasksense.domain.entity.TaskEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
+import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
 import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.dto.message.NotificationMessage;
@@ -78,6 +80,9 @@ public class ReminderWorker {
                 continue;
             }
 
+            ProjectEntity project = task.getProject();
+            WorkspaceEntity workspace = project.getWorkspace();
+
             for(UserEntity assignee : task.getAssignees()){
 
                 notificationService.saveAndPublish(
@@ -87,8 +92,8 @@ public class ReminderWorker {
                                 .referenceType(EntityType.TASK)
                                 .referenceId(task.getId())
                                 .payload(Map.of("referenceName", task.getTitle(),
-                                        "projectId", task.getProject().getId(),
-                                        "workspaceId", task.getProject().getWorkspace().getId()))
+                                        "projectId", project.getId(),
+                                        "workspaceId", workspace.getId()))
                                 .build()
                 );
             }

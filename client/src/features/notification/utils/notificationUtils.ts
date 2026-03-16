@@ -30,6 +30,10 @@ export function getNotificationText(
       title: "New task assigned",
       description: `${actorName} assigned you to "${taskName}"`,
     },
+    TASK_UNASSIGNED: {
+      title: "Unassigned from task",
+      description: `${actorName} removed you from "${taskName}"`,
+    },
     WORKSPACE_INVITE: {
       title: "Workspace invitation",
       description: `${actorName} invited you to join "${workspaceName}"`,
@@ -62,6 +66,26 @@ export function getNotificationText(
       title: "Project join request",
       description: `${actorName} requested to join "${projectName}"`,
     },
+    PROJECT_REVIEW_REQUEST: {
+      title: notification.referenceId
+        ? "Join request approved"
+        : "Join request rejected",
+      description: notification.referenceId
+        ? `Your request to join "${projectName}" was approved`
+        : `Your request to join "${projectName}" was rejected`,
+    },
+    PROJECT_ADD_MEMBER: {
+      title: "Added to project",
+      description: `${actorName} added you to "${projectName}"`,
+    },
+    PROJECT_REMOVE_MEMBER: {
+      title: "Removed from project",
+      description: `You have been removed from "${projectName}"`,
+    },
+    PROJECT_ROLE_CHANGE: {
+      title: "Project role changed",
+      description: `Your role in "${projectName}" has been updated`,
+    },
     COMMENT_MENTION: {
       title: "You were mentioned",
       description: `${actorName} mentioned you in a comment`,
@@ -78,10 +102,6 @@ export function getNotificationText(
       title: "Task reminder",
       description: `Reminder: "${taskName}" is due soon`,
     },
-    PROJECT_ROLE_UPDATED: {
-      title: "Role updated",
-      description: `Your role in "${projectName}" was changed to ${newRole}`,
-    },
   };
 
   return map[notification.type] ?? { title: "New notification", description: "" };
@@ -95,9 +115,14 @@ export function getNotificationTarget(notification: NotificationResponse): strin
   const payload = notification.payload ?? {};
 
   switch (notification.type) {
-    case "TASK_ASSIGNED": {
-      const taskId = notification.referenceId ?? (payload.taskId as number | undefined);
-      return taskId ? `/tasks` : "/tasks";
+    case "TASK_ASSIGNED":
+    case "TASK_UNASSIGNED": {
+      const workspaceId = payload.workspaceId as number | undefined;
+      const projectId = payload.projectId as number | undefined;
+      const taskId = notification.referenceId;
+      return workspaceId && projectId && taskId
+        ? `/workspaces/${workspaceId}/projects/${projectId}/tasks/${taskId}`
+        : "/tasks";
     }
     case "WORKSPACE_INVITE": {
       const token = payload.token as string | undefined;
@@ -134,6 +159,30 @@ export function getNotificationTarget(notification: NotificationResponse): strin
       const workspaceId = payload.workspaceId as number | undefined;
       return workspaceId ? `/workspaces/${workspaceId}` : "/workspaces";
     }
+    case "PROJECT_REVIEW_REQUEST": {
+      const workspaceId = payload.workspaceId as number | undefined;
+      const projectId = notification.referenceId;
+      return workspaceId && projectId
+        ? `/workspaces/${workspaceId}/projects/${projectId}`
+        : "/workspaces";
+    }
+    case "PROJECT_ADD_MEMBER": {
+      const workspaceId = payload.workspaceId as number | undefined;
+      const projectId = notification.referenceId;
+      return workspaceId && projectId
+        ? `/workspaces/${workspaceId}/projects/${projectId}`
+        : "/workspaces";
+    }
+    case "PROJECT_REMOVE_MEMBER": {
+      return "/workspaces";
+    }
+    case "PROJECT_ROLE_CHANGE": {
+      const workspaceId = payload.workspaceId as number | undefined;
+      const projectId = notification.referenceId;
+      return workspaceId && projectId
+        ? `/workspaces/${workspaceId}/projects/${projectId}`
+        : "/workspaces";
+    }
     case "COMMENT_MENTION":
     case "COMMENT_REACTION":
     case "COMMENT_TASK": {
@@ -153,10 +202,6 @@ export function getNotificationTarget(notification: NotificationResponse): strin
       return workspaceId && projectId && taskId
         ? `/workspaces/${workspaceId}/projects/${projectId}/tasks/${taskId}`
         : "/tasks";
-    }
-    case "PROJECT_ROLE_UPDATED": {
-      const workspaceId = payload.workspaceId as number | undefined;
-      return workspaceId ? `/workspaces/${workspaceId}` : "/workspaces";
     }
     default:
       return null;
