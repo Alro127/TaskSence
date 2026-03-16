@@ -478,6 +478,7 @@ export interface CreateTaskRequest {
   parentTaskId?: number;
   sprintId?: number;
   assigneeIds?: number[];
+  tagIds?: number[];
 }
 
 export interface UpdateTaskRequest {
