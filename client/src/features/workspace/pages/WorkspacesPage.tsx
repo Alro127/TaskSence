@@ -23,8 +23,6 @@ export function WorkspacesPage() {
   const pinnedIds = useAppSelector((s) => s.workspace.pinnedIds);
   const recentIds = useAppSelector((s) => s.workspace.recentIds);
 
-  const currentUserId = useAppSelector((s) => s.user.currentUser?.id);
-
   const { data, isLoading, isError } = useGetMyWorkspacesQuery();
   const workspaces = data?.data?.data ?? [];
 
@@ -57,6 +55,11 @@ export function WorkspacesPage() {
 
   const handleDeleteSuccess = (id: number) => {
     dispatch(removeFromPinnedAndRecent(id));
+  };
+
+  const hasWorkspacePermission = (workspace: Workspace, ...keys: string[]) => {
+    const permissions = workspace.permissions ?? [];
+    return keys.some((key) => permissions.includes(key));
   };
 
   // Loading
@@ -133,7 +136,8 @@ export function WorkspacesPage() {
                   onEdit={setEditTarget}
                   onDelete={setDeleteTarget}
                   variant="pinned"
-                  canManage={ws.ownerId === currentUserId}
+                  canEdit={hasWorkspacePermission(ws, "UPDATE")}
+                  canDelete={hasWorkspacePermission(ws, "DELETE")}
                 />
               </div>
             ))}
@@ -159,7 +163,8 @@ export function WorkspacesPage() {
                   onTogglePin={handleTogglePin}
                   onEdit={setEditTarget}
                   onDelete={setDeleteTarget}
-                  canManage={ws.ownerId === currentUserId}
+                  canEdit={hasWorkspacePermission(ws, "UPDATE")}
+                  canDelete={hasWorkspacePermission(ws, "DELETE")}
                 />
               </div>
             ))}
@@ -188,7 +193,8 @@ export function WorkspacesPage() {
                   onTogglePin={handleTogglePin}
                   onEdit={setEditTarget}
                   onDelete={setDeleteTarget}
-                  canManage={ws.ownerId === currentUserId}
+                  canEdit={hasWorkspacePermission(ws, "UPDATE")}
+                  canDelete={hasWorkspacePermission(ws, "DELETE")}
                 />
               </div>
             ))}

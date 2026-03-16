@@ -14,7 +14,7 @@ import {
   Settings,
 } from "lucide-react";
 
-import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,6 @@ import {
   useGetWorkspaceByIdQuery,
   useUpdateWorkspaceMutation,
 } from "../api/workspaceApi";
-import { useGetWorkspaceMembersQuery } from "../api/workspaceMemberApi";
 import { DeleteWorkspaceDialog, WorkspaceMembersTab } from "../components";
 import { useGetProjectsByWorkspaceQuery } from "@/features/project/api/projectApi";
 import { ProjectCard, ProjectCardGhost } from "@/features/project/components";
@@ -79,25 +78,12 @@ export function WorkspaceDetailPage() {
   const totalProjects = projectsData?.data?.totalElements ?? 0;
   const totalProjectPages = projectsData?.data?.totalPages ?? 1;
 
-  // Determine current user's workspace role
-  const currentUserId = useAppSelector((s) => s.user.currentUser?.id);
-  const { data: membersData } = useGetWorkspaceMembersQuery(workspaceId, {
-    skip: isNaN(workspaceId),
-  });
-  const members = membersData?.data?.data ?? [];
-  const myMember = members.find((m) => m.user.id === currentUserId);
-  const myRole = myMember?.role ?? null;
-  const canManage = myRole === "OWNER" || myRole === "MANAGER";
-  const isOwner = myRole === "OWNER";
-  const workspacePermissions = myMember?.permissions ?? [];
+  const workspacePermissions = workspace?.permissions ?? [];
   const hasWorkspacePermission = (...keys: string[]) =>
     keys.some((key) => workspacePermissions.includes(key));
-  const canManageSettings =
-    canManage || hasWorkspacePermission("MANAGE_WORKSPACE", "UPDATE_WORKSPACE", "EDIT_WORKSPACE");
-  const canCreateProject =
-    canManage || hasWorkspacePermission("CREATE_PROJECT", "MANAGE_PROJECTS");
-  const canDeleteWorkspace =
-    isOwner || hasWorkspacePermission("DELETE_WORKSPACE", "MANAGE_WORKSPACE");
+  const canManageSettings = hasWorkspacePermission("UPDATE");
+  const canCreateProject = hasWorkspacePermission("CREATE_PROJECT");
+  const canDeleteWorkspace = hasWorkspacePermission("DELETE");
 
   const [updateWorkspace, { isLoading: isUpdating }] = useUpdateWorkspaceMutation();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -297,7 +283,7 @@ export function WorkspaceDetailPage() {
           <WorkspaceMembersTab workspaceId={workspaceId} />
         </TabsContent>
 
-        {/* ── Settings Tab (OWNER / MANAGER only) ── */}
+        {/* ── Settings Tab ── */}
         {canManageSettings && (
           <TabsContent value="settings" className="mt-6 max-w-xl space-y-8">
             {/* General settings */}

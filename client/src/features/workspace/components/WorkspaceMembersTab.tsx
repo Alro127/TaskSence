@@ -109,22 +109,14 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
   const { data: invitesData, isLoading: invitesLoading } =
     useGetWorkspaceInvitesQuery({ workspaceId, size: 50 });
 
-  // Compute current user's role early so join requests query can use it
   const members = membersData?.data?.data ?? [];
-  const myMember = members.find((m) => m.user.id === currentUserId);
-  const myRole = myMember?.role ?? null;
-  const canManage = myRole === "OWNER" || myRole === "MANAGER";
-  const workspacePermissions = myMember?.permissions ?? [];
+  const workspacePermissions = members[0]?.permissions ?? [];
   const hasWorkspacePermission = (...keys: string[]) =>
     keys.some((key) => workspacePermissions.includes(key));
-  const canInvite =
-    canManage || hasWorkspacePermission("INVITE_MEMBER", "CREATE_INVITE", "MANAGE_INVITES");
-  const canReviewJoinRequests =
-    canManage || hasWorkspacePermission("REVIEW_JOIN_REQUEST", "MANAGE_JOIN_REQUESTS");
-  const canUpdateRoles =
-    canManage || hasWorkspacePermission("UPDATE_MEMBER_ROLE", "MANAGE_MEMBERS");
-  const canRemoveMembers =
-    canManage || hasWorkspacePermission("REMOVE_MEMBER", "MANAGE_MEMBERS");
+  const canInvite = hasWorkspacePermission("INVITE_MEMBERS");
+  const canReviewJoinRequests = hasWorkspacePermission("MANAGE_JOIN_REQUESTS");
+  const canUpdateRoles = hasWorkspacePermission("MANAGE_MEMBERS");
+  const canRemoveMembers = hasWorkspacePermission("MANAGE_MEMBERS");
   const canManageMembers = canUpdateRoles || canRemoveMembers;
 
   const { data: joinRequestsData, isLoading: joinRequestsLoading } =
@@ -213,24 +205,15 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
   };
 
   // ── Determine available roles for a target member ─────────────────────────
-  const getAvailableRoles = (target: WorkspaceMember): WorkspaceRole[] => {
+  const getAvailableRoles = (_target: WorkspaceMember): WorkspaceRole[] => {
     if (!canUpdateRoles) return [];
-    if (myRole === "OWNER") return ROLES_FOR_CHANGE;
-    // MANAGER can only change MEMBER and VIEWER roles, and only to MEMBER/VIEWER
-    if (myRole === "MANAGER" && (target.role === "MEMBER" || target.role === "VIEWER")) {
-      return ["MEMBER", "VIEWER"];
-    }
-    // Permission-based fallback if backend grants role update capability.
+    // Role transition constraints are enforced by backend.
     return ROLES_FOR_CHANGE;
   };
 
   // ── Can manage a specific member ──────────────────────────────────────────
   const canManageMember = (target: WorkspaceMember): boolean => {
     if (target.user.id === currentUserId) return false; // can't manage yourself
-    if (myRole === "OWNER") return canManageMembers;
-    if (myRole === "MANAGER" && (target.role === "MEMBER" || target.role === "VIEWER")) {
-      return canManageMembers;
-    }
     return canManageMembers;
   };
 

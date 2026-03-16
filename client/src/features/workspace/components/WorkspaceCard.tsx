@@ -22,8 +22,8 @@ interface WorkspaceCardProps {
   onDelete: (workspace: Workspace) => void;
   projectCount?: number;
   variant?: "default" | "pinned";
-  /** Whether the current user can manage (edit/delete) this workspace (OWNER/MANAGER) */
-  canManage?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export function WorkspaceCard({
@@ -34,9 +34,11 @@ export function WorkspaceCard({
   onDelete,
   projectCount = 0,
   variant = "default",
-  canManage = false,
+  canEdit = false,
+  canDelete = false,
 }: WorkspaceCardProps) {
   const navigate = useNavigate();
+  const hasActionMenu = canEdit || canDelete;
 
   return (
     <Card
@@ -83,7 +85,7 @@ export function WorkspaceCard({
               )}
             </Button>
 
-            {canManage && (
+            {hasActionMenu && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon-sm">
@@ -92,16 +94,20 @@ export function WorkspaceCard({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onEdit(workspace)}>
-                    Edit workspace
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => onDelete(workspace)}
-                  >
-                    Delete workspace
-                  </DropdownMenuItem>
+                  {canEdit && (
+                    <DropdownMenuItem onClick={() => onEdit(workspace)}>
+                      Edit workspace
+                    </DropdownMenuItem>
+                  )}
+                  {canEdit && canDelete && <DropdownMenuSeparator />}
+                  {canDelete && (
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => onDelete(workspace)}
+                    >
+                      Delete workspace
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
