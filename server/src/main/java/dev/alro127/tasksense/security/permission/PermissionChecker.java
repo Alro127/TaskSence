@@ -1,31 +1,26 @@
 package dev.alro127.tasksense.security.permission;
 
-import dev.alro127.tasksense.domain.entity.ProjectEntity;
-import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
 import dev.alro127.tasksense.domain.entity.TaskEntity;
-import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
-import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 import dev.alro127.tasksense.exception.UnauthorizedException;
-import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
-import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.service.SecurityService;
 import lombok.RequiredArgsConstructor;
 
-import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
 /**
  * Bean dùng cho @PreAuthorize SpEL và service-layer permission checks.
+ * Delegate sang EffectivePermissionResolver cho mọi logic resolve.
  *
  * Controller usage:
  * @PreAuthorize("@perm.workspace(#workspaceId, 'MANAGE_MEMBERS')")
  * @PreAuthorize("@perm.project(#projectId, 'CREATE_TASK')")
  *
  * Service usage (resource-level):
- * permissionChecker.requireTaskEditPermission(projectId, task);
+ * permissionChecker.requireTaskPermission(projectId, task, TaskPermission.EDIT);
  */
 @Component("perm")
 @RequiredArgsConstructor
@@ -33,9 +28,7 @@ public class PermissionChecker {
 
     private final SecurityService securityService;
     private final WorkspaceMemberRepository workspaceMemberRepository;
-    private final ProjectMemberRepository projectMemberRepository;
-    private final ProjectRepository projectRepository;
-    private final PermissionPolicy policy;
+    private final EffectivePermissionResolver resolver;
 
     // ==================== @PreAuthorize SpEL methods ====================
 
@@ -45,31 +38,18 @@ public class PermissionChecker {
      */
     public boolean workspace(Long workspaceId, String permissionName) {
         Long userId = securityService.getCurrentUserId();
-        WorkspacePermission permission = WorkspacePermission.valueOf(permissionName);
-
-        return workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, userId)
-                .map(member -> policy.hasWorkspacePermission(member.getRole(), permission))
-                .orElse(false);
+        Set<String> permissions = resolver.resolveWorkspacePermissions(userId, workspaceId);
+        return permissions.contains(permissionName);
     }
 
     /**
-     * Check project-level permission.
-     * Workspace OWNER có implicit full access cho mọi project.
-     * Workspace MANAGER có implicit VIEWER access cho mọi project.
+     * Check project-level permission (xét cả workspace inheritance).
      * Dùng: @PreAuthorize("@perm.project(#projectId, 'CREATE_TASK')")
      */
     public boolean project(Long projectId, String permissionName) {
         Long userId = securityService.getCurrentUserId();
-        ProjectPermission permission = ProjectPermission.valueOf(permissionName);
-
-        // 1. Check project-level role
-        var projectMember = projectMemberRepository.findByProjectIdAndUserId(projectId, userId);
-        if (projectMember.isPresent()) {
-            return policy.hasProjectPermission(projectMember.get().getRole(), permission);
-        }
-
-        // 2. Fallback: check workspace role for implicit project access
-        return hasImplicitProjectPermission(projectId, userId, permission);
+        Set<String> permissions = resolver.resolveProjectPermissions(userId, projectId);
+        return permissions.contains(permissionName);
     }
 
     /**
@@ -84,101 +64,41 @@ public class PermissionChecker {
     // ==================== Service-layer helpers ====================
 
     /**
-     * Lấy project role của current user. Throw nếu không phải member.
+     * Lấy effective project role của current user (xét cả workspace inheritance).
+     * Throw nếu không có quyền gì.
      */
     public ProjectMemberRole getProjectRole(Long projectId) {
         Long userId = securityService.getCurrentUserId();
-        return projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
-                .map(ProjectMemberEntity::getRole)
-                .orElseThrow(() -> new UnauthorizedException("Not a project member"));
+        ProjectMemberRole role = resolver.resolveEffectiveProjectRole(userId, projectId);
+        if (role == null) {
+            throw new UnauthorizedException("Not a project member");
+        }
+        return role;
     }
 
     /**
-     * Check current user có phải Project MANAGER hoặc Workspace OWNER không.
+     * Check current user có effective MANAGER role trên project không.
      */
     public boolean isProjectManager(Long projectId) {
         Long userId = securityService.getCurrentUserId();
-        boolean isManager = projectMemberRepository
-                .existsByProjectIdAndUserIdAndRole(projectId, userId, ProjectMemberRole.MANAGER);
-        if (isManager)
-            return true;
-        return isWorkspaceOwnerOfProject(projectId, userId);
+        ProjectMemberRole role = resolver.resolveEffectiveProjectRole(userId, projectId);
+        return role == ProjectMemberRole.MANAGER;
     }
 
     /**
-     * Task edit permission:
-     * - MANAGER/Workspace OWNER: edit bất kỳ task nào
-     * - MEMBER: chỉ edit task mình tạo
+     * Require task-level permission.
+     * Dùng cho service-layer resource-level checks.
+     *
+     * Ví dụ:
+     *   requireTaskPermission(projectId, task, TaskPermission.EDIT);
+     *   requireTaskPermission(projectId, task, TaskPermission.UPDATE_STATUS);
      */
-    public void requireTaskEditPermission(Long projectId, TaskEntity task) {
-        if (isProjectManager(projectId))
-            return;
-
+    public void requireTaskPermission(Long projectId, TaskEntity task, TaskPermission required) {
         Long userId = securityService.getCurrentUserId();
-        if (!task.getCreatedBy().getId().equals(userId)) {
-            throw new UnauthorizedException("You can only modify tasks you created");
-        }
-    }
-
-    /**
-     * Task status update permission:
-     * - MANAGER/Workspace OWNER: update status bất kỳ task nào
-     * - MEMBER: update status task mình tạo hoặc được assign
-     */
-    public void requireTaskStatusPermission(Long projectId, TaskEntity task) {
-        if (isProjectManager(projectId))
-            return;
-
-        Long userId = securityService.getCurrentUserId();
-        boolean isCreator = task.getCreatedBy().getId().equals(userId);
-        boolean isAssignee = task.getAssignees().stream()
-                .anyMatch(u -> u.getId().equals(userId));
-
-        if (!isCreator && !isAssignee) {
+        Set<String> permissions = resolver.resolveTaskPermissions(userId, projectId, task);
+        if (!permissions.contains(required.name())) {
             throw new UnauthorizedException(
-                    "You can only update status of tasks you created or are assigned to");
+                    "You do not have " + required.name() + " permission on this task");
         }
-    }
-
-    // ==================== Internal ====================
-
-    private boolean isWorkspaceOwnerOfProject(Long projectId, Long userId) {
-        return projectRepository.findById(projectId)
-                .flatMap(project -> workspaceMemberRepository.findByWorkspaceIdAndUserId(
-                        project.getWorkspace().getId(), userId))
-                .map(wsMember -> wsMember.getRole() == WorkspaceRole.OWNER)
-                .orElse(false);
-    }
-
-    /**
-     * Implicit project permission dựa trên workspace role:
-     * - OWNER: full project access
-     * - MANAGER: VIEWER-level project access
-     */
-    private boolean hasImplicitProjectPermission(Long projectId, Long userId, ProjectPermission permission) {
-
-        Optional<ProjectEntity> projectOpt = projectRepository.findById(projectId);
-        if (projectOpt.isEmpty())
-            return false;
-
-        Long workspaceId = projectOpt.get().getWorkspace().getId();
-
-        Optional<WorkspaceMemberEntity> wsMemberOpt = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId,
-                userId);
-
-        if (wsMemberOpt.isEmpty())
-            return false;
-
-        WorkspaceMemberEntity wsMember = wsMemberOpt.get();
-
-        if (wsMember.getRole() == WorkspaceRole.OWNER) {
-            return true;
-        }
-
-        if (wsMember.getRole() == WorkspaceRole.MANAGER) {
-            return policy.hasProjectPermission(ProjectMemberRole.VIEWER, permission);
-        }
-
-        return false;
     }
 }

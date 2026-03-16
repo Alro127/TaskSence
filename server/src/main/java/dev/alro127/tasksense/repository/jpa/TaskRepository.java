@@ -18,86 +18,116 @@ import java.util.Optional;
 @Repository
 public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
 
-  Page<TaskEntity> findByProjectId(Long projectId, Pageable pageable);
+    Page<TaskEntity> findByProjectId(Long projectId, Pageable pageable);
 
-  List<TaskEntity> findByProjectIdAndStatus(Long projectId, TaskStatus status);
+    List<TaskEntity> findByProjectIdAndStatus(Long projectId, TaskStatus status);
 
-  Page<TaskEntity> findByParentTaskId(Long parentTaskId, Pageable pageable);
+    Page<TaskEntity> findByParentTaskId(Long parentTaskId, Pageable pageable);
 
-  Optional<TaskEntity> findByIdAndProjectId(Long id, Long projectId);
+    Optional<TaskEntity> findByIdAndProjectId(Long id, Long projectId);
 
-  @Query(value = """
-          SELECT DISTINCT t.* FROM tasks t
-          LEFT JOIN task_assignees ta ON t.id = ta.task_id
-          LEFT JOIN users u ON u.id = ta.user_id AND u.deleted_at IS NULL
-          WHERE t.deleted_at IS NULL
-            AND t.project_id = :projectId
-            AND (CAST(:status AS VARCHAR) IS NULL OR t.status = CAST(:status AS VARCHAR))
-            AND (CAST(:priority AS VARCHAR) IS NULL OR t.priority = CAST(:priority AS VARCHAR))
-            AND (CAST(:assigneeId AS BIGINT) IS NULL OR ta.user_id = CAST(:assigneeId AS BIGINT))
-            AND (CAST(:keyword AS VARCHAR) IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS VARCHAR), '%')))
-            AND (CAST(:dueDateFrom AS TIMESTAMPTZ) IS NULL OR t.due_date >= CAST(:dueDateFrom AS TIMESTAMPTZ))
-            AND (CAST(:dueDateTo AS TIMESTAMPTZ) IS NULL OR t.due_date <= CAST(:dueDateTo AS TIMESTAMPTZ))
-          ORDER BY t.position ASC, t.id DESC
-      """, nativeQuery = true)
-  List<TaskEntity> searchTasks(
-      @Param("projectId") Long projectId,
-      @Param("status") String status,
-      @Param("priority") String priority,
-      @Param("assigneeId") Long assigneeId,
-      @Param("keyword") String keyword,
-      @Param("dueDateFrom") OffsetDateTime dueDateFrom,
-      @Param("dueDateTo") OffsetDateTime dueDateTo,
-      Pageable pageable);
+    // Câu query bên dưới cần được optimize lại
+    @Query(value = """
+                            SELECT DISTINCT t.*
+                            FROM tasks t
+                            LEFT JOIN task_assignees ta ON t.id = ta.task_id
+                            WHERE t.deleted_at IS NULL
+                                    AND t.project_id = :projectId
+                                    AND (CAST(:status AS VARCHAR) IS NULL OR t.status = CAST(:status AS VARCHAR))
+                                    AND (CAST(:priority AS VARCHAR) IS NULL OR t.priority = CAST(:priority AS VARCHAR))
+                                    AND (CAST(:assigneeId AS BIGINT) IS NULL OR ta.user_id = CAST(:assigneeId AS BIGINT))
+                                    AND (CAST(:sprintId AS BIGINT) IS NULL OR t.sprint_id = CAST(:sprintId AS BIGINT))
+                                    AND (CAST(:keyword AS VARCHAR) IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS VARCHAR), '%')))
+                                    AND (CAST(:dueDateFrom AS TIMESTAMPTZ) IS NULL OR t.due_date >= CAST(:dueDateFrom AS TIMESTAMPTZ))
+                                    AND (CAST(:dueDateTo AS TIMESTAMPTZ) IS NULL OR t.due_date <= CAST(:dueDateTo AS TIMESTAMPTZ))
+                                    AND (:filterByTags = FALSE OR EXISTS (
+                                                            SELECT 1
+                                                            FROM task_tags tt
+                                                            WHERE tt.task_id = t.id
+                                                                    AND tt.tag_id IN (:tagIds)
+                                    ))
+                            ORDER BY t.position ASC, t.id DESC
+            """, countQuery = """
+                            SELECT COUNT(DISTINCT t.id)
+                            FROM tasks t
+                            LEFT JOIN task_assignees ta ON t.id = ta.task_id
+                            WHERE t.deleted_at IS NULL
+                                    AND t.project_id = :projectId
+                                    AND (CAST(:status AS VARCHAR) IS NULL OR t.status = CAST(:status AS VARCHAR))
+                                    AND (CAST(:priority AS VARCHAR) IS NULL OR t.priority = CAST(:priority AS VARCHAR))
+                                    AND (CAST(:assigneeId AS BIGINT) IS NULL OR ta.user_id = CAST(:assigneeId AS BIGINT))
+                                    AND (CAST(:sprintId AS BIGINT) IS NULL OR t.sprint_id = CAST(:sprintId AS BIGINT))
+                                    AND (CAST(:keyword AS VARCHAR) IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS VARCHAR), '%')))
+                                    AND (CAST(:dueDateFrom AS TIMESTAMPTZ) IS NULL OR t.due_date >= CAST(:dueDateFrom AS TIMESTAMPTZ))
+                                    AND (CAST(:dueDateTo AS TIMESTAMPTZ) IS NULL OR t.due_date <= CAST(:dueDateTo AS TIMESTAMPTZ))
+                                    AND (:filterByTags = FALSE OR EXISTS (
+                                                            SELECT 1
+                                                            FROM task_tags tt
+                                                            WHERE tt.task_id = t.id
+                                                                    AND tt.tag_id IN (:tagIds)
+                                    ))
+            """, nativeQuery = true)
+    Page<TaskEntity> searchTasks(
+            @Param("projectId") Long projectId,
+            @Param("status") String status,
+            @Param("priority") String priority,
+            @Param("assigneeId") Long assigneeId,
+            @Param("sprintId") Long sprintId,
+            @Param("filterByTags") boolean filterByTags,
+            @Param("tagIds") List<Long> tagIds,
+            @Param("keyword") String keyword,
+            @Param("dueDateFrom") OffsetDateTime dueDateFrom,
+            @Param("dueDateTo") OffsetDateTime dueDateTo,
+            Pageable pageable);
 
-  @Query("""
-      SELECT t
-      FROM TaskEntity t
-      WHERE t.dueDate BETWEEN :now AND :window
-      """)
-  List<TaskEntity> findTasksWithReminderBetween(
-      OffsetDateTime now,
-      OffsetDateTime window);
+    @Query("""
+            SELECT t
+            FROM TaskEntity t
+            WHERE t.dueDate BETWEEN :now AND :window
+            """)
+    List<TaskEntity> findTasksWithReminderBetween(
+            OffsetDateTime now,
+            OffsetDateTime window);
 
-  @Query("""
-          SELECT DISTINCT t
-          FROM TaskEntity t
-          LEFT JOIN FETCH t.assignees
-          LEFT JOIN FETCH t.project p
-          LEFT JOIN FETCH p.workspace
-          WHERE t.id = :id
-      """)
-  Optional<TaskEntity> findWithAssigneesProjectWorkspace(Long id);
+    @Query("""
+                SELECT DISTINCT t
+                FROM TaskEntity t
+                LEFT JOIN FETCH t.assignees
+                LEFT JOIN FETCH t.project p
+                LEFT JOIN FETCH p.workspace
+                WHERE t.id = :id
+            """)
+    Optional<TaskEntity> findWithAssigneesProjectWorkspace(Long id);
 
-  @Modifying
-  @Query("UPDATE TaskEntity t SET t.deletedAt = :now WHERE t.project.id = :projectId AND t.deletedAt IS NULL")
-  int softDeleteByProjectId(@Param("projectId") Long projectId, @Param("now") OffsetDateTime now);
+    @Modifying
+    @Query("UPDATE TaskEntity t SET t.deletedAt = :now WHERE t.project.id = :projectId AND t.deletedAt IS NULL")
+    int softDeleteByProjectId(@Param("projectId") Long projectId, @Param("now") OffsetDateTime now);
 
-  @Modifying
-  @Query("UPDATE TaskEntity t SET t.deletedAt = :now WHERE t.project.id IN :projectIds AND t.deletedAt IS NULL")
-  int softDeleteByProjectIds(@Param("projectIds") List<Long> projectIds, @Param("now") OffsetDateTime now);
+    @Modifying
+    @Query("UPDATE TaskEntity t SET t.deletedAt = :now WHERE t.project.id IN :projectIds AND t.deletedAt IS NULL")
+    int softDeleteByProjectIds(@Param("projectIds") List<Long> projectIds, @Param("now") OffsetDateTime now);
 
-  @Modifying
-  @Query("UPDATE TaskEntity t SET t.deletedAt = :now WHERE t.parentTask.id = :parentTaskId AND t.deletedAt IS NULL")
-  int softDeleteByParentTaskId(@Param("parentTaskId") Long parentTaskId, @Param("now") OffsetDateTime now);
+    @Modifying
+    @Query("UPDATE TaskEntity t SET t.deletedAt = :now WHERE t.parentTask.id = :parentTaskId AND t.deletedAt IS NULL")
+    int softDeleteByParentTaskId(@Param("parentTaskId") Long parentTaskId, @Param("now") OffsetDateTime now);
 
-  @Query(value = """
-    SELECT
-        COUNT(*) as taskCount,
-        SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) as completedTaskCount
-    FROM tasks
-    WHERE sprint_id = :sprintId
-""", nativeQuery = true)
-  SprintTaskStats getSprintTaskStats(Long sprintId);
+    @Query(value = """
+                SELECT
+                    COUNT(*) as taskCount,
+                    SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) as completedTaskCount
+                FROM tasks
+                WHERE sprint_id = :sprintId
+            """, nativeQuery = true)
+    SprintTaskStats getSprintTaskStats(Long sprintId);
 
-  @Query("""
-    SELECT t.sprint.id as sprintId,
-           COUNT(t) as taskCount,
-           SUM(CASE WHEN t.status = 'DONE' THEN 1 ELSE 0 END) as completedTaskCount
-    FROM TaskEntity t
-    WHERE t.sprint.id IN :sprintIds
-    GROUP BY t.sprint.id
-""")
-  List<SprintTaskStats> getSprintTaskStatsBySprintIds(List<Long> sprintIds);
+    @Query("""
+                SELECT t.sprint.id as sprintId,
+                       COUNT(t) as taskCount,
+                       SUM(CASE WHEN t.status = 'DONE' THEN 1 ELSE 0 END) as completedTaskCount
+                FROM TaskEntity t
+                WHERE t.sprint.id IN :sprintIds
+                GROUP BY t.sprint.id
+            """)
+    List<SprintTaskStats> getSprintTaskStatsBySprintIds(List<Long> sprintIds);
 
 }

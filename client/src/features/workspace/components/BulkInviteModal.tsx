@@ -151,14 +151,17 @@ export function BulkInviteModal({
   // ── APIs ───────────────────────────────────────────────────────────────────
   const [searchUsers, { data: searchData, isFetching: isSearching }] =
     useLazySearchUsersQuery();
-  const { data: templatesData } = useGetMyTemplatesQuery();
+  const { data: templatesData } = useGetMyTemplatesQuery({ page: 0, size: 50 });
   const { data: templateMembersData, isFetching: isFetchingMembers } =
-    useGetMembersQuery(selectedTemplateId!, { skip: selectedTemplateId === null });
+    useGetMembersQuery(
+      { templateId: selectedTemplateId ?? 0, page: 0, size: 100 },
+      { skip: selectedTemplateId === null },
+    );
   const [bulkInvite, { isLoading: isSubmitting }] = useBulkInviteMembersMutation();
 
   const searchResults: UserSearchResult[] = searchData?.data ?? [];
-  const templates = templatesData?.data ?? [];
-  const templateMembers = templateMembersData?.data ?? [];
+  const templates = templatesData?.data?.data ?? [];
+  const templateMembers = templateMembersData?.data?.data ?? [];
 
   // ── Debounce search ────────────────────────────────────────────────────────
   useEffect(() => {

@@ -32,6 +32,8 @@ function toDatetimeLocal(iso: string): string {
 import { useCreateTaskMutation, useUpdateTaskMutation } from "../api/taskApi";
 import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
 import { useGetProjectSprintsQuery } from "@/features/sprint/api/sprintApi";
+import { useGetTagsByProjectQuery } from "@/features/tag/api";
+import { TagBadge } from "@/features/tag/components";
 
 interface TaskFormSheetProps {
   open: boolean;
@@ -67,6 +69,7 @@ export function TaskFormSheet({
   const [dueDate, setDueDate] = useState("");
   const [sprintSelection, setSprintSelection] = useState<string>("NONE");
   const [assigneeIds, setAssigneeIds] = useState<number[]>([]);
+  const [tagIds, setTagIds] = useState<number[]>([]);
 
   const { data: membersData } = useGetMembersQuery(
     { projectId, page: 0, size: 100 },
@@ -79,6 +82,11 @@ export function TaskFormSheet({
     { skip: !open },
   );
   const sprints = sprintsData?.data?.data ?? [];
+
+  const { data: tagsData } = useGetTagsByProjectQuery(projectId, {
+    skip: !open,
+  });
+  const projectTags = tagsData?.data ?? [];
 
   const [createTask, { isLoading: isCreating }] = useCreateTaskMutation();
   const [updateTask, { isLoading: isUpdating }] = useUpdateTaskMutation();
@@ -94,6 +102,7 @@ export function TaskFormSheet({
       setDueDate(task.dueDate ? toDatetimeLocal(task.dueDate) : "");
       setSprintSelection(task.sprintId != null ? String(task.sprintId) : "NONE");
       setAssigneeIds(task.assignees.map((a) => a.id));
+      setTagIds((task.tags ?? []).map((tag) => tag.id));
     } else if (open && !task) {
       setTitle("");
       setDescription("");
@@ -102,12 +111,19 @@ export function TaskFormSheet({
       setDueDate("");
       setSprintSelection("NONE");
       setAssigneeIds([]);
+      setTagIds([]);
     }
   }, [open, task]);
 
   function toggleAssignee(userId: number) {
     setAssigneeIds((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+    );
+  }
+
+  function toggleTag(tagId: number) {
+    setTagIds((prev) =>
+      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId],
     );
   }
 
@@ -128,6 +144,7 @@ export function TaskFormSheet({
       dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
       sprintId: sprintSelection !== "NONE" ? Number(sprintSelection) : undefined,
       assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
+      tagIds: tagIds.length > 0 ? tagIds : undefined,
     };
 
     try {
@@ -293,6 +310,45 @@ export function TaskFormSheet({
                       <span className="truncate text-sm">
                         {m.user.fullName ?? m.user.email}
                       </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Tags */}
+          {projectTags.length > 0 && (
+            <div className="space-y-2">
+              <Label>Tags</Label>
+
+              {tagIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 rounded-md border bg-muted/20 p-2">
+                  {projectTags
+                    .filter((tag) => tagIds.includes(tag.id))
+                    .map((tag) => (
+                      <TagBadge key={tag.id} tag={tag} />
+                    ))}
+                </div>
+              )}
+
+              <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
+                {projectTags.map((tag) => {
+                  const checked = tagIds.includes(tag.id);
+                  return (
+                    <label
+                      key={tag.id}
+                      className="flex cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50"
+                    >
+                      <div className="min-w-0">
+                        <TagBadge tag={tag} />
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleTag(tag.id)}
+                        className="h-4 w-4 shrink-0 accent-primary"
+                      />
                     </label>
                   );
                 })}

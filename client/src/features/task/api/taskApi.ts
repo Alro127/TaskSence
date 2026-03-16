@@ -42,7 +42,7 @@ export const taskApi = createApi({
     }),
 
     searchTasks: builder.query<
-      ApiResponse<TaskResponse[]>,
+      ApiResponse<PageResponse<TaskResponse>>,
       { projectId: number } & TaskSearchParams
     >({
       query: ({ projectId, ...params }) => ({

@@ -1,7 +1,7 @@
 # TaskSense - Frontend Project Context
 
 > File này dùng để giữ context cho AI và developers. Cập nhật sau mỗi sprint/thay đổi lớn.
-> **Cập nhật lần cuối**: Sprint 11 - Sprint Planning & Task Board Sprint Focus
+> **Cập nhật lần cuối**: Sprint 11 + Post-review task loading follow-up
 
 ## 📋 Thông tin dự án
 
@@ -79,10 +79,10 @@
   - `GET /sprints/project/:projectId?page=&size=` → danh sách sprint theo project (paged) → `PageResponse<SprintResponse>`
 - **Task Endpoints**:
   - `POST /projects/:projectId/tasks` → body: `CreateTaskRequest` → `TaskResponse` _(MANAGER, MEMBER)_
-  - `GET /projects/:projectId/tasks` → danh sách tasks của project → `TaskResponse[]` _(tất cả roles)_
-  - `GET /projects/:projectId/tasks/search?status=&keyword=&cursor=&size=` → tìm kiếm task (cursor-based) → `TaskResponse[]` _(tất cả roles)_
+  - `GET /projects/:projectId/tasks` → danh sách tasks của project (pageable) → `PageResponse<TaskResponse>` _(tất cả roles)_
+  - `GET /projects/:projectId/tasks/search?status=&priority=&assigneeId=&keyword=&dueDateFrom=&dueDateTo=&page=&size=` → tìm kiếm task (page + size, chưa hỗ trợ `sprintId`/`tagIds`) → `TaskResponse[]` _(tất cả roles)_
   - `GET /projects/:projectId/tasks/:taskId` → chi tiết task → `TaskResponse` _(tất cả roles)_
-  - `GET /projects/:projectId/tasks/:taskId/subtasks` → danh sách subtask → `TaskResponse[]` _(tất cả roles)_
+  - `GET /projects/:projectId/tasks/:taskId/subtasks` → danh sách subtask (pageable) → `PageResponse<TaskResponse>` _(tất cả roles)_
   - `PUT /projects/:projectId/tasks/:taskId` → body: `UpdateTaskRequest` → `TaskResponse` _(MANAGER: bất kỳ task; MEMBER: chỉ task mình tạo)_
   - `PATCH /projects/:projectId/tasks/:taskId/status` → body: `{status}` → `TaskResponse` _(MANAGER: bất kỳ; MEMBER: task mình tạo hoặc được assign)_
   - `DELETE /projects/:projectId/tasks/:taskId` → xóa task (soft delete) _(MANAGER: bất kỳ; MEMBER: chỉ task mình tạo)_
@@ -626,7 +626,8 @@ client/
   - Sprint focus summary card cho sprint đang chọn
   - Quick toggle `Active Sprint Only`
   - Summary card cho `No Sprint`
-  - Hỗ trợ đọc query params: `?sprint=<id|none>` và `?activeSprint=1`
+  - Ghi chú xác minh sau triển khai: deep-link từ Sprint/Tag sang task page đã tồn tại, nhưng luồng filter theo query params hiện cần được rà soát lại vì chưa đồng bộ đầy đủ với trạng thái code thực tế
+  - Follow-up đã được ghi tại `Documents/task-loading-sprint-tag-issues.md`
 
 ### Sprint 7 - Project CRUD & Member Management ✅ COMPLETED
 
@@ -747,32 +748,32 @@ client/
 
 ## 🗺️ Routes hiện tại
 
-| Path                                                | Component                 | Ghi chú                                                                          |
-| --------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------- |
-| `/`                                                 | → `/dashboard`            | redirect                                                                         |
-| `/auth/login`                                       | `LoginPage`               | trong `AuthLayout`                                                               |
-| `/auth/register`                                    | `RegisterPage`            |                                                                                  |
-| `/auth/verify-otp`                                  | `VerifyOtpPage`           |                                                                                  |
-| `/auth/forgot-password`                             | `ForgotPasswordPage`      |                                                                                  |
-| `/auth/reset-password`                              | `ResetPasswordPage`       |                                                                                  |
-| `/dashboard`                                        | `DashboardPage`           | trong `MainLayout`                                                               |
-| `/dashboard/edit-profile`                           | → `/profile`              | redirect (backward compat)                                                       |
-| `/profile`                                          | `ProfilePage`             | 2 tabs: Info + Skills                                                            |
-| `/workspaces`                                       | `WorkspacesPage`          | Pinned / Recent / All                                                            |
-| `/workspaces/explore`                               | `WorkspaceExplorePage`    | Search public workspaces; **phải đứng trước `/workspaces/invitation` và `/:id`** |
-| `/workspaces/invitation`                            | `WorkspaceInvitationPage` | **phải đứng trước `:id`**                                                        |
-| `/workspaces/:id`                                   | `WorkspaceDetailPage`     | 3 tabs: Projects / Members / Settings; hỗ trợ `?tab=` query param                |
-| `/workspaces/:id/projects/new`                      | `CreateProjectPage`       |                                                                                  |
-| `/workspaces/:id/projects/:projectId`               | `ProjectDetailPage`       | 5 tabs: Overview / Tasks / Sprints / Members / Join Requests                      |
-| `/workspaces/:id/projects/:projectId/tasks`         | `TaskBoardPage`           | Kanban + List + Sprint focus (`?sprint=<id|none>`, `?activeSprint=1`)            |
-| `/workspaces/:id/projects/:projectId/tasks/:taskId` | `TaskDetailPage`          | Chi tiết task + inline edit + subtasks                                           |
-| `/team-templates`                                   | `TeamTemplatesPage`       |                                                                                  |
-| `/team-templates/:id`                               | `TeamTemplateDetailPage`  | 2 tabs: Members + Settings                                                       |
-| `/tasks`                                            | `PlaceholderPage`         | mock                                                                             |
-| `/calendar`                                         | `PlaceholderPage`         | mock                                                                             |
-| `/analytics`                                        | `PlaceholderPage`         | mock                                                                             |
-| `/settings`                                         | `PlaceholderPage`         | mock                                                                             |
-| `*`                                                 | → `/auth/login`           | catch-all                                                                        |
+| Path                                                | Component                 | Ghi chú                                                                                           |
+| --------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `/`                                                 | → `/dashboard`            | redirect                                                                                          |
+| `/auth/login`                                       | `LoginPage`               | trong `AuthLayout`                                                                                |
+| `/auth/register`                                    | `RegisterPage`            |                                                                                                   |
+| `/auth/verify-otp`                                  | `VerifyOtpPage`           |                                                                                                   |
+| `/auth/forgot-password`                             | `ForgotPasswordPage`      |                                                                                                   |
+| `/auth/reset-password`                              | `ResetPasswordPage`       |                                                                                                   |
+| `/dashboard`                                        | `DashboardPage`           | trong `MainLayout`                                                                                |
+| `/dashboard/edit-profile`                           | → `/profile`              | redirect (backward compat)                                                                        |
+| `/profile`                                          | `ProfilePage`             | 2 tabs: Info + Skills                                                                             |
+| `/workspaces`                                       | `WorkspacesPage`          | Pinned / Recent / All                                                                             |
+| `/workspaces/explore`                               | `WorkspaceExplorePage`    | Search public workspaces; **phải đứng trước `/workspaces/invitation` và `/:id`**                  |
+| `/workspaces/invitation`                            | `WorkspaceInvitationPage` | **phải đứng trước `:id`**                                                                         |
+| `/workspaces/:id`                                   | `WorkspaceDetailPage`     | 3 tabs: Projects / Members / Settings; hỗ trợ `?tab=` query param                                 |
+| `/workspaces/:id/projects/new`                      | `CreateProjectPage`       |                                                                                                   |
+| `/workspaces/:id/projects/:projectId`               | `ProjectDetailPage`       | 5 tabs: Overview / Tasks / Sprints / Members / Join Requests                                      |
+| `/workspaces/:id/projects/:projectId/tasks`         | `TaskBoardPage`           | Kanban + List; hiện có deep-link target từ Sprint/Tag, nhưng filter sprint/tag cần follow-up thêm |
+| `/workspaces/:id/projects/:projectId/tasks/:taskId` | `TaskDetailPage`          | Chi tiết task + inline edit + subtasks                                                            |
+| `/team-templates`                                   | `TeamTemplatesPage`       |                                                                                                   |
+| `/team-templates/:id`                               | `TeamTemplateDetailPage`  | 2 tabs: Members + Settings                                                                        |
+| `/tasks`                                            | `PlaceholderPage`         | mock                                                                                              |
+| `/calendar`                                         | `PlaceholderPage`         | mock                                                                                              |
+| `/analytics`                                        | `PlaceholderPage`         | mock                                                                                              |
+| `/settings`                                         | `PlaceholderPage`         | mock                                                                                              |
+| `*`                                                 | → `/auth/login`           | catch-all                                                                                         |
 
 ## 📝 Quyết định thiết kế hiện tại
 
@@ -808,10 +809,12 @@ client/
 10. **Delete workflow (workspace/project)**: Bắt buộc gõ lại đúng tên (paste bị chặn bằng `onPaste preventDefault`). Nút delete disabled cho đến khi text khớp.
 11. **Project Detail** (`/workspaces/:id/projects/:projectId`):
     - Breadcrumb: `Workspaces > [workspaceName] > [projectName]`. `workspaceName` truyền qua `location.state` từ card click hoặc fetch fallback.
-  - 5 tabs: Overview / Tasks / Sprints / Members / Join Requests.
-  - **Sprints tab**: sprint optional, manager có thể CRUD, card compact có timeline + deep-link vào Task Board theo sprint.
-    - **Join Requests tab**: chỉ hiện cho MANAGER. Badge đếm pending.
-    - Role detection: gọi `GET /projects/:id/members/me/role` riêng (không embed trong project response).
+
+- 5 tabs: Overview / Tasks / Sprints / Members / Join Requests.
+- **Sprints tab**: sprint optional, manager có thể CRUD, card compact có timeline + deep-link vào Task Board theo sprint.
+  - **Join Requests tab**: chỉ hiện cho MANAGER. Badge đếm pending.
+  - Role detection: gọi `GET /projects/:id/members/me/role` riêng (không embed trong project response).
+
 12. **AddMembersModal (Project)** khác với **BulkInviteModal (Workspace)**:
     - Project: source là workspace members (không search toàn hệ thống), batch add với role per-member.
     - Workspace: source là search hệ thống + direct email + template import, send invite qua email.
@@ -970,20 +973,24 @@ npm run preview
 ### Task Architecture
 
 - **`taskApi`** (RTK Query): tag `'Task'` keyed by `taskId`, `PROJECT_{projectId}`, `SUBTASKS_{taskId}`. 8 endpoints: `getTasksByProject`, `searchTasks`, `getTaskById`, `getSubTasks`, `createTask`, `updateTask`, `updateTaskStatus`, `deleteTask`.
+- **Search contract hiện tại**:
+  - `searchTasks` đang trả `ApiResponse<TaskResponse[]>`, chưa phải `ApiResponse<PageResponse<TaskResponse>>`.
+  - `TaskSearchParams` hiện chỉ có `status`, `priority`, `assigneeId`, `keyword`, `dueDateFrom`, `dueDateTo`, `page`, `size`.
+  - Chưa có typed support cho `sprintId` và `tagIds`.
 - **Endpoint separation** (critical):
   - `updateTask` (`PUT /:taskId`) — full edit: title, description, priority, dates, assignees, position. Permission: MANAGER bất kỳ, MEMBER chỉ task mình tạo.
   - `updateTaskStatus` (`PATCH /:taskId/status`) — chỉ gửi `{status}`. Permission: MANAGER bất kỳ, MEMBER task mình tạo **hoặc được assign**.
   - FE gọi `updateTaskStatus` tại: drag-and-drop (TaskBoardPage), status dropdown (TaskDetailPage), subtask checkbox toggle (TaskDetailPage).
   - FE gọi `updateTask` tại: inline edit title/desc/dates/assignees/priority (TaskDetailPage), TaskFormSheet submit.
 - **`_parentTaskId` pattern**: `updateTaskStatus` mutation nhận optional `_parentTaskId` (prefixed `_` để không gửi lên server) → dùng trong `invalidatesTags` để refresh subtasks list của parent task khi toggle subtask status.
-- **TaskBoardPage** — 2 views + sprint focus:
+- **TaskBoardPage** — 2 views, hiện trạng đã xác minh:
   - **Board view**: Kanban 4 cột (`TODO`, `IN_PROGRESS`, `REVIEW`, `DONE`). Drag-and-drop dùng `@dnd-kit/core` (`DndContext`, `useDroppable`, `useDraggable`, `DragOverlay`).
-  - **List view**: Grouped by status, mỗi group collapsible. Rows hiển thị title, priority badge, due date, assignees.
+  - **List view**: Flat paged list. Rows hiển thị title, priority badge, due date, assignees.
   - Chỉ hiển thị root tasks (filter `parentTaskId == null`).
-  - Sprint selector top-bar: `Any Sprint`, `No Sprint`, sprint cụ thể.
-  - Quick toggle `Active Sprint Only` để lọc task thuộc sprint đang active.
-  - Hỗ trợ deep-link query params: `?sprint=<id|none>` và `?activeSprint=1`.
-  - Hiển thị summary card cho sprint đang focus hoặc `No Sprint`.
+  - Board mode hiện gọi search với `size: 200`, nên có rủi ro cắt dữ liệu khi project lớn.
+  - List pagination hiện đang suy ra từ độ dài mảng response search, chưa phải server-backed pagination đầy đủ.
+  - Deep-link từ `SprintManagementTab` và tag click trong `TaskDetailPage` đã tồn tại, nhưng `TaskBoardPage` hiện chưa tiêu thụ đầy đủ context `sprint/tag` từ URL theo trạng thái code đã xác minh.
+  - Vấn đề follow-up được ghi riêng tại `Documents/task-loading-sprint-tag-issues.md`.
 - **TaskDetailPage** — 2-column layout:
   - Left: title (click-to-edit), description (click-to-edit), subtasks (progress bar + list + quick-add).
   - Right sidebar: status Select, priority Select, start/end date (click-to-edit input[type=date]), assignees (add from project members, remove per-user), metadata (creator, timestamps).
@@ -1014,6 +1021,10 @@ npm run preview
 
 - ~~**Tasks (Sprint tiếp)**~~: ✅ Task Board (Kanban + List) + Task Detail đã implement. Route `/workspaces/:id/projects/:projectId/tasks` và `/:taskId`. FE đã tách đúng `updateTask` vs `updateTaskStatus` endpoint theo permission model.
 - ~~**Comment System (Sprint 10)**~~: ✅ Đã hoàn thành. CommentSection, CommentItem (reactions + 1-per-user + hover tooltip + @mention + mentionUserIds + notification deep-link highlight), CommentInput, commentApi (8 endpoints), cursor pagination, COMMENT_REACTION + COMMENT_TASK notification types.
+- **Task loading theo Sprint/Tag — follow-up contract review**: đã xác minh lệch pha giữa deep-link UI và search contract hiện tại. Các vấn đề cùng thứ tự xử lý được ghi tại `Documents/task-loading-sprint-tag-issues.md`.
+  - Cần xem lại contract `searchTasks` để hỗ trợ `sprintId` và `tagIds`.
+  - Cần đồng bộ URL params với filter state của `TaskBoardPage`.
+  - Cần thay list pagination giả lập bằng pagination thật nếu tiếp tục dùng search endpoint cho list view.
 - **Workspace Join Request — backend alignment**: `WorkspaceJoinRequestResponse.java` cần embed `UserSummaryResponse` (thay vì chỉ `userId: Long`) để FE hiển thị tên/avatar trong Join Requests section của `WorkspaceMembersTab`.
 - **Notification — Project Join Request deep-link**: `PROJECT_JOIN_REQUEST` notification nên navigate đến tab Join Requests của ProjectDetailPage (đã có pattern với `?tab=` cho workspace, cần làm tương tự cho project).
 - **Khi backend user API sẵn sàng**:

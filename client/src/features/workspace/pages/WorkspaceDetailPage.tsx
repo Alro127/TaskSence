@@ -89,6 +89,15 @@ export function WorkspaceDetailPage() {
   const myRole = myMember?.role ?? null;
   const canManage = myRole === "OWNER" || myRole === "MANAGER";
   const isOwner = myRole === "OWNER";
+  const workspacePermissions = myMember?.permissions ?? [];
+  const hasWorkspacePermission = (...keys: string[]) =>
+    keys.some((key) => workspacePermissions.includes(key));
+  const canManageSettings =
+    canManage || hasWorkspacePermission("MANAGE_WORKSPACE", "UPDATE_WORKSPACE", "EDIT_WORKSPACE");
+  const canCreateProject =
+    canManage || hasWorkspacePermission("CREATE_PROJECT", "MANAGE_PROJECTS");
+  const canDeleteWorkspace =
+    isOwner || hasWorkspacePermission("DELETE_WORKSPACE", "MANAGE_WORKSPACE");
 
   const [updateWorkspace, { isLoading: isUpdating }] = useUpdateWorkspaceMutation();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -192,7 +201,7 @@ export function WorkspaceDetailPage() {
             <Users className="h-4 w-4" />
             Members
           </TabsTrigger>
-          {canManage && (
+          {canManageSettings && (
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="h-4 w-4" />
               Settings
@@ -223,7 +232,7 @@ export function WorkspaceDetailPage() {
                     workspaceName={workspace.name}
                   />
                 ))}
-                {canManage && projectPage === totalProjectPages - 1 && (
+                {canCreateProject && projectPage === totalProjectPages - 1 && (
                   <ProjectCardGhost
                     onClick={() => navigate(`/workspaces/${workspaceId}/projects/new`)}
                   />
@@ -289,7 +298,7 @@ export function WorkspaceDetailPage() {
         </TabsContent>
 
         {/* ── Settings Tab (OWNER / MANAGER only) ── */}
-        {canManage && (
+        {canManageSettings && (
           <TabsContent value="settings" className="mt-6 max-w-xl space-y-8">
             {/* General settings */}
             <section className="space-y-4">
@@ -368,7 +377,7 @@ export function WorkspaceDetailPage() {
             </section>
 
             {/* Danger Zone — OWNER only */}
-            {isOwner && (
+            {canDeleteWorkspace && (
               <>
                 <Separator />
 

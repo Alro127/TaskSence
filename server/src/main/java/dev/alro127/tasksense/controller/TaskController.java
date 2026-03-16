@@ -20,7 +20,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
-
 import java.util.List;
 
 @RestController
@@ -59,21 +58,23 @@ public class TaskController {
 
         @GetMapping("/search")
         @PreAuthorize("@perm.project(#projectId, 'VIEW_TASKS')")
-        public ResponseEntity<ApiResponse<List<TaskResponse>>> searchTasks(
+        public ResponseEntity<ApiResponse<PageResponse<TaskResponse>>> searchTasks(
                         @PathVariable Long projectId,
                         @RequestParam(required = false) TaskStatus status,
                         @RequestParam(required = false) TaskPriority priority,
                         @RequestParam(required = false) Long assigneeId,
+                        @RequestParam(required = false) Long sprintId,
+                        @RequestParam(required = false) List<Long> tagIds,
                         @RequestParam(required = false) String keyword,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime dueDateFrom,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime dueDateTo,
-                        @RequestParam(defaultValue = "1") int page,
-                        @RequestParam(defaultValue = "20") int size) {
-                ApiResponse<List<TaskResponse>> response = new ApiResponse<>(
+                        Pageable pageable) {
+                ApiResponse<PageResponse<TaskResponse>> response = new ApiResponse<>(
                                 "200",
                                 "Search tasks successfully",
-                                taskService.searchTasks(projectId, status, priority, assigneeId, keyword,
-                                                dueDateFrom, dueDateTo, page, size),
+                                taskService.searchTasks(projectId, status, priority, assigneeId, sprintId, tagIds,
+                                                keyword,
+                                                dueDateFrom, dueDateTo, pageable),
                                 null);
 
                 return ResponseEntity.ok(response);
@@ -157,17 +158,17 @@ public class TaskController {
         @PostMapping("/{taskId}/tags")
         @PreAuthorize("@perm.project(#projectId, 'UPDATE_TASK')")
         public ResponseEntity<ApiResponse<Void>> addTagsToTask(
-                @PathVariable Long projectId,
-                @PathVariable Long taskId,
-                @Valid @RequestBody UpdateTaskTagsRequest request) {
+                        @PathVariable Long projectId,
+                        @PathVariable Long taskId,
+                        @Valid @RequestBody UpdateTaskTagsRequest request) {
 
                 taskService.addTagsToTask(projectId, taskId, request.getTagIds());
 
                 ApiResponse<Void> response = new ApiResponse<>(
-                        "200",
-                        "Add tags to task successfully",
-                        null,
-                        null);
+                                "200",
+                                "Add tags to task successfully",
+                                null,
+                                null);
 
                 return ResponseEntity.ok(response);
         }
@@ -175,17 +176,17 @@ public class TaskController {
         @DeleteMapping("/{taskId}/tags")
         @PreAuthorize("@perm.project(#projectId, 'UPDATE_TASK')")
         public ResponseEntity<ApiResponse<Void>> removeTagsFromTask(
-                @PathVariable Long projectId,
-                @PathVariable Long taskId,
-                @Valid @RequestBody UpdateTaskTagsRequest request) {
+                        @PathVariable Long projectId,
+                        @PathVariable Long taskId,
+                        @Valid @RequestBody UpdateTaskTagsRequest request) {
 
                 taskService.removeTagsFromTask(projectId, taskId, request.getTagIds());
 
                 ApiResponse<Void> response = new ApiResponse<>(
-                        "200",
-                        "Remove tags from task successfully",
-                        null,
-                        null);
+                                "200",
+                                "Remove tags from task successfully",
+                                null,
+                                null);
 
                 return ResponseEntity.ok(response);
         }

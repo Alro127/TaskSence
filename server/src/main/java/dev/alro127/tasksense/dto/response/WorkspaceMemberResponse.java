@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.OffsetDateTime;
+import java.util.Set;
 
 @Data
 @Builder
@@ -18,6 +19,8 @@ public class WorkspaceMemberResponse {
     private OffsetDateTime joinedAt;
 
     private UserSummaryResponse user;
+
+    private Set<String> permissions;
 
     public static WorkspaceMemberResponse mapToResponse(WorkspaceMemberEntity entity) {
         return WorkspaceMemberResponse.builder()

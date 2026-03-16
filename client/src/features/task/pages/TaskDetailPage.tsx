@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
+import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -57,9 +58,11 @@ import { TaskTagSelector } from "../components/TaskTagSelector";
 import { CommentSection } from "../components/CommentSection";
 import { AttachmentSection } from "../components/AttachmentSection";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
-import { useGetProjectByIdQuery } from "@/features/project/api/projectApi";
+import {
+  useGetCurrentUserRoleQuery,
+  useGetProjectByIdQuery,
+} from "@/features/project/api/projectApi";
 
-// ─── Config ──────────────────────────────────────────────────────────────────────
 function toDatetimeLocal(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -88,7 +91,6 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string; badgeClass: string
   },
 ];
 
-// ─── User Avatar helper ──────────────────────────────────────────────────────────
 function UserAvatar({
   user,
   size = "sm",
@@ -102,6 +104,7 @@ function UserAvatar({
     md: "h-9 w-9 text-sm",
   }[size];
   const initial = (user.fullName ?? user.email).charAt(0).toUpperCase();
+
   if (user.avatarUrl) {
     return (
       <img
@@ -111,6 +114,7 @@ function UserAvatar({
       />
     );
   }
+
   return (
     <div
       className={cn(
@@ -123,7 +127,6 @@ function UserAvatar({
   );
 }
 
-// ─── Main Page ───────────────────────────────────────────────────────────────────
 export function TaskDetailPage() {
   const {
     id: workspaceIdStr,
@@ -135,7 +138,6 @@ export function TaskDetailPage() {
   const taskId = Number(taskIdStr);
   const navigate = useNavigate();
 
-  // ─── Queries ─────────────────────────────────────────────────────────────────
   const {
     data: taskData,
     isLoading,
@@ -159,6 +161,11 @@ export function TaskDetailPage() {
   );
   const members = membersData?.data?.data ?? [];
 
+  const currentUserId = useAppSelector((state) => state.user.currentUser?.id);
+  const { data: roleData } = useGetCurrentUserRoleQuery(projectId, {
+    skip: isNaN(projectId),
+  });
+
   const { data: workspaceData } = useGetWorkspaceByIdQuery(workspaceId, {
     skip: isNaN(workspaceId),
   });
@@ -169,7 +176,6 @@ export function TaskDetailPage() {
   const workspaceName = workspaceData?.data?.name ?? "Workspace";
   const projectName = projectData?.data?.name ?? "Project";
 
-  // Fetch parent task when this is a subtask
   const parentTaskId = task?.parentTaskId ?? null;
   const { data: parentTaskData } = useGetTaskByIdQuery(
     { projectId, taskId: parentTaskId ?? 0 },
@@ -177,13 +183,11 @@ export function TaskDetailPage() {
   );
   const parentTask = parentTaskData?.data ?? null;
 
-  // ─── Mutations ───────────────────────────────────────────────────────────────
   const [updateTask] = useUpdateTaskMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
   const [createTask] = useCreateTaskMutation();
 
-  // ─── Inline edit states ──────────────────────────────────────────────────────
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
 
@@ -198,7 +202,6 @@ export function TaskDetailPage() {
   const [subtaskSheetOpen, setSubtaskSheetOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // ─── Save handlers ───────────────────────────────────────────────────────────
   async function saveTitle() {
     if (!task || !titleDraft.trim() || titleDraft.trim() === task.title) {
       setEditingTitle(false);
@@ -241,7 +244,11 @@ export function TaskDetailPage() {
 
   async function saveStartDate(value: string) {
     try {
-      await updateTask({ projectId, taskId, startDate: value ? new Date(value).toISOString() : undefined }).unwrap();
+      await updateTask({
+        projectId,
+        taskId,
+        startDate: value ? new Date(value).toISOString() : undefined,
+      }).unwrap();
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to update start date"));
     }
@@ -250,7 +257,11 @@ export function TaskDetailPage() {
 
   async function saveDueDate(value: string) {
     try {
-      await updateTask({ projectId, taskId, dueDate: value ? new Date(value).toISOString() : undefined }).unwrap();
+      await updateTask({
+        projectId,
+        taskId,
+        dueDate: value ? new Date(value).toISOString() : undefined,
+      }).unwrap();
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to update due date"));
     }
@@ -317,7 +328,6 @@ export function TaskDetailPage() {
     }
   }
 
-  // ─── Loading / Error ─────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
@@ -351,9 +361,16 @@ export function TaskDetailPage() {
     (m) => !task.assignees.some((a) => a.id === m.user.id),
   );
 
+  const currentUserMember = members.find((m) => m.user.id === currentUserId);
+  const canCreateTask =
+    currentUserMember?.permissions?.includes("CREATE_TASK") ??
+    (roleData?.data !== undefined && roleData.data !== "VIEWER");
+  const canEdit = task.permissions?.includes("EDIT") ?? true;
+  const canDelete = task.permissions?.includes("DELETE") ?? true;
+  const canUpdateStatus = task.permissions?.includes("UPDATE_STATUS") ?? true;
+
   return (
     <div className="space-y-6">
-      {/* ── Breadcrumb ── */}
       <nav className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
         <Link to="/workspaces" className="hover:text-foreground transition-colors">
           Workspaces
@@ -396,7 +413,6 @@ export function TaskDetailPage() {
         </span>
       </nav>
 
-      {/* ── Header ── */}
       <div className="flex items-center justify-between gap-4">
         <Button
           variant="ghost"
@@ -409,29 +425,28 @@ export function TaskDetailPage() {
           Back to Board
         </Button>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => setShowDeleteDialog(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Task
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {canDelete && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setShowDeleteDialog(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Task
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
-      {/* ── Main 2-column grid ── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
-        {/* ───── Left column ───── */}
         <div className="space-y-4">
-          {/* Title */}
           <Card className="p-5">
             {editingTitle ? (
               <input
@@ -445,7 +460,7 @@ export function TaskDetailPage() {
                 }}
                 className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xl font-bold focus:outline-none focus:ring-2 focus:ring-ring"
               />
-            ) : (
+            ) : canEdit ? (
               <button
                 onClick={() => {
                   setTitleDraft(task.title);
@@ -455,6 +470,8 @@ export function TaskDetailPage() {
               >
                 {task.title}
               </button>
+            ) : (
+              <p className="-mx-2 w-full px-2 py-1 text-xl font-bold">{task.title}</p>
             )}
 
             {task.parentTaskId && (
@@ -470,7 +487,6 @@ export function TaskDetailPage() {
             )}
           </Card>
 
-          {/* Description */}
           <Card className="p-5">
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Description
@@ -488,7 +504,7 @@ export function TaskDetailPage() {
                 placeholder="Add a description..."
                 className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
-            ) : (
+            ) : canEdit ? (
               <button
                 onClick={() => {
                   setDescDraft(task.description ?? "");
@@ -506,12 +522,20 @@ export function TaskDetailPage() {
                   </span>
                 )}
               </button>
+            ) : (
+              <div className="-mx-2 min-h-[80px] px-2 py-1.5 text-sm">
+                {task.description ? (
+                  <span className="whitespace-pre-wrap text-foreground">
+                    {task.description}
+                  </span>
+                ) : (
+                  <span className="italic text-muted-foreground">No description.</span>
+                )}
+              </div>
             )}
           </Card>
 
-          {/* Subtasks */}
           <Card className="p-5">
-            {/* Section header */}
             <button
               onClick={() => setSubtasksExpanded((v) => !v)}
               className="flex w-full items-center gap-2 text-left"
@@ -539,80 +563,86 @@ export function TaskDetailPage() {
 
             {subtasksExpanded && (
               <div className="mt-3 space-y-0.5">
-                {subtasks.map((st) => (
-                  <div
-                    key={st.id}
-                    className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/40"
-                  >
-                    <button
-                      onClick={() => toggleSubtaskDone(st.id, st.status)}
-                      className="shrink-0 text-muted-foreground transition-colors hover:text-green-600"
+                {subtasks.map((st) => {
+                  const canToggleSubtask = st.permissions?.includes("UPDATE_STATUS") ?? true;
+                  return (
+                    <div
+                      key={st.id}
+                      className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/40"
                     >
-                      {st.status === "DONE" ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Circle className="h-4 w-4" />
+                      <button
+                        onClick={() => toggleSubtaskDone(st.id, st.status)}
+                        disabled={!canToggleSubtask}
+                        className={cn(
+                          "shrink-0 text-muted-foreground transition-colors hover:text-green-600",
+                          !canToggleSubtask && "opacity-40 cursor-not-allowed",
+                        )}
+                      >
+                        {st.status === "DONE" ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Circle className="h-4 w-4" />
+                        )}
+                      </button>
+                      <span
+                        onClick={() =>
+                          navigate(
+                            `/workspaces/${workspaceId}/projects/${projectId}/tasks/${st.id}`,
+                          )
+                        }
+                        className={cn(
+                          "flex-1 cursor-pointer text-sm hover:text-primary hover:underline",
+                          st.status === "DONE" && "line-through text-muted-foreground",
+                        )}
+                      >
+                        {st.title}
+                      </span>
+                      {st.assignees.length > 0 && (
+                        <div className="flex -space-x-1 shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
+                          {st.assignees.slice(0, 3).map((a) => (
+                            <UserAvatar key={a.id} user={a} size="xs" />
+                          ))}
+                        </div>
                       )}
-                    </button>
-                    <span
-                      onClick={() =>
-                        navigate(
-                          `/workspaces/${workspaceId}/projects/${projectId}/tasks/${st.id}`,
-                        )
-                      }
-                      className={cn(
-                        "flex-1 cursor-pointer text-sm hover:text-primary hover:underline",
-                        st.status === "DONE" && "line-through text-muted-foreground",
-                      )}
-                    >
-                      {st.title}
-                    </span>
-                    {st.assignees.length > 0 && (
-                      <div className="flex -space-x-1 shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
-                        {st.assignees.slice(0, 3).map((a) => (
-                          <UserAvatar key={a.id} user={a} size="xs" />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
 
-                {/* Add subtask */}
-                <div className="mt-2 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <input
-                      value={newSubtaskTitle}
-                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && newSubtaskTitle.trim()) addSubtask();
-                      }}
-                      placeholder="Quick add (Enter to save)..."
-                      className="flex-1 rounded-md border-0 bg-transparent px-2 py-1 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
-                    {newSubtaskTitle.trim() && (
-                      <Button size="sm" className="h-6 text-xs" onClick={addSubtask}>
-                        Add
-                      </Button>
-                    )}
+                {canCreateTask && (
+                  <div className="mt-2 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <input
+                        value={newSubtaskTitle}
+                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newSubtaskTitle.trim()) addSubtask();
+                        }}
+                        placeholder="Quick add (Enter to save)..."
+                        className="flex-1 rounded-md border-0 bg-transparent px-2 py-1 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                      {newSubtaskTitle.trim() && (
+                        <Button size="sm" className="h-6 text-xs" onClick={addSubtask}>
+                          Add
+                        </Button>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setSubtaskSheetOpen(true)}
+                      className="ml-6 flex items-center gap-1.5 text-xs text-primary hover:underline"
+                    >
+                      <SquarePen className="h-3 w-3" />
+                      Add with more details
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setSubtaskSheetOpen(true)}
-                    className="ml-6 flex items-center gap-1.5 text-xs text-primary hover:underline"
-                  >
-                    <SquarePen className="h-3 w-3" />
-                    Add with more details
-                  </button>
-                </div>
+                )}
               </div>
             )}
           </Card>
 
-          {/* Attachments */}
           <AttachmentSection taskId={taskId} />
         </div>
 
-        {/* ───── Right sidebar ───── */}
         <div className="space-y-4 lg:sticky lg:top-20 self-start">
           <Card className="p-4 space-y-4 bg-card/90 backdrop-blur-sm border-border/70">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -623,6 +653,7 @@ export function TaskDetailPage() {
                 <Select
                   value={task.status}
                   onValueChange={(v) => saveStatus(v as TaskStatus)}
+                  disabled={!canUpdateStatus}
                 >
                   <SelectTrigger className={cn("border font-medium", statusCfg.badgeClass)}>
                     <SelectValue />
@@ -646,6 +677,7 @@ export function TaskDetailPage() {
                   onValueChange={(v) => {
                     if (v !== "none") savePriority(v as TaskPriority);
                   }}
+                  disabled={!canEdit}
                 >
                   <SelectTrigger
                     className={cn(
@@ -672,6 +704,7 @@ export function TaskDetailPage() {
             <TaskTagSelector
               projectId={projectId}
               task={task}
+              disabled={!canEdit}
               onOpenBoardByTag={(tagId) =>
                 navigate(`/workspaces/${workspaceId}/projects/${projectId}/tasks?tags=${tagId}`)
               }
@@ -696,7 +729,7 @@ export function TaskDetailPage() {
                     }}
                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
-                ) : (
+                ) : canEdit ? (
                   <button
                     onClick={() => setEditingStartDate(true)}
                     className="w-full rounded-md border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
@@ -707,6 +740,14 @@ export function TaskDetailPage() {
                       <span className="italic text-muted-foreground">Not set</span>
                     )}
                   </button>
+                ) : (
+                  <div className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+                    {task.startDate ? (
+                      format(new Date(task.startDate), "MMM d, yyyy · HH:mm")
+                    ) : (
+                      <span className="italic text-muted-foreground">Not set</span>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -723,7 +764,7 @@ export function TaskDetailPage() {
                     }}
                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
-                ) : (
+                ) : canEdit ? (
                   <button
                     onClick={() => setEditingDueDate(true)}
                     className="w-full rounded-md border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
@@ -742,6 +783,22 @@ export function TaskDetailPage() {
                       <span className="italic text-muted-foreground">Not set</span>
                     )}
                   </button>
+                ) : (
+                  <div className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+                    {task.dueDate ? (
+                      <span
+                        className={cn(
+                          new Date(task.dueDate) < new Date() && task.status !== "DONE"
+                            ? "font-medium text-destructive"
+                            : "",
+                        )}
+                      >
+                        {format(new Date(task.dueDate), "MMM d, yyyy · HH:mm")}
+                      </span>
+                    ) : (
+                      <span className="italic text-muted-foreground">Not set</span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -757,49 +814,52 @@ export function TaskDetailPage() {
 
             <div className="space-y-1.5">
               {task.assignees.map((a) => (
-                <div key={a.id} className="group flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-muted/40">
+                <div
+                  key={a.id}
+                  className="group flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-muted/40"
+                >
                   <UserAvatar user={a} size="sm" />
-                  <span className="flex-1 truncate text-sm">
-                    {a.fullName ?? a.email}
-                  </span>
-                  <button
-                    onClick={() => removeAssignee(a.id)}
-                    className="invisible text-muted-foreground transition-colors hover:text-destructive group-hover:visible"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+                  <span className="flex-1 truncate text-sm">{a.fullName ?? a.email}</span>
+                  {canEdit && (
+                    <button
+                      onClick={() => removeAssignee(a.id)}
+                      className="invisible text-muted-foreground transition-colors hover:text-destructive group-hover:visible"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
 
-            <DropdownMenu open={showAssigneeMenu} onOpenChange={setShowAssigneeMenu}>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 w-full text-xs">
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  Assign member
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="max-h-48 w-56 overflow-y-auto">
-                {unassigned.length === 0 ? (
-                  <p className="px-2 py-3 text-center text-xs text-muted-foreground">
-                    All members assigned
-                  </p>
-                ) : (
-                  unassigned.map((m) => (
-                    <DropdownMenuItem
-                      key={m.id}
-                      className="gap-2"
-                      onClick={() => addAssignee(m.user.id)}
-                    >
-                      <UserAvatar user={m.user} size="xs" />
-                      <span className="truncate text-sm">
-                        {m.user.fullName ?? m.user.email}
-                      </span>
-                    </DropdownMenuItem>
-                  ))
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {canEdit && (
+              <DropdownMenu open={showAssigneeMenu} onOpenChange={setShowAssigneeMenu}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 w-full text-xs">
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    Assign member
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="max-h-48 w-56 overflow-y-auto">
+                  {unassigned.length === 0 ? (
+                    <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                      All members assigned
+                    </p>
+                  ) : (
+                    unassigned.map((m) => (
+                      <DropdownMenuItem
+                        key={m.id}
+                        className="gap-2"
+                        onClick={() => addAssignee(m.user.id)}
+                      >
+                        <UserAvatar user={m.user} size="xs" />
+                        <span className="truncate text-sm">{m.user.fullName ?? m.user.email}</span>
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </Card>
 
           <Card className="p-4 space-y-2 text-xs text-muted-foreground">
@@ -818,10 +878,8 @@ export function TaskDetailPage() {
         </div>
       </div>
 
-      {/* ── Comments ── */}
       <CommentSection taskId={taskId} projectId={projectId} />
 
-      {/* ── Subtask full-form sheet ── */}
       <TaskFormSheet
         open={subtaskSheetOpen}
         onOpenChange={setSubtaskSheetOpen}
@@ -829,7 +887,6 @@ export function TaskDetailPage() {
         parentTaskId={taskId}
       />
 
-      {/* ── Delete Dialog ── */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>

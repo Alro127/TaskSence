@@ -114,9 +114,21 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
   const myMember = members.find((m) => m.user.id === currentUserId);
   const myRole = myMember?.role ?? null;
   const canManage = myRole === "OWNER" || myRole === "MANAGER";
+  const workspacePermissions = myMember?.permissions ?? [];
+  const hasWorkspacePermission = (...keys: string[]) =>
+    keys.some((key) => workspacePermissions.includes(key));
+  const canInvite =
+    canManage || hasWorkspacePermission("INVITE_MEMBER", "CREATE_INVITE", "MANAGE_INVITES");
+  const canReviewJoinRequests =
+    canManage || hasWorkspacePermission("REVIEW_JOIN_REQUEST", "MANAGE_JOIN_REQUESTS");
+  const canUpdateRoles =
+    canManage || hasWorkspacePermission("UPDATE_MEMBER_ROLE", "MANAGE_MEMBERS");
+  const canRemoveMembers =
+    canManage || hasWorkspacePermission("REMOVE_MEMBER", "MANAGE_MEMBERS");
+  const canManageMembers = canUpdateRoles || canRemoveMembers;
 
   const { data: joinRequestsData, isLoading: joinRequestsLoading } =
-    useGetWorkspaceJoinRequestsQuery({ workspaceId, size: 50 }, { skip: !canManage });
+    useGetWorkspaceJoinRequestsQuery({ workspaceId, size: 50 }, { skip: !canReviewJoinRequests });
 
   const [updateRole, { isLoading: isUpdatingRole }] = useUpdateMemberRoleMutation();
   const [removeMember, { isLoading: isRemoving }] = useRemoveMemberMutation();
@@ -202,20 +214,24 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
 
   // ── Determine available roles for a target member ─────────────────────────
   const getAvailableRoles = (target: WorkspaceMember): WorkspaceRole[] => {
+    if (!canUpdateRoles) return [];
     if (myRole === "OWNER") return ROLES_FOR_CHANGE;
     // MANAGER can only change MEMBER and VIEWER roles, and only to MEMBER/VIEWER
     if (myRole === "MANAGER" && (target.role === "MEMBER" || target.role === "VIEWER")) {
       return ["MEMBER", "VIEWER"];
     }
-    return [];
+    // Permission-based fallback if backend grants role update capability.
+    return ROLES_FOR_CHANGE;
   };
 
   // ── Can manage a specific member ──────────────────────────────────────────
   const canManageMember = (target: WorkspaceMember): boolean => {
     if (target.user.id === currentUserId) return false; // can't manage yourself
-    if (myRole === "OWNER") return true;
-    if (myRole === "MANAGER" && (target.role === "MEMBER" || target.role === "VIEWER")) return true;
-    return false;
+    if (myRole === "OWNER") return canManageMembers;
+    if (myRole === "MANAGER" && (target.role === "MEMBER" || target.role === "VIEWER")) {
+      return canManageMembers;
+    }
+    return canManageMembers;
   };
 
   // ─── Loading ────────────────────────────────────────────────────────────────
@@ -242,7 +258,7 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
             Manage who has access to this workspace and their permissions.
           </p>
         </div>
-        {canManage && (
+        {canInvite && (
           <Button size="sm" onClick={() => setIsInviteOpen(true)}>
             <UserPlus className="mr-2 h-4 w-4" />
             Invite Member
@@ -264,6 +280,9 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
               const RoleIcon = cfg.icon;
               const availableRoles = getAvailableRoles(member);
               const manageable = canManageMember(member);
+              const canChangeRole = manageable && canUpdateRoles && availableRoles.length > 0;
+              const canRemove = manageable && canRemoveMembers;
+              const hasActionMenu = canChangeRole || canRemove;
 
               return (
                 <li key={member.id} className="flex items-center gap-3 px-4 py-3">
@@ -310,7 +329,7 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
                   </span>
 
                   {/* Actions */}
-                  {manageable && (
+                  {hasActionMenu && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -325,7 +344,7 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {/* Change Role submenu */}
-                        {availableRoles.length > 0 && (
+                        {canChangeRole && (
                           <DropdownMenuSub>
                             <DropdownMenuSubTrigger>
                               Change role
@@ -357,15 +376,17 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
                           </DropdownMenuSub>
                         )}
 
-                        <DropdownMenuSeparator />
+                        {canChangeRole && canRemove && <DropdownMenuSeparator />}
 
                         {/* Remove */}
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onSelect={() => setRemoveTarget(member)}
-                        >
-                          Remove from workspace
-                        </DropdownMenuItem>
+                        {canRemove && (
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => setRemoveTarget(member)}
+                          >
+                            Remove from workspace
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
@@ -377,7 +398,7 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
       </div>
 
       {/* ── Pending Invites section ── */}
-      {canManage && (
+      {canInvite && (
         <>
           <Separator />
           <div className="space-y-4">
@@ -467,7 +488,7 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
       )}
 
       {/* ── Join Requests section ── */}
-      {canManage && (
+      {canReviewJoinRequests && (
         <>
           <Separator />
           <div className="space-y-4">

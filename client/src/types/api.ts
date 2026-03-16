@@ -177,6 +177,7 @@ export interface WorkspaceMember {
   role: WorkspaceRole;
   joinedAt: string;
   user: UserSummaryResponse;
+  permissions?: string[];
 }
 
 // Workspace Invite
@@ -270,6 +271,7 @@ export interface ProjectMember {
   projectId: number;
   user: UserSummaryResponse;
   role: ProjectMemberRole;
+  permissions?: string[];
   createdAt: string;
 }
 
@@ -462,6 +464,7 @@ export interface TaskResponse {
   assignees: UserSummaryResponse[];
   tags: TagResponse[];
   sprintId: number | null;
+  permissions?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -475,6 +478,7 @@ export interface CreateTaskRequest {
   parentTaskId?: number;
   sprintId?: number;
   assigneeIds?: number[];
+  tagIds?: number[];
 }
 
 export interface UpdateTaskRequest {
@@ -500,6 +504,8 @@ export interface TaskSearchParams {
   status?: TaskStatus;
   priority?: TaskPriority;
   assigneeId?: number;
+  sprintId?: number;
+  tagIds?: number[];
   keyword?: string;
   dueDateFrom?: string;
   dueDateTo?: string;
