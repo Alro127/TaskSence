@@ -42,7 +42,7 @@ import { cn, getApiErrorMessage } from "@/lib/utils";
 import type { JoinRequestStatus, ProjectJoinRequest, ProjectMember } from "@/types/api";
 
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
-import { useGetProjectByIdQuery, useGetCurrentUserRoleQuery } from "../api/projectApi";
+import { useGetProjectByIdQuery } from "../api/projectApi";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
 import { useGetMembersQuery, useUpdateMemberRoleMutation } from "../api/projectMemberApi";
 import { useGetJoinRequestsQuery, useReviewJoinRequestMutation, useCancelJoinRequestMutation } from "../api/projectJoinRequestApi";
@@ -319,24 +319,19 @@ export function ProjectDetailPage() {
     data: projectData,
     isLoading: isProjectLoading,
     isError: isProjectError,
+    error: projectError,
   } = useGetProjectByIdQuery(
     { workspaceId, projectId },
     { skip: isNaN(workspaceId) || isNaN(projectId) },
   );
   const project = projectData?.data ?? null;
+  const projectErrorStatus = projectError && "status" in projectError
+    ? (projectError as FetchBaseQueryError).status
+    : undefined;
+  const isProjectForbidden = projectErrorStatus === 403;
 
-  const { data: roleData, isLoading: isRoleLoading, isError: isRoleError, error: roleError } = useGetCurrentUserRoleQuery(projectId, {
-    skip: isNaN(projectId),
-  });
-  const currentUserRole = roleData?.data ?? undefined;
-  const isManager = currentUserRole === "MANAGER";
-  const isNonMember = !isRoleLoading && isRoleError
-    && roleError !== undefined
-    && "status" in roleError
-    && (roleError as FetchBaseQueryError).status === 404;
-
-  // skip = role still loading OR confirmed non-member
-  const skipMemberOnlyQueries = isNaN(projectId) || isRoleLoading || isNonMember;
+  // Member-only endpoints are queried only when the user can access project detail.
+  const skipMemberOnlyQueries = isNaN(projectId) || !project;
 
   const { data: workspaceData } = useGetWorkspaceByIdQuery(workspaceId, {
     skip: isNaN(workspaceId) || !!workspaceNameFromState,
@@ -360,13 +355,12 @@ export function ProjectDetailPage() {
   const allMembers = allMembersData?.data?.data ?? [];
 
   const currentUserMember = allMembers.find((m) => m.user.id === currentUserId);
-  const projectPermissions = currentUserMember?.permissions ?? [];
+  const projectPermissions = project?.permissions ?? currentUserMember?.permissions ?? [];
   const hasProjectPermission = (...keys: string[]) =>
     keys.some((key) => projectPermissions.includes(key));
   const canManageProject =
-    isManager || hasProjectPermission("MANAGE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT", "EDIT_PROJECT");
+    hasProjectPermission("MANAGE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT", "EDIT_PROJECT");
   const canManageMembers =
-    isManager ||
     hasProjectPermission(
       "MANAGE_MEMBERS",
       "ADD_MEMBER",
@@ -375,11 +369,11 @@ export function ProjectDetailPage() {
       "TRANSFER_MANAGER",
     );
   const canReviewJoinRequests =
-    isManager || hasProjectPermission("REVIEW_JOIN_REQUEST", "MANAGE_JOIN_REQUESTS");
+    hasProjectPermission("REVIEW_JOIN_REQUEST", "MANAGE_JOIN_REQUESTS");
   const canManageSprints =
-    isManager || hasProjectPermission("MANAGE_SPRINT", "CREATE_SPRINT", "UPDATE_SPRINT", "DELETE_SPRINT");
+    hasProjectPermission("MANAGE_SPRINT", "CREATE_SPRINT", "UPDATE_SPRINT", "DELETE_SPRINT");
   const canManageTags =
-    isManager || hasProjectPermission("MANAGE_TAG", "CREATE_TAG", "UPDATE_TAG", "DELETE_TAG");
+    hasProjectPermission("MANAGE_TAG", "CREATE_TAG", "UPDATE_TAG", "DELETE_TAG");
 
   const { data: joinRequestsData, isLoading: isJoinRequestsLoading } =
     useGetJoinRequestsQuery(
@@ -408,7 +402,7 @@ export function ProjectDetailPage() {
   const [cancelJoinRequest, { isLoading: isCancellingJoin }] = useCancelJoinRequestMutation();
 
   // ── Loading ──
-  if (isProjectLoading || isRoleLoading) {
+  if (isProjectLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -416,8 +410,8 @@ export function ProjectDetailPage() {
     );
   }
 
-  // ── Non-member view (check BEFORE project error — getProjectById also 403s for non-members) ──
-  if (isNonMember) {
+  // ── Non-access view (check BEFORE not-found handling) ──
+  if (isProjectForbidden) {
     const displayProject = project ?? projectSnapshot;
     if (!displayProject) {
       return (
@@ -666,14 +660,6 @@ export function ProjectDetailPage() {
             {project.description && (
               <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
                 {project.description}
-              </p>
-            )}
-            {currentUserRole && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Your role:{" "}
-                <span className="font-medium text-foreground">
-                  {ROLE_LABEL[currentUserRole]}
-                </span>
               </p>
             )}
           </div>
