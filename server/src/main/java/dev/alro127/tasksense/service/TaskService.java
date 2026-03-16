@@ -23,8 +23,9 @@ public interface TaskService {
 
     PageResponse<TaskResponse> getTasksByProject(Long projectId, Pageable pageable);
 
-    List<TaskResponse> searchTasks(Long projectId, TaskStatus status, TaskPriority priority, Long assigneeId,
-            String keyword, OffsetDateTime dueDateFrom, OffsetDateTime dueDateTo, int page, int size);
+    PageResponse<TaskResponse> searchTasks(Long projectId, TaskStatus status, TaskPriority priority, Long assigneeId,
+            Long sprintId, List<Long> tagIds,
+            String keyword, OffsetDateTime dueDateFrom, OffsetDateTime dueDateTo, Pageable pageable);
 
     PageResponse<TaskResponse> getSubTasks(Long projectId, Long parentTaskId, Pageable pageable);
 

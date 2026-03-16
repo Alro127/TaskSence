@@ -181,15 +181,29 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<TaskResponse> searchTasks(Long projectId, TaskStatus status, TaskPriority priority, Long assigneeId,
-            String keyword, OffsetDateTime dueDateFrom, OffsetDateTime dueDateTo, int page, int size) {
+    public PageResponse<TaskResponse> searchTasks(Long projectId, TaskStatus status, TaskPriority priority,
+            Long assigneeId, Long sprintId, List<Long> tagIds,
+            String keyword, OffsetDateTime dueDateFrom, OffsetDateTime dueDateTo, Pageable pageable) {
         // @PreAuthorize đã kiểm tra VIEW_TASKS permission
-        return taskRepository.searchTasks(projectId,
-                status != null ? status.name() : null,
-                priority != null ? priority.name() : null,
-                assigneeId, keyword, dueDateFrom, dueDateTo,
-                PageRequest.of(page - 1, size))
-                .stream().map(task -> toResponseWithPermissions(task, projectId)).toList();
+
+        boolean filterByTags = tagIds != null && !tagIds.isEmpty();
+        List<Long> normalizedTagIds = filterByTags ? tagIds : List.of(-1L);
+
+        Page<TaskResponse> responsePage = taskRepository
+                .searchTasks(projectId,
+                        status != null ? status.name() : null,
+                        priority != null ? priority.name() : null,
+                assigneeId, sprintId, filterByTags, normalizedTagIds,
+                keyword, dueDateFrom, dueDateTo,
+                        pageable)
+                .map(task -> toResponseWithPermissions(task, projectId));
+
+        return new PageResponse<>(
+                responsePage.getContent(),
+                responsePage.getNumber(),
+                responsePage.getSize(),
+                responsePage.getTotalElements(),
+                responsePage.getTotalPages());
     }
 
     @Override
@@ -280,7 +294,8 @@ public class TaskServiceImpl implements TaskService {
         // @PreAuthorize đã kiểm tra UPDATE_TASK_STATUS permission (role-based)
 
         TaskEntity task = getTaskOrThrow(projectId, taskId);
-        // Resource-level: MANAGER update bất kỳ, MEMBER chỉ update task mình tạo/được assign
+        // Resource-level: MANAGER update bất kỳ, MEMBER chỉ update task mình tạo/được
+        // assign
         permissionChecker.requireTaskPermission(projectId, task, TaskPermission.UPDATE_STATUS);
 
         task.setStatus(request.getStatus());
