@@ -359,10 +359,32 @@ export function ProjectDetailPage() {
   );
   const allMembers = allMembersData?.data?.data ?? [];
 
+  const currentUserMember = allMembers.find((m) => m.user.id === currentUserId);
+  const projectPermissions = currentUserMember?.permissions ?? [];
+  const hasProjectPermission = (...keys: string[]) =>
+    keys.some((key) => projectPermissions.includes(key));
+  const canManageProject =
+    isManager || hasProjectPermission("MANAGE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT", "EDIT_PROJECT");
+  const canManageMembers =
+    isManager ||
+    hasProjectPermission(
+      "MANAGE_MEMBERS",
+      "ADD_MEMBER",
+      "REMOVE_MEMBER",
+      "UPDATE_MEMBER_ROLE",
+      "TRANSFER_MANAGER",
+    );
+  const canReviewJoinRequests =
+    isManager || hasProjectPermission("REVIEW_JOIN_REQUEST", "MANAGE_JOIN_REQUESTS");
+  const canManageSprints =
+    isManager || hasProjectPermission("MANAGE_SPRINT", "CREATE_SPRINT", "UPDATE_SPRINT", "DELETE_SPRINT");
+  const canManageTags =
+    isManager || hasProjectPermission("MANAGE_TAG", "CREATE_TAG", "UPDATE_TAG", "DELETE_TAG");
+
   const { data: joinRequestsData, isLoading: isJoinRequestsLoading } =
     useGetJoinRequestsQuery(
       { projectId, page: joinRequestPage, size: JOIN_REQUEST_PAGE_SIZE },
-      { skip: skipMemberOnlyQueries || !isManager },
+      { skip: skipMemberOnlyQueries || !canReviewJoinRequests },
     );
   const joinRequests = joinRequestsData?.data?.data ?? [];
   const joinRequestsTotalElements = joinRequestsData?.data?.totalElements ?? 0;
@@ -658,7 +680,7 @@ export function ProjectDetailPage() {
         </div>
 
         {/* Header actions — MANAGER only */}
-        {isManager && (
+        {canManageProject && (
           <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="outline"
@@ -709,7 +731,7 @@ export function ProjectDetailPage() {
               </Badge>
             )}
           </TabsTrigger>
-          {isManager && (
+          {canReviewJoinRequests && (
             <TabsTrigger value="join-requests" className="gap-2">
               <ClipboardList className="h-4 w-4" />
               Join Requests
@@ -800,7 +822,7 @@ export function ProjectDetailPage() {
               )}
             </dl>
 
-            {isManager && (
+            {canManageProject && (
               <>
                 <Separator />
                 <Button
@@ -904,13 +926,13 @@ export function ProjectDetailPage() {
           <SprintManagementTab
             workspaceId={workspaceId}
             projectId={projectId}
-            isManager={isManager}
+            isManager={canManageSprints}
           />
         </TabsContent>
 
         {/* ── Tags Tab ── */}
         <TabsContent value="tags" className="mt-6 space-y-6">
-          <ProjectTagsTab projectId={projectId} isManager={isManager} />
+          <ProjectTagsTab projectId={projectId} isManager={canManageTags} />
         </TabsContent>
 
         {/* ── Members Tab ── */}
@@ -919,7 +941,7 @@ export function ProjectDetailPage() {
             <p className="text-sm text-muted-foreground">
               {totalMembers} member{totalMembers !== 1 ? "s" : ""}
             </p>
-            {isManager && (
+            {canManageMembers && (
               <Button size="sm" onClick={() => setIsAddMembersOpen(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Add Members
@@ -936,7 +958,7 @@ export function ProjectDetailPage() {
               <Users className="h-8 w-8 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">No members yet</p>
-                {isManager && (
+                {canManageMembers && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     Add team members to get started.
                   </p>
@@ -949,7 +971,7 @@ export function ProjectDetailPage() {
                 <MemberCard
                   key={member.id}
                   member={member}
-                  canManage={isManager}
+                  canManage={canManageMembers}
                   currentUserId={currentUserId}
                   onTransferManager={(managerId) => {
                     setTransferSourceId(managerId);
@@ -1012,7 +1034,7 @@ export function ProjectDetailPage() {
         </TabsContent>
 
         {/* ── Join Requests Tab (MANAGER only) ── */}
-        {isManager && (
+        {canReviewJoinRequests && (
           <TabsContent value="join-requests" className="mt-6 space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
@@ -1041,7 +1063,7 @@ export function ProjectDetailPage() {
                   <JoinRequestItem
                     key={request.id}
                     request={request}
-                    canReview={isManager}
+                    canReview={canReviewJoinRequests}
                   />
                 ))}
               </div>

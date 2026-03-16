@@ -2,7 +2,6 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  ChevronDown,
   ChevronRight,
   Filter,
   GripVertical,
@@ -60,8 +59,9 @@ import type { TaskPriority, TaskResponse, TaskStatus } from "@/types/api";
 import { useSearchTasksQuery, useDeleteTaskMutation, useUpdateTaskStatusMutation } from "../api/taskApi";
 import { TaskFormSheet } from "../components/TaskFormSheet";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
-import { useGetProjectByIdQuery } from "@/features/project/api/projectApi";
+import { useGetProjectByIdQuery, useGetCurrentUserRoleQuery } from "@/features/project/api/projectApi";
 import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
+import { useAppSelector } from "@/app/hooks";
 
 // ─── Config ──────────────────────────────────────────────────────────────────────
 const STATUS_COLUMNS: {
@@ -110,6 +110,9 @@ function TaskCard({
   workspaceId,
   onEdit,
   onDelete,
+  canEdit = true,
+  canDelete = true,
+  canDrag = true,
   isDragOverlay = false,
 }: {
   task: TaskResponse;
@@ -117,12 +120,16 @@ function TaskCard({
   workspaceId: number;
   onEdit: (task: TaskResponse) => void;
   onDelete: (task: TaskResponse) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canDrag?: boolean;
   isDragOverlay?: boolean;
 }) {
   const navigate = useNavigate();
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
     data: { task },
+    disabled: !canDrag,
   });
 
   const isOverdue =
@@ -147,38 +154,46 @@ function TaskCard({
       )}
     >
       {/* Drag handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="absolute left-1.5 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-40 cursor-grab active:cursor-grabbing touch-none"
-      >
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
-      </div>
+      {canDrag && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute left-1.5 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-40 cursor-grab active:cursor-grabbing touch-none"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+      )}
 
       {/* 3-dot menu */}
-      <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-6 w-6">
-              <MoreHorizontal className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(task)}>
-              <Pencil className="mr-2 h-3.5 w-3.5" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => onDelete(task)}
-            >
-              <Trash2 className="mr-2 h-3.5 w-3.5" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      {(canEdit || canDelete) && (
+        <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {canEdit && (
+                <DropdownMenuItem onClick={() => onEdit(task)}>
+                  <Pencil className="mr-2 h-3.5 w-3.5" />
+                  Edit
+                </DropdownMenuItem>
+              )}
+              {canEdit && canDelete && <DropdownMenuSeparator />}
+              {canDelete && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => onDelete(task)}
+                >
+                  <Trash2 className="mr-2 h-3.5 w-3.5" />
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
 
       {/* Title */}
       <button
@@ -258,6 +273,7 @@ function KanbanColumn({
   onDelete,
   onAddTask,
   isOver,
+  canAddTask = true,
 }: {
   col: (typeof STATUS_COLUMNS)[number];
   tasks: TaskResponse[];
@@ -267,6 +283,7 @@ function KanbanColumn({
   onDelete: (task: TaskResponse) => void;
   onAddTask: () => void;
   isOver: boolean;
+  canAddTask?: boolean;
 }) {
   const { setNodeRef } = useDroppable({ id: col.value });
 
@@ -307,6 +324,9 @@ function KanbanColumn({
             workspaceId={workspaceId}
             onEdit={onEdit}
             onDelete={onDelete}
+            canEdit={t.permissions?.includes("EDIT") ?? true}
+            canDelete={t.permissions?.includes("DELETE") ?? true}
+            canDrag={t.permissions?.includes("UPDATE_STATUS") ?? true}
           />
         ))}
 
@@ -324,13 +344,15 @@ function KanbanColumn({
       </div>
 
       {/* Quick add button per column */}
-      <button
-        onClick={onAddTask}
-        className="flex items-center gap-2 border-t px-3 py-2.5 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        Add task
-      </button>
+      {canAddTask && (
+        <button
+          onClick={onAddTask}
+          className="flex items-center gap-2 border-t px-3 py-2.5 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add task
+        </button>
+      )}
     </div>
   );
 }
@@ -342,12 +364,16 @@ function TaskListRow({
   workspaceId,
   onEdit,
   onDelete,
+  canEdit = true,
+  canDelete = true,
 }: {
   task: TaskResponse;
   projectId: number;
   workspaceId: number;
   onEdit: (task: TaskResponse) => void;
   onDelete: (task: TaskResponse) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   const navigate = useNavigate();
   const isOverdue =
@@ -417,29 +443,35 @@ function TaskListRow({
       </div>
 
       {/* Actions */}
-      <div className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-6 w-6">
-              <MoreHorizontal className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(task)}>
-              <Pencil className="mr-2 h-3.5 w-3.5" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => onDelete(task)}
-            >
-              <Trash2 className="mr-2 h-3.5 w-3.5" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      {(canEdit || canDelete) && (
+        <div className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {canEdit && (
+                <DropdownMenuItem onClick={() => onEdit(task)}>
+                  <Pencil className="mr-2 h-3.5 w-3.5" />
+                  Edit
+                </DropdownMenuItem>
+              )}
+              {canEdit && canDelete && <DropdownMenuSeparator />}
+              {canDelete && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => onDelete(task)}
+                >
+                  <Trash2 className="mr-2 h-3.5 w-3.5" />
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
     </div>
   );
 }
@@ -614,11 +646,16 @@ export function TaskBoardPage() {
   );
   const members = membersData?.data?.data ?? [];
 
+  const currentUserId = useAppSelector((state) => state.user.currentUser?.id);
+  const { data: roleData } = useGetCurrentUserRoleQuery(projectId, { skip: isNaN(projectId) });
+  const currentUserRole = roleData?.data;
+  const currentUserMember = members.find((m) => m.user.id === currentUserId);
+  const canCreateTask =
+    currentUserMember?.permissions?.includes("CREATE_TASK") ??
+    (currentUserRole !== undefined && currentUserRole !== "VIEWER");
+
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
-
-  // ─── UI state ───────────────────────────────────────────────────────────────
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<TaskStatus>>(new Set());
 
   // Sheet state
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -684,14 +721,6 @@ export function TaskBoardPage() {
     }
   };
 
-  const toggleGroup = (status: TaskStatus) => {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      next.has(status) ? next.delete(status) : next.add(status);
-      return next;
-    });
-  };
-
   // ─── Drag handlers ──────────────────────────────────────────────────────────
   const handleDragStart = (event: DragStartEvent) => {
     const task = event.active.data.current?.task as TaskResponse | undefined;
@@ -717,6 +746,7 @@ export function TaskBoardPage() {
     const task = active.data.current?.task as TaskResponse | undefined;
     if (!task) return;
     if (task.status === droppedOnColumn.value) return;
+    if (!(task.permissions?.includes("UPDATE_STATUS") ?? true)) return;
     try {
       await updateTaskStatus({
         projectId,
@@ -875,10 +905,12 @@ export function TaskBoardPage() {
           </div>
 
           {/* New task */}
-          <Button size="sm" onClick={handleOpenCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Task
-          </Button>
+          {canCreateTask && (
+            <Button size="sm" onClick={handleOpenCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Task
+            </Button>
+          )}
         </div>
 
         {/* Advanced filter panel */}
@@ -983,10 +1015,12 @@ export function TaskBoardPage() {
           <p className="text-xs text-muted-foreground">
             Create the first task for this project.
           </p>
-          <Button size="sm" onClick={handleOpenCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Task
-          </Button>
+          {canCreateTask && (
+            <Button size="sm" onClick={handleOpenCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Task
+            </Button>
+          )}
         </div>
       )}
 
@@ -1020,6 +1054,8 @@ export function TaskBoardPage() {
                   workspaceId={workspaceId}
                   onEdit={handleOpenEdit}
                   onDelete={handleDeleteRequest}
+                                  canEdit={t.permissions?.includes("EDIT") ?? true}
+                                  canDelete={t.permissions?.includes("DELETE") ?? true}
                 />
               ))}
             </div>
@@ -1082,6 +1118,7 @@ export function TaskBoardPage() {
                     onDelete={handleDeleteRequest}
                     onAddTask={handleOpenCreate}
                     isOver={overColumnId === col.value}
+                                      canAddTask={canCreateTask}
                   />
 
                   {remaining > 0 && (
@@ -1109,6 +1146,9 @@ export function TaskBoardPage() {
             {activeTask ? (
               <TaskCard
                 task={activeTask}
+                                canEdit={activeTask.permissions?.includes("EDIT") ?? true}
+                                canDelete={activeTask.permissions?.includes("DELETE") ?? true}
+                                canDrag={activeTask.permissions?.includes("UPDATE_STATUS") ?? true}
                 projectId={projectId}
                 workspaceId={workspaceId}
                 onEdit={handleOpenEdit}
