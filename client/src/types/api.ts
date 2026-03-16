@@ -348,6 +348,7 @@ export type EntityType =
 
 export type NotificationType =
   | "TASK_ASSIGNED"
+  | "TASK_UNASSIGNED"
   | "WORKSPACE_INVITE"
   | "WORKSPACE_INVITE_ACCEPT"
   | "WORKSPACE_JOIN_REQUEST"
@@ -355,11 +356,14 @@ export type NotificationType =
   | "WORKSPACE_REMOVE_MEMBER"
   | "WORKSPACE_ROLE_CHANGE"
   | "PROJECT_JOIN_REQUEST"
+  | "PROJECT_REVIEW_REQUEST"
+  | "PROJECT_ADD_MEMBER"
+  | "PROJECT_REMOVE_MEMBER"
+  | "PROJECT_ROLE_CHANGE"
   | "COMMENT_MENTION"
   | "COMMENT_REACTION"
   | "COMMENT_TASK"
-  | "TASK_REMINDER"
-  | "PROJECT_ROLE_UPDATED";
+  | "TASK_REMINDER";
 
 export interface NotificationResponse {
   id: number;

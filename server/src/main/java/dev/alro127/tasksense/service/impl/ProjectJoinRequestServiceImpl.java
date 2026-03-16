@@ -75,7 +75,7 @@ public class ProjectJoinRequestServiceImpl implements ProjectJoinRequestService 
                 .receiverId(manager.getUser().getId())
                 .actorId(securityService.getCurrentUserId())
                 .type(NotificationType.PROJECT_JOIN_REQUEST)
-                .referenceType(EntityType.INVITATION)
+                .referenceType(EntityType.PROJECT)
                 .referenceId(projectId)
                 .payload(Map.of("referenceName", project.getName()))
                 .build());
@@ -149,8 +149,8 @@ public class ProjectJoinRequestServiceImpl implements ProjectJoinRequestService 
         notificationService.saveAndPublish(NotificationMessage.builder()
                 .receiverId(joinRequest.getUser().getId())
                 .actorId(securityService.getCurrentUserId())
-                .type(NotificationType.PROJECT_JOIN_REQUEST)
-                .referenceType(EntityType.INVITATION)
+                .type(NotificationType.PROJECT_REVIEW_REQUEST)
+                .referenceType(EntityType.PROJECT)
                 .referenceId(projectId)
                 .payload(Map.of("referenceName", project.getName()))
                 .build());

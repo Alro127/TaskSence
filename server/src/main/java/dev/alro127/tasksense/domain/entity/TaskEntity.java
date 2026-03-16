@@ -50,7 +50,6 @@ public class TaskEntity {
 
     @Column(nullable = false, length = 50)
     @Enumerated(EnumType.STRING)
-    @Builder.Default
     private TaskStatus status = TaskStatus.TODO;
 
     @Column(name = "start_date")
@@ -63,7 +62,6 @@ public class TaskEntity {
     private OffsetDateTime completedAt;
 
     @Column
-    @Builder.Default
     private Integer position = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -72,7 +70,6 @@ public class TaskEntity {
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "task_assignees", joinColumns = @JoinColumn(name = "task_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
-    @Builder.Default
     private Set<UserEntity> assignees = new HashSet<>();
 
     @ManyToMany

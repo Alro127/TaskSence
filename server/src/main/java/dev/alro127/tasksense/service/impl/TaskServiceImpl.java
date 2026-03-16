@@ -1,9 +1,12 @@
 package dev.alro127.tasksense.service.impl;
 
 import dev.alro127.tasksense.domain.entity.*;
+import dev.alro127.tasksense.domain.enums.EntityType;
+import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.domain.enums.TaskPriority;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
 import dev.alro127.tasksense.dto.common.PageResponse;
+import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.dto.request.CreateTaskRequest;
 import dev.alro127.tasksense.dto.request.UpdateTaskRequest;
 import dev.alro127.tasksense.dto.request.UpdateTaskStatusRequest;
@@ -16,13 +19,13 @@ import dev.alro127.tasksense.repository.jpa.*;
 import dev.alro127.tasksense.security.permission.EffectivePermissionResolver;
 import dev.alro127.tasksense.security.permission.PermissionChecker;
 import dev.alro127.tasksense.security.permission.TaskPermission;
+import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.ReminderService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.TaskService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -45,6 +49,7 @@ public class TaskServiceImpl implements TaskService {
     private final PermissionChecker permissionChecker;
     private final EffectivePermissionResolver permissionResolver;
     private final ReminderService reminderService;
+    private final NotificationService notificationService;
     private final TagRepository tagRepository;
 
     // ===== Helpers =====
@@ -91,6 +96,7 @@ public class TaskServiceImpl implements TaskService {
             }
             assignees.add(assignee);
         }
+
         return assignees;
     }
 
@@ -139,7 +145,7 @@ public class TaskServiceImpl implements TaskService {
 
         ProjectEntity project = getProjectOrThrow(projectId);
 
-        TaskEntity.TaskEntityBuilder builder = TaskEntity.builder()
+        TaskEntity task = TaskEntity.builder()
                 .project(project)
                 .title(request.getTitle().trim())
                 .description(request.getDescription())
@@ -148,14 +154,32 @@ public class TaskServiceImpl implements TaskService {
                 .dueDate(request.getDueDate())
                 .sprint(resolveSprint(projectId, request.getSprintId()))
                 .tags(resolveTags(request.getTagIds(), projectId))
-                .createdBy(currentUser).assignees(resolveAssignees(request.getAssigneeIds(), projectId));
+                .createdBy(currentUser)
+                .assignees(resolveAssignees(request.getAssigneeIds(), projectId))
+                .build();
 
         if (request.getParentTaskId() != null) {
             TaskEntity parent = getTaskOrThrow(projectId, request.getParentTaskId());
-            builder.parentTask(parent);
+            task.setParentTask(parent);
         }
 
-        TaskEntity saved = taskRepository.save(builder.build());
+        TaskEntity saved = taskRepository.save(task);
+        WorkspaceEntity workspace = project.getWorkspace();
+
+        for (UserEntity u : task.getAssignees()) {
+            notificationService.saveAndPublish(NotificationMessage.builder()
+                    .receiverId(u.getId())
+                    .actorId(securityService.getCurrentUserId())
+                    .type(NotificationType.TASK_ASSIGNED)
+                    .referenceType(EntityType.TASK)
+                    .referenceId(projectId)
+                    .payload(Map.of(
+                            "sender", securityService.getCurrentUser().getFullName(),
+                            "referenceName", task.getTitle(),
+                            "projectId", project.getId(),
+                            "workspaceId", workspace.getId()))
+                    .build());
+        }
 
         if (saved.getDueDate() != null) {
             OffsetDateTime reminderTime = saved.getDueDate().minusMinutes(15);
@@ -263,8 +287,53 @@ public class TaskServiceImpl implements TaskService {
             task.setDueDate(request.getDueDate());
         if (request.getPosition() != null)
             task.setPosition(request.getPosition());
-        if (request.getAssigneeIds() != null)
-            task.setAssignees(resolveAssignees(request.getAssigneeIds(), projectId));
+        if (request.getAssigneeIds() != null) {
+
+            Set<UserEntity> oldAssignees = new HashSet<>(task.getAssignees());
+            Set<UserEntity> newAssignees = resolveAssignees(request.getAssigneeIds(), projectId);
+
+            Set<UserEntity> addedAssignees = new HashSet<>(newAssignees);
+            addedAssignees.removeAll(oldAssignees);
+
+            Set<UserEntity> removedAssignees = new HashSet<>(oldAssignees);
+            removedAssignees.removeAll(newAssignees);
+
+            task.setAssignees(newAssignees);
+
+            WorkspaceEntity workspace = task.getProject().getWorkspace();
+
+            // notify new assignees
+            for (UserEntity u : addedAssignees) {
+                notificationService.saveAndPublish(NotificationMessage.builder()
+                        .receiverId(u.getId())
+                        .actorId(securityService.getCurrentUserId())
+                        .type(NotificationType.TASK_ASSIGNED)
+                        .referenceType(EntityType.TASK)
+                        .referenceId(task.getId())
+                        .payload(Map.of(
+                                "sender", securityService.getCurrentUser().getFullName(),
+                                "referenceName", task.getTitle(),
+                                "projectId", projectId,
+                                "workspaceId", workspace.getId()))
+                        .build());
+            }
+
+            for (UserEntity u : removedAssignees) {
+                notificationService.saveAndPublish(NotificationMessage.builder()
+                        .receiverId(u.getId())
+                        .actorId(securityService.getCurrentUserId())
+                        .type(NotificationType.TASK_UNASSIGNED)
+                        .referenceType(EntityType.TASK)
+                        .referenceId(task.getId())
+                        .payload(Map.of(
+                                "sender", securityService.getCurrentUser().getFullName(),
+                                "referenceName", task.getTitle(),
+                                "projectId", projectId,
+                                "workspaceId", workspace.getId()))
+                        .build());
+            }
+
+        }
 
         if (request.isRemoveSprint()) {
             task.setSprint(null);
@@ -293,7 +362,7 @@ public class TaskServiceImpl implements TaskService {
 
         reminderService.removeReminder(taskId);
 
-        if (saved.getDueDate() != null && !saved.getStatus().equals(TaskStatus.DONE)
+        if (request.getDueDate() != null && !saved.getStatus().equals(TaskStatus.DONE)
                 && !saved.getStatus().equals(TaskStatus.REVIEW)) {
 
             OffsetDateTime reminderTime = saved.getDueDate().minusMinutes(15);
@@ -349,7 +418,7 @@ public class TaskServiceImpl implements TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
         if (!task.getProject().getId().equals(projectId)) {
-            throw new IllegalArgumentException("Task does not belong to project");
+            throw new ConflictException("Task does not belong to project");
         }
 
         List<TagEntity> tags = tagRepository.findAllByIdInAndProjectId(tagIds, projectId);
