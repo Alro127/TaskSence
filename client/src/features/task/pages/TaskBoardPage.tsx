@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   ChevronRight,
@@ -61,6 +61,8 @@ import { TaskFormSheet } from "../components/TaskFormSheet";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
 import { useGetProjectByIdQuery, useGetCurrentUserRoleQuery } from "@/features/project/api/projectApi";
 import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
+import { useGetProjectSprintsQuery } from "@/features/sprint/api/sprintApi";
+import { useGetTagsByProjectQuery } from "@/features/tag/api";
 import { useAppSelector } from "@/app/hooks";
 
 // ─── Config ──────────────────────────────────────────────────────────────────────
@@ -102,6 +104,22 @@ const PRIORITY_BADGE: Record<TaskPriority, { label: string; class: string }> = {
   HIGH: { label: "High", class: "text-amber-600 bg-amber-50 border-amber-200" },
   URGENT: { label: "Urgent", class: "text-red-600 bg-red-50 border-red-200" },
 };
+
+function parseTagIdsParam(tagsParam: string | null): number[] {
+  if (!tagsParam) return [];
+  return tagsParam
+    .split(",")
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isFinite(value) && value > 0);
+}
+
+function toStartOfDayIso(dateValue: string): string {
+  return new Date(`${dateValue}T00:00:00`).toISOString();
+}
+
+function toEndOfDayIso(dateValue: string): string {
+  return new Date(`${dateValue}T23:59:59.999`).toISOString();
+}
 
 // ─── Task Card (draggable, used in Kanban board) ─────────────────────────────────
 function TaskCard({
@@ -484,6 +502,7 @@ export function TaskBoardPage() {
   } = useParams<{ id: string; projectId: string }>();
   const workspaceId = Number(workspaceIdStr);
   const projectId = Number(projectIdStr);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // ─── Filter state ────────────────────────────────────────────────────────────
   type ViewMode = "list" | "board";
@@ -491,6 +510,13 @@ export function TaskBoardPage() {
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "ALL">("ALL");
   const [filterPriority, setFilterPriority] = useState<TaskPriority | "ALL">("ALL");
   const [filterAssigneeId, setFilterAssigneeId] = useState<number | "ALL">("ALL");
+  const [filterSprintId, setFilterSprintId] = useState<number | "ALL">(() => {
+    const sprint = Number(searchParams.get("sprint"));
+    return Number.isFinite(sprint) && sprint > 0 ? sprint : "ALL";
+  });
+  const [filterTagIds, setFilterTagIds] = useState<number[]>(() =>
+    parseTagIdsParam(searchParams.get("tags")),
+  );
   const [filterDueDateFrom, setFilterDueDateFrom] = useState("");
   const [filterDueDateTo, setFilterDueDateTo] = useState("");
   const [keywordInput, setKeywordInput] = useState("");
@@ -504,7 +530,7 @@ export function TaskBoardPage() {
     REVIEW: 8,
     DONE: 8,
   });
-  const [listPage, setListPage] = useState(1);
+  const [listPage, setListPage] = useState(0);
   const LIST_PAGE_SIZE = 20;
 
   // Debounce keyword 400ms
@@ -516,15 +542,42 @@ export function TaskBoardPage() {
   const toggleColumn = useCallback((status: TaskStatus) => {
     setHiddenColumns((prev) => {
       const next = new Set(prev);
-      next.has(status) ? next.delete(status) : next.add(status);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
       return next;
     });
   }, []);
+
+  const toggleTagFilter = useCallback((tagId: number) => {
+    setFilterTagIds((prev) =>
+      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId],
+    );
+  }, []);
+
+  useEffect(() => {
+    const currentSprint = searchParams.get("sprint") ?? "";
+    const currentTags = searchParams.get("tags") ?? "";
+    const nextSprint = filterSprintId === "ALL" ? "" : String(filterSprintId);
+    const nextTags = filterTagIds.length > 0 ? filterTagIds.join(",") : "";
+
+    if (currentSprint === nextSprint && currentTags === nextTags) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextSprint) nextParams.set("sprint", nextSprint);
+    else nextParams.delete("sprint");
+    if (nextTags) nextParams.set("tags", nextTags);
+    else nextParams.delete("tags");
+    setSearchParams(nextParams, { replace: true });
+  }, [filterSprintId, filterTagIds, searchParams, setSearchParams]);
 
   // Count active advanced filters for badge
   const advancedFilterCount = [
     filterPriority !== "ALL",
     filterAssigneeId !== "ALL",
+    filterSprintId !== "ALL",
+    filterTagIds.length > 0,
     !!filterDueDateFrom,
     !!filterDueDateTo,
   ].filter(Boolean).length;
@@ -539,21 +592,25 @@ export function TaskBoardPage() {
     setFilterStatus("ALL");
     setFilterPriority("ALL");
     setFilterAssigneeId("ALL");
+    setFilterSprintId("ALL");
+    setFilterTagIds([]);
     setFilterDueDateFrom("");
     setFilterDueDateTo("");
     setKeywordInput("");
     setDebouncedKeyword("");
     setHiddenColumns(new Set());
-    setListPage(1);
+    setListPage(0);
   }, []);
 
   useEffect(() => {
-    setListPage(1);
+    setListPage(0);
   }, [
     viewMode,
     filterStatus,
     filterPriority,
     filterAssigneeId,
+    filterSprintId,
+    filterTagIds,
     debouncedKeyword,
     filterDueDateFrom,
     filterDueDateTo,
@@ -567,16 +624,20 @@ export function TaskBoardPage() {
       projectId,
       ...(filterPriority !== "ALL" && { priority: filterPriority }),
       ...(filterAssigneeId !== "ALL" && { assigneeId: filterAssigneeId }),
+      ...(filterSprintId !== "ALL" && { sprintId: filterSprintId }),
+      ...(filterTagIds.length > 0 && { tagIds: filterTagIds }),
       ...(debouncedKeyword.trim() && { keyword: debouncedKeyword.trim() }),
-      ...(filterDueDateFrom && { dueDateFrom: filterDueDateFrom }),
-      ...(filterDueDateTo && { dueDateTo: filterDueDateTo }),
-      page: 1,
+      ...(filterDueDateFrom && { dueDateFrom: toStartOfDayIso(filterDueDateFrom) }),
+      ...(filterDueDateTo && { dueDateTo: toEndOfDayIso(filterDueDateTo) }),
+      page: 0,
       size: 200,
     }),
     [
       projectId,
       filterPriority,
       filterAssigneeId,
+      filterSprintId,
+      filterTagIds,
       debouncedKeyword,
       filterDueDateFrom,
       filterDueDateTo,
@@ -589,9 +650,11 @@ export function TaskBoardPage() {
       ...(filterStatus !== "ALL" && { status: filterStatus }),
       ...(filterPriority !== "ALL" && { priority: filterPriority }),
       ...(filterAssigneeId !== "ALL" && { assigneeId: filterAssigneeId }),
+      ...(filterSprintId !== "ALL" && { sprintId: filterSprintId }),
+      ...(filterTagIds.length > 0 && { tagIds: filterTagIds }),
       ...(debouncedKeyword.trim() && { keyword: debouncedKeyword.trim() }),
-      ...(filterDueDateFrom && { dueDateFrom: filterDueDateFrom }),
-      ...(filterDueDateTo && { dueDateTo: filterDueDateTo }),
+      ...(filterDueDateFrom && { dueDateFrom: toStartOfDayIso(filterDueDateFrom) }),
+      ...(filterDueDateTo && { dueDateTo: toEndOfDayIso(filterDueDateTo) }),
       page: listPage,
       size: LIST_PAGE_SIZE,
     }),
@@ -600,6 +663,8 @@ export function TaskBoardPage() {
       filterStatus,
       filterPriority,
       filterAssigneeId,
+      filterSprintId,
+      filterTagIds,
       debouncedKeyword,
       filterDueDateFrom,
       filterDueDateTo,
@@ -624,8 +689,8 @@ export function TaskBoardPage() {
   });
 
   // Only show root tasks on the board — subtasks are managed inside TaskDetailPage
-  const boardTasks = (boardTasksData?.data ?? []).filter((t) => t.parentTaskId == null);
-  const listTasks = (listTasksData?.data ?? []).filter((t) => t.parentTaskId == null);
+  const boardTasks = (boardTasksData?.data?.data ?? []).filter((t) => t.parentTaskId == null);
+  const listTasks = (listTasksData?.data?.data ?? []).filter((t) => t.parentTaskId == null);
   const isLoading = viewMode === "board" ? isBoardLoading : isListLoading;
   const isFetching = viewMode === "board" ? isBoardFetching : isListFetching;
 
@@ -645,6 +710,17 @@ export function TaskBoardPage() {
     { skip: isNaN(projectId) },
   );
   const members = membersData?.data?.data ?? [];
+
+  const { data: sprintsData } = useGetProjectSprintsQuery(
+    { projectId, page: 0, size: 50 },
+    { skip: isNaN(projectId) },
+  );
+  const sprints = sprintsData?.data?.data ?? [];
+
+  const { data: tagsData } = useGetTagsByProjectQuery(projectId, {
+    skip: isNaN(projectId),
+  });
+  const tags = tagsData?.data ?? [];
 
   const currentUserId = useAppSelector((state) => state.user.currentUser?.id);
   const { data: roleData } = useGetCurrentUserRoleQuery(projectId, { skip: isNaN(projectId) });
@@ -682,8 +758,10 @@ export function TaskBoardPage() {
     return map;
   }, [boardTasks]);
 
-  const listTotalItems = listTasksData?.data?.length ?? 0;
-  const listTotalPages = Math.max(1, Math.ceil(listTotalItems / LIST_PAGE_SIZE));
+  const listPagination = listTasksData?.data;
+  const listPageIndex = listPagination?.page ?? listPage;
+  const listTotalItems = listPagination?.totalElements ?? 0;
+  const listTotalPages = Math.max(1, listPagination?.totalPages ?? 1);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const handleOpenCreate = useCallback(() => {
@@ -959,6 +1037,66 @@ export function TaskBoardPage() {
               </Select>
             </div>
 
+            {/* Sprint */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Sprint</label>
+              <Select
+                value={filterSprintId === "ALL" ? "ALL" : String(filterSprintId)}
+                onValueChange={(v) => setFilterSprintId(v === "ALL" ? "ALL" : Number(v))}
+              >
+                <SelectTrigger className="h-8 w-44 text-sm">
+                  <SelectValue placeholder="Any sprint" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Any sprint</SelectItem>
+                  {sprints.map((sprint) => (
+                    <SelectItem key={sprint.id} value={String(sprint.id)}>
+                      {sprint.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Tags */}
+            <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Tags</label>
+              <div className="flex min-h-8 flex-wrap items-center gap-1.5 rounded-md border bg-background px-2 py-1.5">
+                {tags.length === 0 && (
+                  <span className="text-xs text-muted-foreground">No tags</span>
+                )}
+
+                {tags.map((tag) => {
+                  const selected = filterTagIds.includes(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTagFilter(tag.id)}
+                      className={cn(
+                        "rounded-full border px-2 py-0.5 text-[11px] transition-colors",
+                        selected
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      {tag.name}
+                    </button>
+                  );
+                })}
+
+                {filterTagIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterTagIds([])}
+                    className="ml-1 text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+                  >
+                    Clear tags
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Due date from */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">Due after</label>
@@ -989,6 +1127,8 @@ export function TaskBoardPage() {
                 onClick={() => {
                   setFilterPriority("ALL");
                   setFilterAssigneeId("ALL");
+                  setFilterSprintId("ALL");
+                  setFilterTagIds([]);
                   setFilterDueDateFrom("");
                   setFilterDueDateTo("");
                 }}
@@ -1063,8 +1203,8 @@ export function TaskBoardPage() {
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3">
             <p className="text-xs text-muted-foreground">
-              Showing {Math.min((listPage - 1) * LIST_PAGE_SIZE + 1, listTotalItems)}-
-              {Math.min(listPage * LIST_PAGE_SIZE, listTotalItems)} of {listTotalItems} tasks
+              Showing {Math.min(listPageIndex * LIST_PAGE_SIZE + 1, listTotalItems)}-
+              {Math.min((listPageIndex + 1) * LIST_PAGE_SIZE, listTotalItems)} of {listTotalItems} tasks
             </p>
 
             <div className="flex items-center gap-1.5">
@@ -1072,20 +1212,20 @@ export function TaskBoardPage() {
                 variant="outline"
                 size="sm"
                 className="h-8"
-                disabled={listPage <= 1}
-                onClick={() => setListPage((p) => Math.max(1, p - 1))}
+                disabled={listPage <= 0}
+                onClick={() => setListPage((p) => Math.max(0, p - 1))}
               >
                 Previous
               </Button>
               <span className="px-2 text-xs text-muted-foreground">
-                Page {listPage} / {listTotalPages}
+                Page {listPageIndex + 1} / {listTotalPages}
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 className="h-8"
-                disabled={listPage >= listTotalPages}
-                onClick={() => setListPage((p) => Math.min(listTotalPages, p + 1))}
+                disabled={listPage >= listTotalPages - 1}
+                onClick={() => setListPage((p) => Math.min(listTotalPages - 1, p + 1))}
               >
                 Next
               </Button>

@@ -503,6 +503,8 @@ export interface TaskSearchParams {
   status?: TaskStatus;
   priority?: TaskPriority;
   assigneeId?: number;
+  sprintId?: number;
+  tagIds?: number[];
   keyword?: string;
   dueDateFrom?: string;
   dueDateTo?: string;
