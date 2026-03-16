@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.OffsetDateTime;
+import java.util.Set;
 
 @Data
 @Builder
@@ -19,6 +20,8 @@ public class WorkspaceResponse {
     private Long ownerId;
 
     private Boolean isPublic;
+
+    private Set<String> permissions;
 
     private OffsetDateTime createdAt;
 

@@ -15,6 +15,7 @@ import dev.alro127.tasksense.repository.jpa.TaskRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceInviteRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
+import dev.alro127.tasksense.security.permission.EffectivePermissionResolver;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.WorkspaceService;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private final TaskRepository taskRepository;
     private final WorkspaceInviteRepository workspaceInviteRepository;
     private final SecurityService securityService;
+    private final EffectivePermissionResolver permissionResolver;
 
     @Override
     @Transactional
@@ -63,7 +65,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         workspaceMemberRepository.save(member);
 
-        return WorkspaceResponse.mapToResponse(workspace);
+        return toResponseWithPermissions(saved);
     }
 
     @Override
@@ -72,7 +74,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
         // @PreAuthorize đã đảm bảo user là workspace member
-        return WorkspaceResponse.mapToResponse(workspace);
+        return toResponseWithPermissions(workspace);
     }
 
     @Override
@@ -80,7 +82,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         UserEntity currentUser = securityService.getCurrentUser();
 
         Page<WorkspaceResponse> responsePage = workspaceRepository.findAllByMemberUserId(currentUser.getId(), pageable)
-                .map(WorkspaceResponse::mapToResponse);
+                .map(this::toResponseWithPermissions);
 
         return new PageResponse<>(
                 responsePage.getContent(),
@@ -111,7 +113,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         workspaceRepository.save(workspace);
 
-        return WorkspaceResponse.mapToResponse(workspace);
+        return toResponseWithPermissions(workspace);
     }
 
     @Override
@@ -147,7 +149,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         List<WorkspaceEntity> workspaces = workspaceRepository.searchWorkspaces(name, cursor, pageable);
 
         return workspaces.stream()
-                .map(WorkspaceResponse::mapToResponse)
+                .map(this::toResponseWithPermissions)
                 .toList();
     }
 
@@ -155,7 +157,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     public PageResponse<WorkspaceResponse> getPublicWorkspaces(Long userId, Pageable pageable) {
 
         Page<WorkspaceResponse> responsePage = workspaceRepository.findPublicWorkspacesByOwner(userId, pageable)
-                .map(WorkspaceResponse::mapToResponse);
+                .map(this::toResponseWithPermissions);
 
         return new PageResponse<>(
                 responsePage.getContent(),
@@ -163,5 +165,12 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 responsePage.getSize(),
                 responsePage.getTotalElements(),
                 responsePage.getTotalPages());
+    }
+
+    private WorkspaceResponse toResponseWithPermissions(WorkspaceEntity workspace) {
+        Long currentUserId = securityService.getCurrentUserId();
+        WorkspaceResponse response = WorkspaceResponse.mapToResponse(workspace);
+        response.setPermissions(permissionResolver.resolveWorkspacePermissions(currentUserId, workspace.getId()));
+        return response;
     }
 }
