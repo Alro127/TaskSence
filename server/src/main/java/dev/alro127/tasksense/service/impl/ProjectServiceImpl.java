@@ -14,6 +14,7 @@ import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.TaskRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
+import dev.alro127.tasksense.security.permission.EffectivePermissionResolver;
 import dev.alro127.tasksense.service.ProjectService;
 import dev.alro127.tasksense.service.SecurityService;
 
@@ -37,6 +38,7 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectMemberRepository projectMemberRepository;
     private final TaskRepository taskRepository;
     private final SecurityService securityService;
+    private final EffectivePermissionResolver permissionResolver;
 
     @Override
     @Transactional
@@ -66,7 +68,7 @@ public class ProjectServiceImpl implements ProjectService {
         projectRepository.save(project);
         projectMemberRepository.save(owner);
 
-        return ProjectResponse.mapToResponse(project);
+        return toResponseWithPermissions(project);
     }
 
     @Override
@@ -78,21 +80,8 @@ public class ProjectServiceImpl implements ProjectService {
 
         validateProjectBelongsToWorkspace(project, workspaceId);
 
-        return ProjectResponse.mapToResponse(project);
+        return toResponseWithPermissions(project);
     }
-
-    // @Override
-    // public List<ProjectResponse> getProjectsByWorkspace(Long workspaceId) {
-    // // @PreAuthorize đã kiểm tra workspace VIEW permission
-
-    // workspaceRepository.findById(workspaceId)
-    // .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
-
-    // return projectRepository.findAllByWorkspaceId(workspaceId)
-    // .stream()
-    // .map(ProjectResponse::mapToResponse)
-    // .toList();
-    // }
 
     @Override
     public PageResponse<ProjectResponse> getProjectsByWorkspace(
@@ -105,7 +94,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         List<ProjectResponse> data = projectPage.getContent()
                 .stream()
-                .map(ProjectResponse::mapToResponse)
+                .map(this::toResponseWithPermissions)
                 .toList();
 
         return new PageResponse<>(
@@ -143,7 +132,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         projectRepository.save(project);
 
-        return ProjectResponse.mapToResponse(project);
+        return toResponseWithPermissions(project);
     }
 
     @Override
@@ -172,5 +161,12 @@ public class ProjectServiceImpl implements ProjectService {
         if (!project.getWorkspace().getId().equals(workspaceId)) {
             throw new ResourceNotFoundException("Project not found");
         }
+    }
+
+    private ProjectResponse toResponseWithPermissions(ProjectEntity project) {
+        Long currentUserId = securityService.getCurrentUserId();
+        ProjectResponse response = ProjectResponse.mapToResponse(project);
+        response.setPermissions(permissionResolver.resolveProjectPermissions(currentUserId, project.getId()));
+        return response;
     }
 }

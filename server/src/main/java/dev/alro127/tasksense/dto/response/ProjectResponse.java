@@ -7,6 +7,7 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Set;
 
 @Data
 @Builder
@@ -29,6 +30,8 @@ public class ProjectResponse {
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;
+
+    private Set<String> permissions;
 
     public static ProjectResponse mapToResponse(ProjectEntity project) {
         return ProjectResponse.builder()

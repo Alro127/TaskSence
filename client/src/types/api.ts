@@ -244,6 +244,7 @@ export interface Project {
   name: string;
   description: string | null;
   status: ProjectStatus;
+  permissions?: string[];
   startDate: string | null;
   endDate: string | null;
   createdAt: string;
