@@ -99,6 +99,35 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
             """)
     Optional<TaskEntity> findWithAssigneesProjectWorkspace(Long id);
 
+    // ===== ES sync queries =====
+
+    @Query("SELECT t.id FROM TaskEntity t WHERE t.updatedAt > :since ORDER BY t.id ASC")
+    List<Long> findIdsSince(@Param("since") OffsetDateTime since, Pageable pageable);
+
+    @Query("""
+                SELECT DISTINCT t FROM TaskEntity t
+                JOIN FETCH t.project p
+                JOIN FETCH p.workspace
+                JOIN FETCH t.createdBy
+                LEFT JOIN FETCH t.assignees
+                LEFT JOIN FETCH t.tags
+                LEFT JOIN FETCH t.sprint
+                WHERE t.id IN :ids
+            """)
+    List<TaskEntity> findAllByIdsWithAssociations(@Param("ids") List<Long> ids);
+
+    @Query("""
+                SELECT DISTINCT t FROM TaskEntity t
+                JOIN FETCH t.project p
+                JOIN FETCH p.workspace
+                JOIN FETCH t.createdBy
+                LEFT JOIN FETCH t.assignees
+                LEFT JOIN FETCH t.tags
+                LEFT JOIN FETCH t.sprint
+                WHERE t.id = :id
+            """)
+    Optional<TaskEntity> findByIdWithAssociations(@Param("id") Long id);
+
     @Modifying
     @Query("UPDATE TaskEntity t SET t.deletedAt = :now WHERE t.project.id = :projectId AND t.deletedAt IS NULL")
     int softDeleteByProjectId(@Param("projectId") Long projectId, @Param("now") OffsetDateTime now);

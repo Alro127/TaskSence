@@ -1,6 +1,7 @@
 package dev.alro127.tasksense.dto.request;
 
 import dev.alro127.tasksense.domain.enums.TaskPriority;
+import dev.alro127.tasksense.domain.enums.TaskStatus;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -26,6 +27,8 @@ public class CreateTaskRequest {
 
     @FutureOrPresent(message = "Due date must be in the present or future")
     private OffsetDateTime dueDate;
+
+    private TaskStatus status;
 
     private Long parentTaskId;
 

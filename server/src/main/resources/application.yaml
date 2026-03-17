@@ -32,6 +32,13 @@ spring:
       port: 6379
       timeout: 5000
 
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
+    username: ${ELASTICSEARCH_USERNAME:}
+    password: ${ELASTICSEARCH_PASSWORD:}
+    connection-timeout: 5s
+    socket-timeout: 30s
+
   mail:
     host: smtp.gmail.com
     port: 587

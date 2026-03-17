@@ -6,12 +6,17 @@ import dev.alro127.tasksense.dto.response.UserResponse;
 import dev.alro127.tasksense.exception.BadRequestException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
+import dev.alro127.tasksense.domain.enums.EntityType;
+import dev.alro127.tasksense.event.EntityChangedEvent;
+import dev.alro127.tasksense.event.EntityChangedEvent.Operation;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -21,6 +26,7 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final SecurityService securityService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public UserResponse getCurrentUser() {
@@ -37,6 +43,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public UserResponse updateCurrentUser(UpdateUserRequest request) {
 
         UserEntity user = securityService.getCurrentUser();
@@ -69,11 +76,12 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
 
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.USER, user.getId(), Operation.UPSERT));
         return UserResponse.mapToResponse(user);
     }
 
-
     @Override
+    @Transactional
     public void deleteUser(Long id) {
 
         UserEntity user = securityService.getCurrentUser();
@@ -86,6 +94,7 @@ public class UserServiceImpl implements UserService {
         user.setIsActive(false);
 
         userRepository.save(user);
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.USER, user.getId(), Operation.DELETE));
     }
 
     @Override

@@ -47,4 +47,15 @@ public interface ProjectRepository extends JpaRepository<ProjectEntity, Long> {
     @Modifying
     @Query("UPDATE ProjectEntity p SET p.deletedAt = :now WHERE p.workspace.id = :workspaceId AND p.deletedAt IS NULL")
     int softDeleteByWorkspaceId(@Param("workspaceId") Long workspaceId, @Param("now") OffsetDateTime now);
+
+    // ===== ES sync queries =====
+
+    @Query("SELECT p.id FROM ProjectEntity p WHERE p.updatedAt > :since ORDER BY p.id ASC")
+    List<Long> findIdsSince(@Param("since") OffsetDateTime since, Pageable pageable);
+
+    @Query("SELECT p FROM ProjectEntity p JOIN FETCH p.workspace WHERE p.id IN :ids")
+    List<ProjectEntity> findAllByIdsWithWorkspace(@Param("ids") List<Long> ids);
+
+    @Query("SELECT p FROM ProjectEntity p JOIN FETCH p.workspace WHERE p.id = :id")
+    Optional<ProjectEntity> findByIdWithWorkspace(@Param("id") Long id);
 }

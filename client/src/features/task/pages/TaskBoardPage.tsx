@@ -301,7 +301,7 @@ function KanbanColumn({
   workspaceId: number;
   onEdit: (task: TaskResponse) => void;
   onDelete: (task: TaskResponse) => void;
-  onAddTask: () => void;
+  onAddTask: (status: TaskStatus) => void;
   isOver: boolean;
   canAddTask?: boolean;
 }) {
@@ -366,7 +366,7 @@ function KanbanColumn({
       {/* Quick add button per column */}
       {canAddTask && (
         <button
-          onClick={onAddTask}
+          onClick={() => onAddTask(col.value)}
           className="flex items-center gap-2 border-t px-3 py-2.5 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
         >
           <Plus className="h-3.5 w-3.5" />
@@ -740,6 +740,7 @@ export function TaskBoardPage() {
   // Sheet state
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskResponse | undefined>();
+  const [defaultStatus, setDefaultStatus] = useState<TaskStatus | undefined>();
 
   // Delete dialog state
   const [deleteTarget, setDeleteTarget] = useState<TaskResponse | null>(null);
@@ -768,8 +769,9 @@ export function TaskBoardPage() {
   const listTotalPages = Math.max(1, listPagination?.totalPages ?? 1);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
-  const handleOpenCreate = useCallback(() => {
+  const handleOpenCreate = useCallback((status?: TaskStatus) => {
     setEditingTask(undefined);
+    setDefaultStatus(status);
     setSheetOpen(true);
   }, []);
 
@@ -1361,6 +1363,7 @@ export function TaskBoardPage() {
         onOpenChange={setSheetOpen}
         projectId={projectId}
         task={editingTask}
+        defaultStatus={defaultStatus}
       />
 
       {/* ── Delete Dialog ── */}

@@ -12,11 +12,14 @@ import dev.alro127.tasksense.dto.response.UserSummaryResponse;
 import dev.alro127.tasksense.exception.ForbiddenException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.*;
+import dev.alro127.tasksense.event.EntityChangedEvent;
+import dev.alro127.tasksense.event.EntityChangedEvent.Operation;
 import dev.alro127.tasksense.service.CommentService;
 import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.SecurityService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +39,7 @@ public class CommentServiceImpl implements CommentService {
     private final SecurityService securityService;
     private final NotificationService notificationService;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     private void checkOwner(CommentEntity comment) {
 
@@ -135,6 +139,7 @@ public class CommentServiceImpl implements CommentService {
 
         sendTaskCommentNotifications(comment, mentionIds, currentUser);
 
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.COMMENT, comment.getId(), Operation.UPSERT));
         return CommentResponse.mapToResponse(comment);
     }
 
@@ -166,6 +171,7 @@ public class CommentServiceImpl implements CommentService {
             sendTaskCommentNotifications(comment, addedMentions, currentUser);
         }
 
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.COMMENT, commentId, Operation.UPSERT));
         return CommentResponse.mapToResponse(comment);
     }
 
@@ -179,6 +185,7 @@ public class CommentServiceImpl implements CommentService {
         checkOwner(comment);
 
         comment.setDeletedAt(OffsetDateTime.now());
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.COMMENT, commentId, Operation.DELETE));
     }
 
     @Override
