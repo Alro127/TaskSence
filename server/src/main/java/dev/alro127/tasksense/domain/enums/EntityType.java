@@ -6,5 +6,6 @@ public enum EntityType {
     TASK,
     INVITATION,
     COMMENT,
-    NOTIFICATION
+    NOTIFICATION,
+    USER
 }

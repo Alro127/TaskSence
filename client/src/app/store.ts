@@ -21,6 +21,7 @@ import { commentApi } from "@/features/task/api/commentApi";
 import { attachmentApi } from "@/features/task/api/attachmentApi";
 import { sprintApi } from "@/features/sprint/api/sprintApi";
 import { tagApi } from "@/features/tag/api/tagApi";
+import { analyticsApi } from "@/features/analytics/api/analyticsApi";
 
 const combinedReducer = combineReducers({
   auth: authReducer,
@@ -45,6 +46,7 @@ const combinedReducer = combineReducers({
   [attachmentApi.reducerPath]: attachmentApi.reducer,
   [sprintApi.reducerPath]: sprintApi.reducer,
   [tagApi.reducerPath]: tagApi.reducer,
+  [analyticsApi.reducerPath]: analyticsApi.reducer,
 });
 
 type RootReducerState = ReturnType<typeof combinedReducer>;
@@ -83,7 +85,8 @@ export const store = configureStore({
       .concat(commentApi.middleware)
       .concat(attachmentApi.middleware)
       .concat(sprintApi.middleware)
-      .concat(tagApi.middleware),
+      .concat(tagApi.middleware)
+      .concat(analyticsApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

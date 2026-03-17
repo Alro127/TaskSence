@@ -22,7 +22,7 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
-import type { TaskPriority, TaskResponse } from "@/types/api";
+import type { TaskPriority, TaskStatus, TaskResponse } from "@/types/api";
 
 function toDatetimeLocal(iso: string): string {
   const d = new Date(iso);
@@ -43,6 +43,8 @@ interface TaskFormSheetProps {
   task?: TaskResponse;
   /** Pre-fill parentTaskId when adding a subtask */
   parentTaskId?: number;
+  /** Pre-fill status when creating from a specific board column */
+  defaultStatus?: TaskStatus;
 }
 
 const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
@@ -52,12 +54,20 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
   { value: "URGENT", label: "Urgent" },
 ];
 
+const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
+  { value: "TODO", label: "To Do" },
+  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "REVIEW", label: "Review" },
+  { value: "DONE", label: "Done" },
+];
+
 export function TaskFormSheet({
   open,
   onOpenChange,
   projectId,
   task,
   parentTaskId,
+  defaultStatus,
 }: TaskFormSheetProps) {
   const isEdit = !!task;
   const isSubtask = !isEdit && parentTaskId != null;
@@ -65,6 +75,7 @@ export function TaskFormSheet({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TaskPriority | "none">("none");
+  const [status, setStatus] = useState<TaskStatus | "none">("TODO");
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [sprintSelection, setSprintSelection] = useState<string>("NONE");
@@ -98,6 +109,7 @@ export function TaskFormSheet({
       setTitle(task.title);
       setDescription(task.description ?? "");
       setPriority(task.priority ?? "none");
+      setStatus(task.status ?? "none");
       setStartDate(task.startDate ? toDatetimeLocal(task.startDate) : "");
       setDueDate(task.dueDate ? toDatetimeLocal(task.dueDate) : "");
       setSprintSelection(task.sprintId != null ? String(task.sprintId) : "NONE");
@@ -107,6 +119,7 @@ export function TaskFormSheet({
       setTitle("");
       setDescription("");
       setPriority("none");
+      setStatus(defaultStatus ?? "TODO");
       setStartDate("");
       setDueDate("");
       setSprintSelection("NONE");
@@ -140,6 +153,7 @@ export function TaskFormSheet({
       title: title.trim(),
       description: description.trim() || undefined,
       priority: priority !== "none" ? priority : undefined,
+      status: status !== "none" ? status : undefined,
       startDate: startDate ? new Date(startDate).toISOString() : undefined,
       dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
       sprintId: sprintSelection !== "NONE" ? Number(sprintSelection) : undefined,
@@ -215,25 +229,47 @@ export function TaskFormSheet({
             />
           </div>
 
-          {/* Priority */}
-          <div className="space-y-2">
-            <Label>Priority</Label>
-            <Select
-              value={priority}
-              onValueChange={(v) => setPriority(v as TaskPriority | "none")}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="No priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No priority</SelectItem>
-                {PRIORITY_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Priority & Status */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Priority</Label>
+              <Select
+                value={priority}
+                onValueChange={(v) => setPriority(v as TaskPriority | "none")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="No priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No priority</SelectItem>
+                  {PRIORITY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select
+                value={status}
+                onValueChange={(v) => setStatus(v as TaskStatus | "none")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Default" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Default</SelectItem>
+                  {STATUS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Dates */}

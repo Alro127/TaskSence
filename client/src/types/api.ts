@@ -479,6 +479,7 @@ export interface CreateTaskRequest {
   title: string;
   description?: string;
   priority?: TaskPriority;
+  status?: TaskStatus;
   startDate?: string;
   dueDate?: string;
   parentTaskId?: number;
@@ -570,4 +571,36 @@ export interface CreateAttachmentFileInfo {
 export interface CreateAttachmentsRequest {
   taskId: number;
   files: CreateAttachmentFileInfo[];
+}
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+export interface DayCount {
+  date: string;
+  count: number;
+}
+
+export interface SprintVelocity {
+  sprintId: number;
+  completedCount: number;
+}
+
+export interface MemberPerformance {
+  userId: number;
+  assignedCount: number;
+  completedCount: number;
+  overdueCount: number;
+  performanceScore: number;
+}
+
+export interface ProjectAnalyticsResponse {
+  totalTasks: number;
+  statusDistribution: Record<string, number>;
+  priorityDistribution: Record<string, number>;
+  overdueCount: number;
+  completionTrend: DayCount[];
+  healthScore: number;
+  projectedCompletionDate: string | null;
+  avgDailyVelocity: number;
+  sprintVelocity: SprintVelocity[];
+  memberPerformance: MemberPerformance[];
 }

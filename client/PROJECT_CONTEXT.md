@@ -1,7 +1,7 @@
 # TaskSense - Frontend Project Context
 
 > File này dùng để giữ context cho AI và developers. Cập nhật sau mỗi sprint/thay đổi lớn.
-> **Cập nhật lần cuối**: Sprint 11 + Post-review task loading follow-up
+> **Cập nhật lần cuối**: Sprint 12 — Analytics (Elasticsearch aggregations)
 
 ## 📋 Thông tin dự án
 
@@ -109,6 +109,8 @@
   - `POST /notifications/read-all` → đánh dấu tất cả là đã đọc → số lượng đã update
   - `DELETE /notifications/:id` → xóa 1 thông báo
   - `DELETE /notifications` → body: `{ids: number[]}` → xóa nhiều thông báo
+- **Analytics Endpoints**:
+  - `GET /projects/:projectId/analytics` → `ProjectAnalyticsResponse` _(VIEW_TASKS permission)_
 - **WebSocket**: `ws://localhost:8080/api/v1/ws` (STOMP)
   - Connect header: `Authorization: Bearer <accessToken>`
   - Subscribe: `/user/queue/notifications` → nhận `NotificationSocketMessage` real-time
@@ -124,7 +126,7 @@
 client/
 ├── src/
 │   ├── app/
-│   │   ├── store.ts          ← Đã thêm notificationApi + notificationReducer + taskApi + commentApi
+│   │   ├── store.ts          ← Đã thêm notificationApi + notificationReducer + taskApi + commentApi + analyticsApi
 │   │   └── hooks.ts
 │   ├── components/
 │   │   ├── ui/               ← Đã thêm: dialog, dropdown-menu, tabs, badge, sheet
@@ -210,6 +212,11 @@ client/
 │   │   ├── sprint/
 │   │   │   └── api/
 │   │   │       └── sprintApi.ts           ← RTK Query Sprint CRUD + list by project
+│   │   ├── analytics/                     ← Sprint 12 — HOÀN THÀNH
+│   │   │   ├── api/
+│   │   │   │   └── analyticsApi.ts        ← RTK Query: getProjectAnalytics(projectId)
+│   │   │   └── components/
+│   │   │       └── ProjectAnalyticsTab.tsx← Dashboard analytics tab: 6 sections, recharts
 │   │   ├── task/                            ← Sprint 9 FE — Task Board & Detail | Sprint 10 — Comments
 │   │   │   ├── api/
 │   │   │   │   ├── taskApi.ts              ← RTK Query: 8 endpoints (CRUD + search + subtasks + updateTaskStatus)
@@ -247,7 +254,8 @@ client/
    │                            WorkspaceJoinRequest, TeamTemplate, Project, ProjectMember, ProjectJoinRequest,
    │                            Task (incl. UpdateTaskStatusRequest), UserSkill,
    │                            Notification (incl. WORKSPACE_REVIEW_REQUEST),
-   │                            Comment (CommentResponse, CommentCreateRequest, CommentUpdateRequest, CommentReactionRequest), etc.
+   │                            Comment (CommentResponse, CommentCreateRequest, CommentUpdateRequest, CommentReactionRequest),
+   │                            Analytics (DayCount, SprintVelocity, MemberPerformance, ProjectAnalyticsResponse)
 │   ├── App.tsx
 │   ├── main.tsx
 │   └── index.css
@@ -628,6 +636,45 @@ client/
   - Summary card cho `No Sprint`
   - Ghi chú xác minh sau triển khai: deep-link từ Sprint/Tag sang task page đã tồn tại, nhưng luồng filter theo query params hiện cần được rà soát lại vì chưa đồng bộ đầy đủ với trạng thái code thực tế
   - Follow-up đã được ghi tại `Documents/task-loading-sprint-tag-issues.md`
+
+### Sprint 12 - Analytics Dashboard ✅ COMPLETED
+
+> Analytics engine chạy hoàn toàn trên **Elasticsearch aggregations** — không tính toán trên Postgres hay frontend. Tài liệu chi tiết tại `C:\Users\ChiLua\Documents\TaskSense_Analytics.md`.
+
+- ✅ **Backend — `AnalyticsController`**: `GET /projects/{projectId}/analytics` với `@PreAuthorize("@perm.project(#projectId, 'VIEW_TASKS')")`
+- ✅ **Backend — `SearchIndexService.getProjectAnalytics()`**: 7 ES aggregations song song:
+  - `status_dist` — `terms(status)` → StatusDistribution map
+  - `priority_dist` — `terms(priority)` → PriorityDistribution map
+  - `overdue` — `filter(dueDate < now AND status != DONE)` → overdueCount
+  - `completion_trend` — `filter(completedAt >= 30d ago) → date_histogram/day` → completionTrend
+  - `member_total/done/overdue` — `filter → nested(assignees) → terms(assignees.id)` → memberPerformance
+  - `sprint_velocity` — `filter(DONE + sprintId exists) → terms(sprintId)` → sprintVelocity
+- ✅ **Backend — Derived metrics** (tính trong Java sau khi parse aggregation):
+  - `healthScore = round(completionRate×0.6 + onTimeRate×0.4)` (0–100)
+  - `avgDailyVelocity = sum(completionTrend) / 30`
+  - `projectedCompletionDate = today + ceil(remaining / avgDailyVelocity)` (null nếu velocity = 0)
+  - `memberPerformanceScore = round((completionRate×0.6 + onTimeRate×0.4)×100)`
+- ✅ **`ProjectAnalyticsResponse`** DTO: `totalTasks`, `statusDistribution`, `priorityDistribution`, `overdueCount`, `completionTrend`, `healthScore`, `projectedCompletionDate`, `avgDailyVelocity`, `sprintVelocity`, `memberPerformance`
+- ✅ **Types** — thêm vào `types/api.ts`:
+  - `DayCount` — `{date: string; count: number}`
+  - `SprintVelocity` — `{sprintId: number; completedCount: number}`
+  - `MemberPerformance` — `{userId, assignedCount, completedCount, overdueCount, performanceScore}`
+  - `ProjectAnalyticsResponse` — tổng hợp tất cả analytics fields
+- ✅ **`analyticsApi`** (`features/analytics/api/analyticsApi.ts`) — RTK Query, 1 endpoint: `getProjectAnalytics(projectId)` → `GET /projects/${projectId}/analytics`
+- ✅ **`ProjectAnalyticsTab`** (`features/analytics/components/ProjectAnalyticsTab.tsx`) — 6 sections:
+  1. **Summary stats**: 4 stat cards — Total Tasks, Completed %, Overdue count, Velocity (30d)
+  2. **Project Health + Projected Completion**: health score badge (Healthy/At Risk/Critical) + ngày dự kiến xong
+  3. **Status Distribution**: DistBar progress bars + BarChart (recharts)
+  4. **Priority Distribution**: DistBar progress bars + BarChart
+  5. **Completion Trend (30 days)**: LineChart ngày × count (recharts)
+  6. **Sprint Velocity**: BarChart tasks completed per sprint (enrich với sprint name)
+  7. **Member Performance** (chỉ `showMemberWorkload=true` — MANAGER): avatar + name + score badge + progress bar + assigned/done/overdue stats
+- ✅ **`ProjectDetailPage`** — thêm tab **Analytics** (nâng từ 5 lên 6 tabs):
+  - `TabsTrigger value="analytics"` với `BarChart2` icon
+  - `<ProjectAnalyticsTab projectId={projectId} showMemberWorkload={canManageMembers} members={allMembers} sprints={sprints} />`
+- ✅ Cài thêm dependency: **`recharts`** (`npm install recharts`)
+- ✅ Cập nhật **store.ts**: đăng ký `analyticsApi` reducer + middleware
+- ✅ **Phân quyền**: MANAGER thấy Member Performance; MEMBER/VIEWER thấy tất cả phần còn lại
 
 ### Sprint 7 - Project CRUD & Member Management ✅ COMPLETED
 

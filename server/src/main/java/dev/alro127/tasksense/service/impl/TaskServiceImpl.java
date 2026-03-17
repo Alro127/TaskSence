@@ -19,12 +19,15 @@ import dev.alro127.tasksense.repository.jpa.*;
 import dev.alro127.tasksense.security.permission.EffectivePermissionResolver;
 import dev.alro127.tasksense.security.permission.PermissionChecker;
 import dev.alro127.tasksense.security.permission.TaskPermission;
+import dev.alro127.tasksense.event.EntityChangedEvent;
+import dev.alro127.tasksense.event.EntityChangedEvent.Operation;
 import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.ReminderService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.TaskService;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -51,6 +54,7 @@ public class TaskServiceImpl implements TaskService {
     private final ReminderService reminderService;
     private final NotificationService notificationService;
     private final TagRepository tagRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ===== Helpers =====
 
@@ -150,6 +154,7 @@ public class TaskServiceImpl implements TaskService {
                 .title(request.getTitle().trim())
                 .description(request.getDescription())
                 .priority(request.getPriority())
+                .status(request.getStatus())
                 .startDate(request.getStartDate())
                 .dueDate(request.getDueDate())
                 .sprint(resolveSprint(projectId, request.getSprintId()))
@@ -187,6 +192,7 @@ public class TaskServiceImpl implements TaskService {
             reminderService.scheduleReminder(saved.getId(), reminderTime);
         }
 
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.TASK, saved.getId(), Operation.UPSERT));
         return toResponseWithPermissions(saved, projectId);
     }
 
@@ -368,6 +374,7 @@ public class TaskServiceImpl implements TaskService {
             OffsetDateTime reminderTime = saved.getDueDate().minusMinutes(15);
             reminderService.scheduleReminder(saved.getId(), reminderTime);
         }
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.TASK, saved.getId(), Operation.UPSERT));
         return toResponseWithPermissions(task, projectId);
     }
 
@@ -389,6 +396,7 @@ public class TaskServiceImpl implements TaskService {
         }
 
         taskRepository.save(task);
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.TASK, taskId, Operation.UPSERT));
         return toResponseWithPermissions(task, projectId);
     }
 
@@ -408,6 +416,7 @@ public class TaskServiceImpl implements TaskService {
 
         task.setDeletedAt(now);
         taskRepository.save(task);
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.TASK, taskId, Operation.DELETE));
     }
 
     @Override
@@ -430,6 +439,7 @@ public class TaskServiceImpl implements TaskService {
         task.getTags().addAll(tags);
 
         taskRepository.save(task);
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.TASK, taskId, Operation.UPSERT));
     }
 
     @Override
@@ -446,5 +456,6 @@ public class TaskServiceImpl implements TaskService {
         task.getTags().removeIf(tag -> tagIds.contains(tag.getId()));
 
         taskRepository.save(task);
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.TASK, taskId, Operation.UPSERT));
     }
 }

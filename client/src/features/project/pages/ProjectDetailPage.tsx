@@ -21,6 +21,7 @@ import {
   X,
   Clock,
   Tags,
+  BarChart2,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -47,6 +48,7 @@ import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi"
 import { useGetMembersQuery, useUpdateMemberRoleMutation } from "../api/projectMemberApi";
 import { useGetJoinRequestsQuery, useReviewJoinRequestMutation, useCancelJoinRequestMutation } from "../api/projectJoinRequestApi";
 import { useGetTasksByProjectQuery } from "@/features/task/api/taskApi";
+import { ProjectAnalyticsTab } from "@/features/analytics/components/ProjectAnalyticsTab";
 import {
   DeleteProjectDialog,
   EditProjectModal,
@@ -728,6 +730,10 @@ export function ProjectDetailPage() {
               )}
             </TabsTrigger>
           )}
+          <TabsTrigger value="analytics" className="gap-2">
+            <BarChart2 className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Overview Tab ── */}
@@ -1107,6 +1113,15 @@ export function ProjectDetailPage() {
             )}
           </TabsContent>
         )}
+
+        {/* ── Analytics Tab ── */}
+        <TabsContent value="analytics" className="mt-6 space-y-6">
+          <ProjectAnalyticsTab
+            projectId={projectId}
+            showMemberWorkload={canManageMembers}
+            members={allMembers}
+          />
+        </TabsContent>
       </Tabs>
 
       {/* ── Modals ── */}

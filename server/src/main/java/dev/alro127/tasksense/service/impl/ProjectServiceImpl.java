@@ -15,11 +15,17 @@ import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.TaskRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
 import dev.alro127.tasksense.security.permission.EffectivePermissionResolver;
+import dev.alro127.tasksense.domain.enums.EntityType;
+import dev.alro127.tasksense.event.EntityChangedEvent;
+import dev.alro127.tasksense.event.EntityChangedEvent.Operation;
 import dev.alro127.tasksense.service.ProjectService;
+import dev.alro127.tasksense.service.SearchIndexService;
 import dev.alro127.tasksense.service.SecurityService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +37,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProjectServiceImpl implements ProjectService {
 
     private final ProjectRepository projectRepository;
@@ -39,6 +46,8 @@ public class ProjectServiceImpl implements ProjectService {
     private final TaskRepository taskRepository;
     private final SecurityService securityService;
     private final EffectivePermissionResolver permissionResolver;
+    private final ApplicationEventPublisher eventPublisher;
+    private final SearchIndexService searchIndexService;
 
     @Override
     @Transactional
@@ -68,6 +77,7 @@ public class ProjectServiceImpl implements ProjectService {
         projectRepository.save(project);
         projectMemberRepository.save(owner);
 
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.PROJECT, project.getId(), Operation.UPSERT));
         return toResponseWithPermissions(project);
     }
 
@@ -132,6 +142,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         projectRepository.save(project);
 
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.PROJECT, projectId, Operation.UPSERT));
         return toResponseWithPermissions(project);
     }
 
@@ -153,6 +164,15 @@ public class ProjectServiceImpl implements ProjectService {
 
         project.setDeletedAt(now);
         projectRepository.save(project);
+
+        // Xóa khỏi ES — best-effort, cascade delete không đi qua event
+        try {
+            searchIndexService.removeTasksByProject(projectId);
+            searchIndexService.removeCommentsByProject(projectId);
+        } catch (Exception e) {
+            log.error("Failed to remove tasks/comments from ES for projectId={}", projectId, e);
+        }
+        eventPublisher.publishEvent(new EntityChangedEvent(EntityType.PROJECT, projectId, Operation.DELETE));
     }
 
     // ---- helpers ----

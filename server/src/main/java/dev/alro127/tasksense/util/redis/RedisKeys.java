@@ -24,4 +24,6 @@ public class RedisKeys {
     public static String otp(String email) {
         return "OTP:" + email;
     }
+
+    public static final String ES_LAST_SYNC_TIME = "es:last_sync_time";
 }

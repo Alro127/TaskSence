@@ -1,6 +1,6 @@
 package dev.alro127.tasksense.domain.document;
 
-import dev.alro127.tasksense.domain.enums.Gender;
+import dev.alro127.tasksense.domain.enums.ProjectStatus;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
@@ -11,40 +11,37 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
-@Document(indexName = "users", createIndex = false)
+@Document(indexName = "projects", createIndex = false)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserDocument {
+public class ProjectDocument {
 
     @Id
     private Long id;
 
+    @Field(type = FieldType.Long)
+    private Long workspaceId;
+
     @Field(type = FieldType.Keyword)
-    private String email;
+    private String workspaceName;
 
     @Field(type = FieldType.Text, analyzer = "standard")
-    private String fullName;
+    private String name;
 
-    @Field(type = FieldType.Boolean)
-    private Boolean isActive;
-
-    @Field(type = FieldType.Keyword)
-    private String avatarUrl;
+    @Field(type = FieldType.Text, analyzer = "standard")
+    private String description;
 
     @Field(type = FieldType.Keyword)
-    private String phone;
-
-    @Field(type = FieldType.Keyword)
-    private Gender gender;
+    private ProjectStatus status;
 
     @Field(type = FieldType.Date, format = DateFormat.year_month_day)
-    private LocalDate dob;
+    private LocalDate startDate;
 
-    @Field(type = FieldType.Text, analyzer = "standard")
-    private String bio;
+    @Field(type = FieldType.Date, format = DateFormat.year_month_day)
+    private LocalDate endDate;
 
     @Field(type = FieldType.Date, format = DateFormat.date_time)
     private OffsetDateTime createdAt;

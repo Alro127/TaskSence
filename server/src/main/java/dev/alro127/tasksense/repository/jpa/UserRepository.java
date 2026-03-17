@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import dev.alro127.tasksense.domain.entity.UserEntity;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,4 +33,9 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
             @Param("keyword") String keyword,
             @Param("cursor") Long cursor,
             Pageable pageable);
+
+    // ===== ES sync queries =====
+
+    @Query("SELECT u FROM UserEntity u WHERE u.updatedAt > :since ORDER BY u.id ASC")
+    List<UserEntity> findSince(@Param("since") OffsetDateTime since, Pageable pageable);
 }
