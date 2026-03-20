@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,77 +18,69 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class SprintController {
 
-    private final SprintService sprintService;
+        private final SprintService sprintService;
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<SprintResponse>> createSprint(
-            @Valid @RequestBody CreateSprintRequest request
-    ) {
+        @PostMapping
+        @PreAuthorize("@perm.project(#request.projectId, 'CREATE_SPRINT')")
+        public ResponseEntity<ApiResponse<SprintResponse>> createSprint(
+                        @Valid @RequestBody CreateSprintRequest request) {
 
-        SprintResponse sprint = sprintService.createSprint(request);
+                SprintResponse sprint = sprintService.createSprint(request);
 
-        ApiResponse<SprintResponse> response = new ApiResponse<>(
-                "200",
-                "Create sprint successfully",
-                sprint,
-                null
-        );
+                ApiResponse<SprintResponse> response = new ApiResponse<>(
+                                "200",
+                                "Create sprint successfully",
+                                sprint,
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @PutMapping("/{sprintId}")
-    public ResponseEntity<ApiResponse<SprintResponse>> updateSprint(
-            @PathVariable Long sprintId,
-            @Valid @RequestBody UpdateSprintRequest request
-    ) {
+        @PutMapping("/{sprintId}")
+        public ResponseEntity<ApiResponse<SprintResponse>> updateSprint(
+                        @PathVariable Long sprintId,
+                        @Valid @RequestBody UpdateSprintRequest request) {
 
-        SprintResponse sprint = sprintService.updateSprint(sprintId, request);
+                SprintResponse sprint = sprintService.updateSprint(sprintId, request);
 
-        ApiResponse<SprintResponse> response = new ApiResponse<>(
-                "200",
-                "Update sprint successfully",
-                sprint,
-                null
-        );
+                ApiResponse<SprintResponse> response = new ApiResponse<>(
+                                "200",
+                                "Update sprint successfully",
+                                sprint,
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @DeleteMapping("/{sprintId}")
-    public ResponseEntity<ApiResponse<Void>> deleteSprint(
-            @PathVariable Long sprintId
-    ) {
+        @DeleteMapping("/{sprintId}")
+        public ResponseEntity<ApiResponse<Void>> deleteSprint(
+                        @PathVariable Long sprintId) {
 
-        sprintService.deleteSprint(sprintId);
+                sprintService.deleteSprint(sprintId);
 
-        ApiResponse<Void> response = new ApiResponse<>(
-                "200",
-                "Delete sprint successfully",
-                null,
-                null
-        );
+                ApiResponse<Void> response = new ApiResponse<>(
+                                "200",
+                                "Delete sprint successfully",
+                                null,
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @GetMapping("/project/{projectId}")
-    public ResponseEntity<ApiResponse<PageResponse<SprintResponse>>> getProjectSprints(
-            @PathVariable Long projectId,
-            Pageable pageable
-    ) {
+        @GetMapping("/project/{projectId}")
+        @PreAuthorize("@perm.project(#projectId, 'VIEW_SPRINTS')")
+        public ResponseEntity<ApiResponse<PageResponse<SprintResponse>>> getProjectSprints(
+                        @PathVariable Long projectId,
+                        Pageable pageable) {
 
-        PageResponse<SprintResponse> sprints =
-                sprintService.getProjectSprints(projectId, pageable);
+                PageResponse<SprintResponse> sprints = sprintService.getProjectSprints(projectId, pageable);
 
-        ApiResponse<PageResponse<SprintResponse>> response =
-                new ApiResponse<>(
-                        "200",
-                        "Get project sprints successfully",
-                        sprints,
-                        null
-                );
+                ApiResponse<PageResponse<SprintResponse>> response = new ApiResponse<>(
+                                "200",
+                                "Get project sprints successfully",
+                                sprints,
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 }

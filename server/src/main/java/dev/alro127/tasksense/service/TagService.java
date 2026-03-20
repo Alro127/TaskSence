@@ -10,9 +10,9 @@ public interface TagService {
 
     TagResponse createTag(Long projectId, CreateTagRequest request);
 
-    TagResponse updateTag(Long tagId, UpdateTagRequest request);
+    TagResponse updateTag(Long projectId, Long tagId, UpdateTagRequest request);
 
-    void deleteTag(Long tagId);
+    void deleteTag(Long projectId, Long tagId);
 
     List<TagResponse> getTagsByProject(Long projectId);
 }
