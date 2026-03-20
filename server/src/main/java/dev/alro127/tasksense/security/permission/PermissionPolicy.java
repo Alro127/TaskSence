@@ -21,98 +21,103 @@ import java.util.Set;
 @Component
 public class PermissionPolicy {
 
-    // ========================= WORKSPACE =========================
+        // ========================= WORKSPACE =========================
 
-    private static final Map<WorkspaceRole, Set<WorkspacePermission>> WORKSPACE_POLICY = Map.of(
-            WorkspaceRole.OWNER, EnumSet.allOf(WorkspacePermission.class),
+        private static final Map<WorkspaceRole, Set<WorkspacePermission>> WORKSPACE_POLICY = Map.of(
+                        WorkspaceRole.OWNER, EnumSet.allOf(WorkspacePermission.class),
 
-            WorkspaceRole.MANAGER, EnumSet.of(
-                    WorkspacePermission.VIEW,
-                    WorkspacePermission.VIEW_MEMBERS,
-                    WorkspacePermission.MANAGE_MEMBERS,
-                    WorkspacePermission.INVITE_MEMBERS,
-                    WorkspacePermission.MANAGE_JOIN_REQUESTS),
+                        WorkspaceRole.MANAGER, EnumSet.of(
+                                        WorkspacePermission.VIEW,
+                                        WorkspacePermission.VIEW_MEMBERS,
+                                        WorkspacePermission.MANAGE_MEMBERS,
+                                        WorkspacePermission.INVITE_MEMBERS,
+                                        WorkspacePermission.MANAGE_JOIN_REQUESTS),
 
-            WorkspaceRole.MEMBER, EnumSet.of(
-                    WorkspacePermission.VIEW,
-                    WorkspacePermission.VIEW_MEMBERS),
+                        WorkspaceRole.MEMBER, EnumSet.of(
+                                        WorkspacePermission.VIEW,
+                                        WorkspacePermission.VIEW_MEMBERS),
 
-            WorkspaceRole.VIEWER, EnumSet.of(
-                    WorkspacePermission.VIEW,
-                    WorkspacePermission.VIEW_MEMBERS));
+                        WorkspaceRole.VIEWER, EnumSet.of(
+                                        WorkspacePermission.VIEW,
+                                        WorkspacePermission.VIEW_MEMBERS));
 
-    // ========================= PROJECT =========================
+        // ========================= PROJECT =========================
 
-    private static final Map<ProjectMemberRole, Set<ProjectPermission>> PROJECT_POLICY = Map.of(
-            ProjectMemberRole.MANAGER, EnumSet.allOf(ProjectPermission.class),
+        private static final Map<ProjectMemberRole, Set<ProjectPermission>> PROJECT_POLICY = Map.of(
+                        ProjectMemberRole.MANAGER, EnumSet.allOf(ProjectPermission.class),
 
-            ProjectMemberRole.MEMBER, EnumSet.of(
-                    ProjectPermission.VIEW,
-                    ProjectPermission.VIEW_MEMBERS,
-                    ProjectPermission.VIEW_TASKS,
-                    ProjectPermission.CREATE_TASK,
-                    ProjectPermission.UPDATE_TASK,
-                    ProjectPermission.DELETE_TASK,
-                    ProjectPermission.UPDATE_TASK_STATUS),
+                        ProjectMemberRole.MEMBER, EnumSet.of(
+                                        ProjectPermission.VIEW,
+                                        ProjectPermission.VIEW_MEMBERS,
+                                        ProjectPermission.VIEW_TAGS,
+                                        ProjectPermission.VIEW_SPRINTS,
+                                        ProjectPermission.VIEW_TASKS,
+                                        ProjectPermission.CREATE_TASK,
+                                        ProjectPermission.UPDATE_TASK,
+                                        ProjectPermission.DELETE_TASK,
+                                        ProjectPermission.UPDATE_TASK_STATUS),
 
-            ProjectMemberRole.VIEWER, EnumSet.of(
-                    ProjectPermission.VIEW,
-                    ProjectPermission.VIEW_MEMBERS,
-                    ProjectPermission.VIEW_TASKS));
+                        ProjectMemberRole.VIEWER, EnumSet.of(
+                                        ProjectPermission.VIEW,
+                                        ProjectPermission.VIEW_MEMBERS,
+                                        ProjectPermission.VIEW_TAGS,
+                                        ProjectPermission.VIEW_SPRINTS,
+                                        ProjectPermission.VIEW_TASKS));
 
-    // ========================= TASK =========================
+        // ========================= TASK =========================
 
-    /**
-     * Base task permissions theo project role (chưa tính context).
-     * Context modifiers (creator, assignee) được xử lý trong EffectivePermissionResolver.
-     */
-    private static final Map<ProjectMemberRole, Set<TaskPermission>> TASK_BASE_POLICY = Map.of(
-            ProjectMemberRole.MANAGER, EnumSet.allOf(TaskPermission.class),
+        /**
+         * Base task permissions theo project role (chưa tính context).
+         * Context modifiers (creator, assignee) được xử lý trong
+         * EffectivePermissionResolver.
+         */
+        private static final Map<ProjectMemberRole, Set<TaskPermission>> TASK_BASE_POLICY = Map.of(
+                        ProjectMemberRole.MANAGER, EnumSet.allOf(TaskPermission.class),
 
-            ProjectMemberRole.MEMBER, EnumSet.of(
-                    TaskPermission.VIEW),
+                        ProjectMemberRole.MEMBER, EnumSet.of(
+                                        TaskPermission.VIEW),
 
-            ProjectMemberRole.VIEWER, EnumSet.of(
-                    TaskPermission.VIEW));
+                        ProjectMemberRole.VIEWER, EnumSet.of(
+                                        TaskPermission.VIEW));
 
-    /**
-     * Context-based task permissions.
-     * Creator/Assignee sẽ được merge thêm quyền bên dưới.
-     */
-    private static final Set<TaskPermission> TASK_CREATOR_PERMISSIONS = EnumSet.of(
-            TaskPermission.EDIT,
-            TaskPermission.DELETE);
+        /**
+         * Context-based task permissions.
+         * Creator/Assignee sẽ được merge thêm quyền bên dưới.
+         */
+        private static final Set<TaskPermission> TASK_CREATOR_PERMISSIONS = EnumSet.of(
+                        TaskPermission.EDIT,
+                        TaskPermission.DELETE);
 
-    private static final Set<TaskPermission> TASK_ASSIGNEE_PERMISSIONS = EnumSet.of(
-            TaskPermission.UPDATE_STATUS);
+        private static final Set<TaskPermission> TASK_ASSIGNEE_PERMISSIONS = EnumSet.of(
+                        TaskPermission.UPDATE_STATUS);
 
-    // ========================= Query methods =========================
+        // ========================= Query methods =========================
 
-    public boolean hasWorkspacePermission(WorkspaceRole role, WorkspacePermission permission) {
-        return WORKSPACE_POLICY.getOrDefault(role, Set.of()).contains(permission);
-    }
+        public boolean hasWorkspacePermission(WorkspaceRole role, WorkspacePermission permission) {
+                return WORKSPACE_POLICY.getOrDefault(role, Set.of()).contains(permission);
+        }
 
-    public boolean hasProjectPermission(ProjectMemberRole role, ProjectPermission permission) {
-        return PROJECT_POLICY.getOrDefault(role, Set.of()).contains(permission);
-    }
+        public boolean hasProjectPermission(ProjectMemberRole role, ProjectPermission permission) {
+                return PROJECT_POLICY.getOrDefault(role, Set.of()).contains(permission);
+        }
 
-    public Set<WorkspacePermission> getWorkspacePermissions(WorkspaceRole role) {
-        return WORKSPACE_POLICY.getOrDefault(role, Set.of());
-    }
+        public Set<WorkspacePermission> getWorkspacePermissions(WorkspaceRole role) {
+                return WORKSPACE_POLICY.getOrDefault(role, Set.of());
+        }
 
-    public Set<ProjectPermission> getProjectPermissions(ProjectMemberRole role) {
-        return PROJECT_POLICY.getOrDefault(role, Set.of());
-    }
+        public Set<ProjectPermission> getProjectPermissions(ProjectMemberRole role) {
+                return PROJECT_POLICY.getOrDefault(role, Set.of());
+        }
 
-    public Set<TaskPermission> getTaskBasePermissions(ProjectMemberRole role) {
-        return TASK_BASE_POLICY.getOrDefault(role, Set.of());
-    }
+        public Set<TaskPermission> getTaskBasePermissions(ProjectMemberRole role) {
+                return TASK_BASE_POLICY.getOrDefault(role, Set.of());
+        }
 
-    public Set<TaskPermission> getTaskCreatorPermissions() {
-        return TASK_CREATOR_PERMISSIONS;
-    }
+        public Set<TaskPermission> getTaskCreatorPermissions() {
+                return TASK_CREATOR_PERMISSIONS;
+        }
 
-    public Set<TaskPermission> getTaskAssigneePermissions() {
-        return TASK_ASSIGNEE_PERMISSIONS;
-    }
+        public Set<TaskPermission> getTaskAssigneePermissions() {
+                return TASK_ASSIGNEE_PERMISSIONS;
+        }
 }

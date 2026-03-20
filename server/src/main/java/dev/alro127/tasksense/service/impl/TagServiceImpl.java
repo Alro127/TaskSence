@@ -8,6 +8,7 @@ import dev.alro127.tasksense.dto.response.TagResponse;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.TagRepository;
 import dev.alro127.tasksense.service.TagService;
+import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -44,10 +45,14 @@ public class TagServiceImpl implements TagService {
     }
 
     @Override
-    public TagResponse updateTag(Long tagId, UpdateTagRequest request) {
+    public TagResponse updateTag(Long projectId, Long tagId, UpdateTagRequest request) {
 
         TagEntity tag = tagRepository.findById(tagId)
                 .orElseThrow(() -> new EntityNotFoundException("Tag not found"));
+
+        if (!tag.getProject().getId().equals(projectId)) {
+            throw new ResourceNotFoundException("Tag not found");
+        }
 
         tag.setName(request.getName());
         tag.setColor(request.getColor());
@@ -58,10 +63,14 @@ public class TagServiceImpl implements TagService {
     }
 
     @Override
-    public void deleteTag(Long tagId) {
+    public void deleteTag(Long projectId, Long tagId) {
 
         TagEntity tag = tagRepository.findById(tagId)
                 .orElseThrow(() -> new EntityNotFoundException("Tag not found"));
+
+        if (!tag.getProject().getId().equals(projectId)) {
+            throw new ResourceNotFoundException("Tag not found");
+        }
 
         tag.setDeletedAt(OffsetDateTime.now());
 
@@ -76,6 +85,5 @@ public class TagServiceImpl implements TagService {
                 .map(TagResponse::mapToResponse)
                 .toList();
     }
-
 
 }
