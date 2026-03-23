@@ -36,6 +36,9 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
 
     boolean existsByWorkspaceIdAndUserId(Long workspaceId, Long userId);
 
+    @Query("SELECT wm.workspace.id FROM WorkspaceMemberEntity wm WHERE wm.user.id = :userId")
+    List<Long> findWorkspaceIdsByUserId(Long userId);
+
     @Modifying
     @Query("UPDATE WorkspaceMemberEntity wm SET wm.deletedAt = :now WHERE wm.workspace.id = :workspaceId AND wm.deletedAt IS NULL")
     int softDeleteByWorkspaceId(@Param("workspaceId") Long workspaceId, @Param("now") OffsetDateTime now);

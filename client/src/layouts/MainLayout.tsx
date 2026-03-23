@@ -26,6 +26,9 @@ import { clearWorkspace } from "@/features/workspace/workspaceSlice";
 import { NotificationDropdown } from "@/features/notification/components/NotificationDropdown";
 import { useNotificationSocket } from "@/features/notification/hooks/useNotificationSocket";
 import { clearNotifications } from "@/features/notification/notificationSlice";
+import { ChatButton } from "@/features/chat/components/ChatButton";
+import { ChatPanel } from "@/features/chat/components/ChatPanel";
+import { clearChat } from "@/features/chat/chatSlice";
 
 const navItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -43,6 +46,7 @@ export function MainLayout() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const isChatOpen = useAppSelector((state) => state.chat.isOpen);
   const refreshToken = useAppSelector((state) => state.auth.refreshToken);
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
@@ -85,6 +89,7 @@ export function MainLayout() {
       dispatch(clearCurrentUser());
       dispatch(clearWorkspace());
       dispatch(clearNotifications());
+      dispatch(clearChat());
       setIsProfileDrawerOpen(false);
       toast.success("Logged out successfully");
     }
@@ -152,6 +157,9 @@ export function MainLayout() {
           </main>
         </div>
       </div>
+
+      <ChatButton />
+      {isChatOpen && <ChatPanel />}
 
       {isProfileDrawerOpen && (
         <>

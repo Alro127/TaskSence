@@ -41,6 +41,7 @@ public class SearchIndexServiceImpl implements SearchIndexService {
     private final CommentSearchRepository commentSearchRepository;
     private final UserSearchRepository userSearchRepository;
     private final ElasticsearchOperations elasticsearchOperations;
+    private final dev.alro127.tasksense.service.EmbeddingService embeddingService;
 
     // ===== Task =====
 
@@ -376,6 +377,17 @@ public class SearchIndexServiceImpl implements SearchIndexService {
                 .map(TagEntity::getName)
                 .toList();
 
+        List<String> assigneeNames = task.getAssignees().stream()
+                .map(UserEntity::getFullName)
+                .toList();
+
+        String embeddingText = embeddingService.buildTaskText(
+                task.getTitle(), task.getDescription(),
+                task.getStatus() != null ? task.getStatus().name() : null,
+                task.getPriority() != null ? task.getPriority().name() : null,
+                task.getSprint() != null ? task.getSprint().getName() : null,
+                task.getProject().getName(), assigneeNames, tagNames);
+
         return TaskDocument.builder()
                 .id(task.getId())
                 .projectId(task.getProject().getId())
@@ -397,10 +409,15 @@ public class SearchIndexServiceImpl implements SearchIndexService {
                 .completedAt(task.getCompletedAt())
                 .createdAt(task.getCreatedAt())
                 .updatedAt(task.getUpdatedAt())
+                .embedding(embeddingService.embed(embeddingText))
                 .build();
     }
 
     private ProjectDocument toProjectDocument(ProjectEntity project) {
+        String embeddingText = embeddingService.buildProjectText(
+                project.getName(), project.getDescription(),
+                project.getStatus() != null ? project.getStatus().name() : null);
+
         return ProjectDocument.builder()
                 .id(project.getId())
                 .workspaceId(project.getWorkspace().getId())
@@ -412,10 +429,14 @@ public class SearchIndexServiceImpl implements SearchIndexService {
                 .endDate(project.getEndDate())
                 .createdAt(project.getCreatedAt())
                 .updatedAt(project.getUpdatedAt())
+                .embedding(embeddingService.embed(embeddingText))
                 .build();
     }
 
     private CommentDocument toCommentDocument(CommentEntity comment) {
+        String embeddingText = embeddingService.buildCommentText(
+                comment.getContent(), comment.getTask().getTitle());
+
         return CommentDocument.builder()
                 .id(comment.getId())
                 .taskId(comment.getTask().getId())
@@ -429,6 +450,7 @@ public class SearchIndexServiceImpl implements SearchIndexService {
                 .isEdited(comment.getIsEdited())
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
+                .embedding(embeddingService.embed(embeddingText))
                 .build();
     }
 

@@ -22,6 +22,8 @@ import { attachmentApi } from "@/features/task/api/attachmentApi";
 import { sprintApi } from "@/features/sprint/api/sprintApi";
 import { tagApi } from "@/features/tag/api/tagApi";
 import { analyticsApi } from "@/features/analytics/api/analyticsApi";
+import { chatApi } from "@/features/chat/api/chatApi";
+import chatReducer from "@/features/chat/chatSlice";
 
 const combinedReducer = combineReducers({
   auth: authReducer,
@@ -47,6 +49,8 @@ const combinedReducer = combineReducers({
   [sprintApi.reducerPath]: sprintApi.reducer,
   [tagApi.reducerPath]: tagApi.reducer,
   [analyticsApi.reducerPath]: analyticsApi.reducer,
+  chat: chatReducer,
+  [chatApi.reducerPath]: chatApi.reducer,
 });
 
 type RootReducerState = ReturnType<typeof combinedReducer>;
@@ -86,7 +90,8 @@ export const store = configureStore({
       .concat(attachmentApi.middleware)
       .concat(sprintApi.middleware)
       .concat(tagApi.middleware)
-      .concat(analyticsApi.middleware),
+      .concat(analyticsApi.middleware)
+      .concat(chatApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

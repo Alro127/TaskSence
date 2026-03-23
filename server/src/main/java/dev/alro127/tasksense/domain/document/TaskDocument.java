@@ -79,4 +79,7 @@ public class TaskDocument {
 
     @Field(type = FieldType.Date, format = DateFormat.date_time)
     private OffsetDateTime updatedAt;
+
+    @Field(type = FieldType.Dense_Vector, dims = 768)
+    private float[] embedding;
 }

@@ -1,4 +1,39 @@
-// API Response type matching backend ApiResponse<T>
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+export type ChatRole = "USER" | "ASSISTANT";
+
+export interface ChatSourceItem {
+  type: "TASK" | "PROJECT" | "COMMENT";
+  id: number;
+  title: string;
+  projectId?: number;
+  projectName?: string;
+}
+
+export interface ChatMessageResponse {
+  id: number;
+  role: ChatRole;
+  content: string;
+  sources?: ChatSourceItem[];
+  createdAt: string;
+}
+
+export interface ChatSessionResponse {
+  id: number;
+  title: string | null;
+  messages?: ChatMessageResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatMessageRequest {
+  content: string;
+  context?: {
+    workspaceId?: number;
+    projectId?: number;
+  };
+}
+
+// ─── API Response type matching backend ApiResponse<T>
 export interface ApiResponse<T> {
   code: string;
   message: string;
@@ -604,3 +639,4 @@ export interface ProjectAnalyticsResponse {
   sprintVelocity: SprintVelocity[];
   memberPerformance: MemberPerformance[];
 }
+

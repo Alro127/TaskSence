@@ -39,7 +39,7 @@ public class SyncEsWorker {
     private final SearchIndexService searchIndexService;
     private final StringRedisTemplate redisTemplate;
 
-    @Scheduled(cron = "0 11 14 * * *")
+    @Scheduled(cron = "0 0 11 * * *")
     public void syncAll() {
         // Ghi lại thời điểm BẮT ĐẦU sync để không bỏ sót records được update trong khi đang sync
         OffsetDateTime syncStartTime = OffsetDateTime.now();
