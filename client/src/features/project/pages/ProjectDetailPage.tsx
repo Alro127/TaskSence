@@ -361,17 +361,11 @@ export function ProjectDetailPage() {
   const hasProjectPermission = (...keys: string[]) =>
     keys.some((key) => projectPermissions.includes(key));
   const canManageProject =
-    hasProjectPermission("MANAGE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT", "EDIT_PROJECT");
+    hasProjectPermission("UPDATE", "DELETE");
   const canManageMembers =
-    hasProjectPermission(
-      "MANAGE_MEMBERS",
-      "ADD_MEMBER",
-      "REMOVE_MEMBER",
-      "UPDATE_MEMBER_ROLE",
-      "TRANSFER_MANAGER",
-    );
+    hasProjectPermission("MANAGE_MEMBERS");
   const canReviewJoinRequests =
-    hasProjectPermission("REVIEW_JOIN_REQUEST", "MANAGE_JOIN_REQUESTS");
+    hasProjectPermission("MANAGE_MEMBERS");
   const canManageSprints =
     hasProjectPermission("MANAGE_SPRINT", "CREATE_SPRINT", "UPDATE_SPRINT", "DELETE_SPRINT");
   const canManageTags =

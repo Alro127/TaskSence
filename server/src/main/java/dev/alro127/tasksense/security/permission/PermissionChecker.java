@@ -20,7 +20,8 @@ import org.springframework.stereotype.Component;
  * @PreAuthorize("@perm.project(#projectId, 'CREATE_TASK')")
  *
  * Service usage (resource-level):
- * permissionChecker.requireTaskPermission(projectId, task, TaskPermission.EDIT);
+ * permissionChecker.requireTaskPermission(projectId, task,
+ * TaskPermission.EDIT);
  */
 @Component("perm")
 @RequiredArgsConstructor
@@ -86,12 +87,26 @@ public class PermissionChecker {
     }
 
     /**
+     * Require project-level permission for current user.
+     * Dùng trong service khi controller không có projectId để @PreAuthorize trực
+     * tiếp.
+     */
+    public void requireProjectPermission(Long projectId, ProjectPermission required) {
+        Long userId = securityService.getCurrentUserId();
+        Set<String> permissions = resolver.resolveProjectPermissions(userId, projectId);
+        if (!permissions.contains(required.name())) {
+            throw new UnauthorizedException(
+                    "You do not have " + required.name() + " permission on this project");
+        }
+    }
+
+    /**
      * Require task-level permission.
      * Dùng cho service-layer resource-level checks.
      *
      * Ví dụ:
-     *   requireTaskPermission(projectId, task, TaskPermission.EDIT);
-     *   requireTaskPermission(projectId, task, TaskPermission.UPDATE_STATUS);
+     * requireTaskPermission(projectId, task, TaskPermission.EDIT);
+     * requireTaskPermission(projectId, task, TaskPermission.UPDATE_STATUS);
      */
     public void requireTaskPermission(Long projectId, TaskEntity task, TaskPermission required) {
         Long userId = securityService.getCurrentUserId();

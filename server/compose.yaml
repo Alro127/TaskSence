@@ -1,5 +1,6 @@
 networks:
   tasksense_net:
+    name: tasksense_net
 
 services:
   postgres:

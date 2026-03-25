@@ -13,6 +13,8 @@ import dev.alro127.tasksense.dto.response.SprintResponse;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.SprintRepository;
 import dev.alro127.tasksense.repository.jpa.TaskRepository;
+import dev.alro127.tasksense.security.permission.PermissionChecker;
+import dev.alro127.tasksense.security.permission.ProjectPermission;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.SprintService;
 import lombok.RequiredArgsConstructor;
@@ -30,113 +32,123 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SprintServiceImpl implements SprintService {
 
-    private final SprintRepository sprintRepository;
-    private final ProjectRepository projectRepository;
-    private final TaskRepository taskRepository;
-    private final SecurityService securityService;
+        private final SprintRepository sprintRepository;
+        private final ProjectRepository projectRepository;
+        private final TaskRepository taskRepository;
+        private final SecurityService securityService;
+        private final PermissionChecker permissionChecker;
 
-    @Override
-    @Transactional
-    public SprintResponse createSprint(CreateSprintRequest request) {
+        @Override
+        @Transactional
+        public SprintResponse createSprint(CreateSprintRequest request) {
 
-        ProjectEntity project = projectRepository.findById(request.getProjectId())
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+                permissionChecker.requireProjectPermission(request.getProjectId(), ProjectPermission.CREATE_SPRINT);
 
-        UserEntity currentUser = securityService.getCurrentUser();
+                ProjectEntity project = projectRepository.findById(request.getProjectId())
+                                .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        SprintEntity sprint = SprintEntity.builder()
-                .project(project)
-                .name(request.getName())
-                .goal(request.getGoal())
-                .status(SprintStatus.PLANNING)
-                .startDate(request.getStartDate())
-                .endDate(request.getEndDate())
-                .createdBy(currentUser)
-                .build();
+                UserEntity currentUser = securityService.getCurrentUser();
 
-        sprintRepository.save(sprint);
+                SprintEntity sprint = SprintEntity.builder()
+                                .project(project)
+                                .name(request.getName())
+                                .goal(request.getGoal())
+                                .status(SprintStatus.PLANNING)
+                                .startDate(request.getStartDate())
+                                .endDate(request.getEndDate())
+                                .createdBy(currentUser)
+                                .build();
 
-        return SprintResponse.mapToResponse(sprint, 0L, 0L);
-    }
+                sprintRepository.save(sprint);
 
-    @Override
-    @Transactional
-    public SprintResponse updateSprint(Long sprintId, UpdateSprintRequest request) {
-
-        SprintEntity sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found"));
-
-        sprint.setName(request.getName());
-        sprint.setGoal(request.getGoal());
-
-        if (request.getStartDate() != null) {
-            sprint.setStartDate(request.getStartDate());
+                return SprintResponse.mapToResponse(sprint, 0L, 0L);
         }
 
-        if (request.getEndDate() != null) {
-            sprint.setEndDate(request.getEndDate());
+        @Override
+        @Transactional
+        public SprintResponse updateSprint(Long sprintId, UpdateSprintRequest request) {
+
+                SprintEntity sprint = sprintRepository.findById(sprintId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found"));
+
+                permissionChecker.requireProjectPermission(sprint.getProject().getId(),
+                                ProjectPermission.UPDATE_SPRINT);
+
+                sprint.setName(request.getName());
+                sprint.setGoal(request.getGoal());
+
+                if (request.getStartDate() != null) {
+                        sprint.setStartDate(request.getStartDate());
+                }
+
+                if (request.getEndDate() != null) {
+                        sprint.setEndDate(request.getEndDate());
+                }
+
+                SprintTaskStats stats = taskRepository.getSprintTaskStats(sprintId);
+
+                long taskCount = stats == null || stats.getTaskCount() == null ? 0 : stats.getTaskCount();
+                long completed = stats == null || stats.getCompletedTaskCount() == null ? 0
+                                : stats.getCompletedTaskCount();
+
+                return SprintResponse.mapToResponse(sprint, taskCount, completed);
         }
 
-        SprintTaskStats stats = taskRepository.getSprintTaskStats(sprintId);
+        @Override
+        @Transactional
+        public void deleteSprint(Long sprintId) {
 
-        long taskCount = stats == null || stats.getTaskCount() == null ? 0 : stats.getTaskCount();
-        long completed = stats == null || stats.getCompletedTaskCount() == null ? 0 : stats.getCompletedTaskCount();
+                SprintEntity sprint = sprintRepository.findById(sprintId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found"));
 
-        return SprintResponse.mapToResponse(sprint, taskCount, completed);
-    }
+                permissionChecker.requireProjectPermission(sprint.getProject().getId(),
+                                ProjectPermission.DELETE_SPRINT);
 
-    @Override
-    @Transactional
-    public void deleteSprint(Long sprintId) {
+                sprint.setDeletedAt(OffsetDateTime.now());
+        }
 
-        SprintEntity sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found"));
+        @Override
+        public PageResponse<SprintResponse> getProjectSprints(Long projectId, Pageable pageable) {
 
-        sprint.setDeletedAt(OffsetDateTime.now());
-    }
+                permissionChecker.requireProjectPermission(projectId, ProjectPermission.VIEW_SPRINTS);
 
-    @Override
-    public PageResponse<SprintResponse> getProjectSprints(Long projectId, Pageable pageable) {
+                Page<SprintEntity> sprintPage = sprintRepository.findByProjectId(projectId, pageable);
 
-        Page<SprintEntity> sprintPage = sprintRepository.findByProjectId(projectId, pageable);
+                List<Long> sprintIds = sprintPage
+                                .getContent()
+                                .stream()
+                                .map(SprintEntity::getId)
+                                .toList();
 
-        List<Long> sprintIds = sprintPage
-                .getContent()
-                .stream()
-                .map(SprintEntity::getId)
-                .toList();
+                List<SprintTaskStats> statsList = taskRepository.getSprintTaskStatsBySprintIds(sprintIds);
 
-        List<SprintTaskStats> statsList =
-                taskRepository.getSprintTaskStatsBySprintIds(sprintIds);
+                Map<Long, SprintTaskStats> statsMap = statsList.stream()
+                                .collect(Collectors.toMap(SprintTaskStats::getSprintId, s -> s));
 
-        Map<Long, SprintTaskStats> statsMap = statsList.stream()
-                .collect(Collectors.toMap(SprintTaskStats::getSprintId, s -> s));
+                List<SprintResponse> responses = sprintPage
+                                .getContent()
+                                .stream()
+                                .map(sprint -> {
 
-        List<SprintResponse> responses = sprintPage
-                .getContent()
-                .stream()
-                .map(sprint -> {
+                                        SprintTaskStats stats = statsMap.get(sprint.getId());
 
-                    SprintTaskStats stats = statsMap.get(sprint.getId());
+                                        long taskCount = stats == null || stats.getTaskCount() == null
+                                                        ? 0
+                                                        : stats.getTaskCount();
 
-                    long taskCount = stats == null || stats.getTaskCount() == null
-                            ? 0
-                            : stats.getTaskCount();
+                                        long completed = stats == null || stats.getCompletedTaskCount() == null
+                                                        ? 0
+                                                        : stats.getCompletedTaskCount();
 
-                    long completed = stats == null || stats.getCompletedTaskCount() == null
-                            ? 0
-                            : stats.getCompletedTaskCount();
+                                        return SprintResponse.mapToResponse(sprint, taskCount, completed);
+                                })
+                                .toList();
 
-                    return SprintResponse.mapToResponse(sprint, taskCount, completed);
-                })
-                .toList();
-
-        return new PageResponse<>(
-                responses,
-                sprintPage.getNumber(),
-                sprintPage.getSize(),
-                sprintPage.getTotalElements(),
-                sprintPage.getTotalPages()
-        );
-    }
+                return new PageResponse<>(
+                                responses,
+                                sprintPage.getNumber(),
+                                sprintPage.getSize(),
+                                sprintPage.getTotalElements(),
+                                sprintPage.getTotalPages());
+        }
 }

@@ -1,5 +1,9 @@
 package dev.alro127.tasksense.service;
 
+import com.google.genai.Client;
+import com.google.genai.types.ContentEmbedding;
+import com.google.genai.types.EmbedContentConfig;
+import com.google.genai.types.EmbedContentResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.Embedding;
@@ -7,36 +11,32 @@ import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.embedding.EmbeddingRequest;
 import org.springframework.ai.embedding.EmbeddingResponse;
 import org.springframework.ai.embedding.EmbeddingResponseMetadata;
-import org.springframework.web.client.RestClient;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Custom EmbeddingModel gọi Gemini text-embedding-004 API trực tiếp.
- * Spring AI 2.0.0-M3 chưa tích hợp embedding cho Google GenAI starter.
+ * Custom EmbeddingModel using a dedicated v1beta google-genai Client.
+ * embedding-001 requires v1beta; the SDK defaults to v1beta when no apiVersion is set.
+ * This uses a separate Client from the v1 Client used by the chat model.
  */
 @Slf4j
 public class GeminiEmbeddingModel implements EmbeddingModel {
 
-    private static final String BASE_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent";
+    private static final String EMBEDDING_MODEL = "gemini-embedding-001";
 
-    private final String apiKey;
-    private final RestClient restClient;
+    private final Client client;
 
-    public GeminiEmbeddingModel(String apiKey, RestClient restClient) {
-        this.apiKey = apiKey;
-        this.restClient = restClient;
+    public GeminiEmbeddingModel(String apiKey) {
+        // No apiVersion override → SDK defaults to v1beta, which supports embedding-001
+        this.client = Client.builder().apiKey(apiKey).build();
     }
 
     @Override
     public EmbeddingResponse call(EmbeddingRequest request) {
         List<Embedding> embeddings = new ArrayList<>();
         for (int i = 0; i < request.getInstructions().size(); i++) {
-            String text = request.getInstructions().get(i);
-            float[] vector = embedText(text);
+            float[] vector = embedText(request.getInstructions().get(i));
             embeddings.add(new Embedding(vector, i));
         }
         return new EmbeddingResponse(embeddings, new EmbeddingResponseMetadata());
@@ -54,41 +54,39 @@ public class GeminiEmbeddingModel implements EmbeddingModel {
 
     @Override
     public int dimensions() {
-        return 768; // text-embedding-004 produces 768-dimensional vectors
+        return embed("test").length;
     }
 
-    @SuppressWarnings("unchecked")
     private float[] embedText(String text) {
         try {
-            Map<String, Object> body = Map.of(
-                    "content", Map.of(
-                            "parts", List.of(Map.of("text", text))
-                    )
+            EmbedContentResponse response = client.models.embedContent(
+                    EMBEDDING_MODEL,
+                    com.google.genai.types.Content.builder()
+                            .parts(List.of(
+                                    com.google.genai.types.Part.builder()
+                                            .text(text)
+                                            .build()
+                            ))
+                            .build(),
+                    EmbedContentConfig.builder().build()
             );
 
-            Map<String, Object> response = restClient.post()
-                    .uri(BASE_URL + "?key=" + apiKey)
-                    .header("Content-Type", "application/json")
-                    .body(body)
-                    .retrieve()
-                    .body(Map.class);
+            List<ContentEmbedding> embeddings = response.embeddings().orElse(List.of());
+            if (embeddings.isEmpty()) return new float[0];
 
-            if (response == null) return new float[0];
+            List<Float> values = embeddings.get(0).values().orElse(List.of());
+            if (values.isEmpty()) return new float[0];
 
-            Map<String, Object> embedding = (Map<String, Object>) response.get("embedding");
-            if (embedding == null) return new float[0];
-
-            List<Number> values = (List<Number>) embedding.get("values");
-            if (values == null) return new float[0];
+            //log.info("Embedding dimension = {}", values.size());
 
             float[] result = new float[values.size()];
             for (int i = 0; i < values.size(); i++) {
-                result[i] = values.get(i).floatValue();
+                result[i] = values.get(i);
             }
             return result;
 
         } catch (Exception e) {
-            log.warn("Gemini embedding API call failed: {}", e.getMessage());
+            log.warn("Gemini embedding failed: {}", e.getMessage());
             return new float[0];
         }
     }

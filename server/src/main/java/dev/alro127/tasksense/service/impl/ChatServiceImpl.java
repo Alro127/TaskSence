@@ -284,8 +284,11 @@ public class ChatServiceImpl implements ChatService {
                                 List<ChatMessageEntity> history, String userName) {
         List<org.springframework.ai.chat.messages.Message> messages = new ArrayList<>();
 
+        // gemini-2.5-flash on v1 does not support systemInstruction.
+        // Use a user+assistant pair to convey system context instead.
         String systemContent = buildSystemPrompt(ragContext, userName);
-        messages.add(new SystemMessage(systemContent));
+        messages.add(new UserMessage(systemContent));
+        messages.add(new AssistantMessage("Understood. I'm ready to help."));
 
         // Add conversation history (skip the last user message we just saved)
         for (ChatMessageEntity msg : history) {

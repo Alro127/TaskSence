@@ -91,24 +91,42 @@ ON CONFLICT DO NOTHING;
 SELECT setval('projects_id_seq', (SELECT MAX(id) FROM projects));
 
 -- ==================== PROJECT MEMBERS ====================
-INSERT INTO project_members (project_id, user_id, role) VALUES
-    (1, 1, 'MANAGER'),
-    (1, 3, 'MEMBER'),
-    (1, 5, 'VIEWER'),
-    (2, 1, 'MANAGER'),
-    (2, 3, 'MEMBER'),
-    (2, 4, 'MEMBER'),
-    (3, 2, 'MANAGER'),
-    (3, 4, 'MEMBER'),
-    (3, 3, 'MEMBER'),
-    (4, 2, 'MANAGER'),
-    (4, 3, 'MEMBER')
-ON CONFLICT DO NOTHING;
+INSERT INTO project_members (project_id, user_id, role)
+SELECT v.project_id, v.user_id, v.role
+FROM (
+    VALUES
+        (1, 1, 'MANAGER'),
+        (1, 3, 'MEMBER'),
+        (1, 5, 'VIEWER'),
+        (2, 1, 'MANAGER'),
+        (2, 3, 'MEMBER'),
+        (2, 4, 'MEMBER'),
+        (3, 2, 'MANAGER'),
+        (3, 4, 'MEMBER'),
+        (3, 3, 'MEMBER'),
+        (4, 2, 'MANAGER'),
+        (4, 3, 'MEMBER')
+) AS v(project_id, user_id, role)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM project_members pm
+    WHERE pm.project_id = v.project_id
+      AND pm.user_id = v.user_id
+);
 
 -- ==================== PROJECT JOIN REQUESTS ====================
-INSERT INTO project_join_requests (project_id, user_id, status, message) VALUES
-    (3, 5, 'PENDING', 'I have experience in QA and would love to contribute to the MVP.')
-ON CONFLICT DO NOTHING;
+INSERT INTO project_join_requests (project_id, user_id, status, message)
+SELECT v.project_id, v.user_id, v.status, v.message
+FROM (
+    VALUES
+        (3, 5, 'PENDING', 'I have experience in QA and would love to contribute to the MVP.')
+) AS v(project_id, user_id, status, message)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM project_join_requests pjr
+    WHERE pjr.project_id = v.project_id
+      AND pjr.user_id = v.user_id
+);
 
 -- ==================== SPRINTS ====================
 INSERT INTO sprints (id, project_id, name, goal, status, start_date, end_date, created_by) VALUES
@@ -458,34 +476,43 @@ ON CONFLICT DO NOTHING;
 SELECT setval('projects_id_seq', (SELECT MAX(id) FROM projects));
 
 -- ==================== PROJECT MEMBERS ====================
-INSERT INTO project_members (project_id, user_id, role) VALUES
-    (5,  1,  'MANAGER'), (5,  4,  'MEMBER'), (5,  10, 'MEMBER'), (5,  13, 'MEMBER'),
-    (6,  1,  'MANAGER'), (6,  4,  'MEMBER'), (6,  6,  'MEMBER'),
-    (7,  1,  'MANAGER'), (7,  8,  'MEMBER'), (7,  15, 'VIEWER'),
-    (8,  6,  'MANAGER'), (8,  4,  'MEMBER'), (8,  14, 'MEMBER'),
-    (9,  1,  'MANAGER'), (9,  3,  'MEMBER'),
-    (10, 2,  'MANAGER'), (10, 1,  'MEMBER'), (10, 4,  'MEMBER'),
-    (11, 4,  'MANAGER'), (11, 1,  'MEMBER'),
-    (12, 4,  'MANAGER'), (12, 6,  'MEMBER'),
-    (13, 1,  'MANAGER'), (13, 10, 'MEMBER'), (13, 4, 'MEMBER'),
-    (14, 11, 'MANAGER'), (14, 1,  'MEMBER'),
-    (15, 15, 'MANAGER'), (15, 3,  'MEMBER'), (15, 9, 'MEMBER'),
-    (16, 6,  'MANAGER'), (16, 14, 'MEMBER'),
-    (17, 12, 'MANAGER'), (17, 1,  'VIEWER'),
-    (18, 2,  'MANAGER'), (18, 3,  'MEMBER'), (18, 7,  'MEMBER'),
-    (19, 2,  'MANAGER'), (19, 8,  'MEMBER'),
-    (20, 2,  'MANAGER'), (20, 3,  'MEMBER'), (20, 9,  'MEMBER'),
-    (21, 2,  'MANAGER'), (21, 4,  'MEMBER'),
-    (22, 2,  'MANAGER'), (22, 8,  'MEMBER'),
-    (23, 2,  'MANAGER'), (23, 10, 'MEMBER'),
-    (24, 2,  'MANAGER'), (24, 7,  'MEMBER'), (24, 4, 'MEMBER'),
-    (25, 2,  'MANAGER'), (25, 9,  'MEMBER'),
-    (26, 3,  'MANAGER'), (26, 9,  'MEMBER'),
-    (27, 3,  'MANAGER'), (27, 9,  'MEMBER'), (27, 13, 'MEMBER'),
-    (28, 3,  'MANAGER'), (28, 9,  'MEMBER'),
-    (29, 3,  'MANAGER'), (29, 9,  'MEMBER'),
-    (30, 3,  'MANAGER'), (30, 9,  'MEMBER')
-ON CONFLICT DO NOTHING;
+INSERT INTO project_members (project_id, user_id, role)
+SELECT v.project_id, v.user_id, v.role
+FROM (
+    VALUES
+        (5,  1,  'MANAGER'), (5,  4,  'MEMBER'), (5,  10, 'MEMBER'), (5,  13, 'MEMBER'),
+        (6,  1,  'MANAGER'), (6,  4,  'MEMBER'), (6,  6,  'MEMBER'),
+        (7,  1,  'MANAGER'), (7,  8,  'MEMBER'), (7,  15, 'VIEWER'),
+        (8,  6,  'MANAGER'), (8,  4,  'MEMBER'), (8,  14, 'MEMBER'),
+        (9,  1,  'MANAGER'), (9,  3,  'MEMBER'),
+        (10, 2,  'MANAGER'), (10, 1,  'MEMBER'), (10, 4,  'MEMBER'),
+        (11, 4,  'MANAGER'), (11, 1,  'MEMBER'),
+        (12, 4,  'MANAGER'), (12, 6,  'MEMBER'),
+        (13, 1,  'MANAGER'), (13, 10, 'MEMBER'), (13, 4, 'MEMBER'),
+        (14, 11, 'MANAGER'), (14, 1,  'MEMBER'),
+        (15, 15, 'MANAGER'), (15, 3,  'MEMBER'), (15, 9, 'MEMBER'),
+        (16, 6,  'MANAGER'), (16, 14, 'MEMBER'),
+        (17, 12, 'MANAGER'), (17, 1,  'VIEWER'),
+        (18, 2,  'MANAGER'), (18, 3,  'MEMBER'), (18, 7,  'MEMBER'),
+        (19, 2,  'MANAGER'), (19, 8,  'MEMBER'),
+        (20, 2,  'MANAGER'), (20, 3,  'MEMBER'), (20, 9,  'MEMBER'),
+        (21, 2,  'MANAGER'), (21, 4,  'MEMBER'),
+        (22, 2,  'MANAGER'), (22, 8,  'MEMBER'),
+        (23, 2,  'MANAGER'), (23, 10, 'MEMBER'),
+        (24, 2,  'MANAGER'), (24, 7,  'MEMBER'), (24, 4, 'MEMBER'),
+        (25, 2,  'MANAGER'), (25, 9,  'MEMBER'),
+        (26, 3,  'MANAGER'), (26, 9,  'MEMBER'),
+        (27, 3,  'MANAGER'), (27, 9,  'MEMBER'), (27, 13, 'MEMBER'),
+        (28, 3,  'MANAGER'), (28, 9,  'MEMBER'),
+        (29, 3,  'MANAGER'), (29, 9,  'MEMBER'),
+        (30, 3,  'MANAGER'), (30, 9,  'MEMBER')
+) AS v(project_id, user_id, role)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM project_members pm
+    WHERE pm.project_id = v.project_id
+      AND pm.user_id = v.user_id
+);
 
 -- ==================== SPRINTS (7-20) ====================
 INSERT INTO sprints (id, project_id, name, goal, status, start_date, end_date, created_by) VALUES

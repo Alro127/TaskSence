@@ -4,6 +4,7 @@ import dev.alro127.tasksense.security.middleware.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import jakarta.servlet.DispatcherType;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
@@ -34,9 +35,10 @@ public class SecurityConfig {
                 .sessionManagement(s ->
                         s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/auth/**", "/api-docs/**", "/swagger-ui/**","/actuator/health",
-                                        "/pings/**", "/ws/**", "/ws"
+                                        "/pings/**", "/ws/**", "/ws", "/chat"
                                 ).permitAll()
                         .anyRequest().authenticated()
                 )

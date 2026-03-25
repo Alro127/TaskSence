@@ -26,7 +26,7 @@ public class SyncEsWorker {
 
     private static final int BATCH_SIZE = 500;
     private static final int MAX_RETRIES = 3;
-    private static final long[] BACKOFF_MS = {1_000, 2_000, 4_000};
+    private static final long[] BACKOFF_MS = { 1_000, 2_000, 4_000 };
 
     // Fallback khi chưa có last sync time: sync toàn bộ lịch sử
     private static final OffsetDateTime EPOCH = OffsetDateTime.parse("2000-01-01T00:00:00+00:00");
@@ -39,9 +39,10 @@ public class SyncEsWorker {
     private final SearchIndexService searchIndexService;
     private final StringRedisTemplate redisTemplate;
 
-    @Scheduled(cron = "0 0 11 * * *")
+    @Scheduled(cron = "0 43 10 * * *")
     public void syncAll() {
-        // Ghi lại thời điểm BẮT ĐẦU sync để không bỏ sót records được update trong khi đang sync
+        // Ghi lại thời điểm BẮT ĐẦU sync để không bỏ sót records được update trong khi
+        // đang sync
         OffsetDateTime syncStartTime = OffsetDateTime.now();
         OffsetDateTime since = readLastSyncTime();
 
@@ -64,7 +65,8 @@ public class SyncEsWorker {
         while (true) {
             List<OutboxEventEntity> events = outboxEventRepository
                     .lockEventsForProcessing(OutboxEventType.ES_SYNC.name(), BATCH_SIZE);
-            if (events.isEmpty()) break;
+            if (events.isEmpty())
+                break;
 
             for (OutboxEventEntity event : events) {
                 try {
@@ -103,9 +105,11 @@ public class SyncEsWorker {
         int page = 0;
         while (true) {
             List<UserEntity> batch = userRepository.findSince(since, PageRequest.of(page, BATCH_SIZE));
-            if (batch.isEmpty()) break;
+            if (batch.isEmpty())
+                break;
             indexWithRetry(batch, EntityType.USER, searchIndexService::indexUsers);
-            if (batch.size() < BATCH_SIZE) break;
+            if (batch.size() < BATCH_SIZE)
+                break;
             page++;
         }
     }
@@ -115,10 +119,12 @@ public class SyncEsWorker {
         int page = 0;
         while (true) {
             List<Long> ids = projectRepository.findIdsSince(since, PageRequest.of(page, BATCH_SIZE));
-            if (ids.isEmpty()) break;
+            if (ids.isEmpty())
+                break;
             List<ProjectEntity> batch = projectRepository.findAllByIdsWithWorkspace(ids);
             indexWithRetry(batch, EntityType.PROJECT, searchIndexService::indexProjects);
-            if (ids.size() < BATCH_SIZE) break;
+            if (ids.size() < BATCH_SIZE)
+                break;
             page++;
         }
     }
@@ -128,10 +134,12 @@ public class SyncEsWorker {
         int page = 0;
         while (true) {
             List<Long> ids = taskRepository.findIdsSince(since, PageRequest.of(page, BATCH_SIZE));
-            if (ids.isEmpty()) break;
+            if (ids.isEmpty())
+                break;
             List<TaskEntity> batch = taskRepository.findAllByIdsWithAssociations(ids);
             indexWithRetry(batch, EntityType.TASK, searchIndexService::indexTasks);
-            if (ids.size() < BATCH_SIZE) break;
+            if (ids.size() < BATCH_SIZE)
+                break;
             page++;
         }
     }
@@ -141,10 +149,12 @@ public class SyncEsWorker {
         int page = 0;
         while (true) {
             List<Long> ids = commentRepository.findIdsSince(since, PageRequest.of(page, BATCH_SIZE));
-            if (ids.isEmpty()) break;
+            if (ids.isEmpty())
+                break;
             List<CommentEntity> batch = commentRepository.findAllByIdsWithAssociations(ids);
             indexWithRetry(batch, EntityType.COMMENT, searchIndexService::indexComments);
-            if (ids.size() < BATCH_SIZE) break;
+            if (ids.size() < BATCH_SIZE)
+                break;
             page++;
         }
     }
@@ -209,8 +219,7 @@ public class SyncEsWorker {
     private void saveLastSyncTime(OffsetDateTime time) {
         redisTemplate.opsForValue().set(
                 RedisKeys.ES_LAST_SYNC_TIME,
-                time.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-        );
+                time.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
     }
 
     private void sleep(long ms) {

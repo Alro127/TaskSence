@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /tmp)",
+      "Bash(jar xf:*)",
+      "Bash(jar tf:*)",
+      "Bash(javap -p org/springframework/ai/google/genai/GoogleGenAiChatModel$Builder.class)",
+      "Bash(cd /tmp2)",
+      "Bash(mkdir -p /tmp2)",
+      "Bash(javap -p org/springframework/ai/autoconfigure/google/genai/GoogleGenAiAutoConfiguration.class)",
+      "Bash(mkdir -p /tmp/springai)",
+      "Read(//tmp/**)"
+    ]
+  }
+}
