@@ -47,6 +47,18 @@ public class AiConfig {
     @ConfigurationProperties(prefix = "spring.ai.google.genai")
     public static class GeminiProperties {
         private String apiKey;
+        private Chat chat = new Chat();
+
+        @Data
+        public static class Chat {
+            private Options options = new Options();
+
+            @Data
+            public static class Options {
+                private String model = "gemini-2.5-flash";
+                private Double temperature = 0.3;
+            }
+        }
     }
 
 }

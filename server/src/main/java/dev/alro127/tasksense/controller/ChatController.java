@@ -56,7 +56,7 @@ public class ChatController {
     @PostMapping(value = "/sessions/{id}/messages", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chat(@PathVariable Long id, @Valid @RequestBody ChatMessageRequest request) {
         Long userId = securityService.getCurrentUserId();
-        SseEmitter emitter = new SseEmitter(120_000L); // 2 min timeout
+        SseEmitter emitter = new SseEmitter(600_000L); // 2 min timeout
 
         chatService.streamChat(id, userId, request)
                 .subscribe(

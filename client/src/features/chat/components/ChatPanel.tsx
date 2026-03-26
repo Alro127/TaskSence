@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Plus, Send, Trash2, X, ChevronLeft } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -22,6 +23,12 @@ export function ChatPanel() {
   const dispatch = useAppDispatch();
   const { activeSessionId, messages, streamingContent, isStreaming } =
     useAppSelector((s) => s.chat);
+  const location = useLocation();
+
+  const workspaceMatch = location.pathname.match(/\/workspaces\/(\d+)/);
+  const projectMatch = location.pathname.match(/\/workspaces\/\d+\/projects\/(\d+)/);
+  const workspaceId = workspaceMatch ? Number(workspaceMatch[1]) : undefined;
+  const projectId = projectMatch ? Number(projectMatch[1]) : undefined;
 
   const [input, setInput] = useState("");
   const [showSessions, setShowSessions] = useState(!activeSessionId);
@@ -94,7 +101,7 @@ export function ChatPanel() {
     }
 
     setInput("");
-    await sendMessage(sessionId, { content });
+    await sendMessage(sessionId, { content, context: { workspaceId, projectId } });
     refetchSessions(); // update session title after first message
   };
 

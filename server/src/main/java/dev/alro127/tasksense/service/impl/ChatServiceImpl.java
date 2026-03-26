@@ -17,6 +17,7 @@ import dev.alro127.tasksense.repository.jpa.ChatMessageRepository;
 import dev.alro127.tasksense.repository.jpa.ChatSessionRepository;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
+import dev.alro127.tasksense.config.provider.AiConfig;
 import dev.alro127.tasksense.service.ChatService;
 import dev.alro127.tasksense.service.EmbeddingService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
@@ -53,8 +55,9 @@ import java.util.stream.Collectors;
 public class ChatServiceImpl implements ChatService {
 
     private static final int HISTORY_SIZE = 10;
-    private static final int KNN_K = 5;
-    private static final int KNN_CANDIDATES = 50;
+    private static final int KNN_K = 7;
+    private static final int KNN_CANDIDATES = 70;
+    private static final float KNN_SCORE_THRESHOLD = 0.65f;
 
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
@@ -63,6 +66,7 @@ public class ChatServiceImpl implements ChatService {
     private final EmbeddingService embeddingService;
     private final ElasticsearchOperations elasticsearchOperations;
     private final ChatModel chatModel;
+    private final AiConfig.GeminiProperties geminiProperties;
 
     // ===== Session management =====
 
@@ -270,6 +274,7 @@ public class ChatServiceImpl implements ChatService {
             return elasticsearchOperations.search(query, docClass)
                     .getSearchHits()
                     .stream()
+                    .filter(hit -> hit.getScore() >= KNN_SCORE_THRESHOLD)
                     .map(SearchHit::getContent)
                     .collect(Collectors.toList());
         } catch (Exception e) {
@@ -300,23 +305,35 @@ public class ChatServiceImpl implements ChatService {
         }
 
         messages.add(new UserMessage(userQuery));
-        return new Prompt(messages);
+
+        ChatOptions options = ChatOptions.builder()
+                .model(geminiProperties.getChat().getOptions().getModel())
+                .temperature(geminiProperties.getChat().getOptions().getTemperature())
+                .build();
+
+        return new Prompt(messages, options);
     }
 
     private String buildSystemPrompt(String ragContext, String userName) {
         StringBuilder sb = new StringBuilder();
-        sb.append("You are TaskSense Assistant, a helpful AI assistant for a project management platform.\n");
-        sb.append("You help users understand their tasks, projects, sprints, and team workload.\n");
-        sb.append("Always be concise and professional. Support both Vietnamese and English — respond in the same language the user writes in.\n");
-        sb.append("When referencing a task or project, mention its name clearly.\n");
-        sb.append("If the provided context does not contain the answer, say so honestly.\n\n");
+        sb.append("You are TaskSense Assistant, an AI assistant embedded in a project management platform.\n");
+        sb.append("Your job is to help users understand their tasks, projects, sprints, and team workload.\n\n");
+        sb.append("## Rules\n");
+        sb.append("- Respond in the SAME language the user writes in (Vietnamese or English).\n");
+        sb.append("- Base your answers STRICTLY on the context provided below. Do NOT invent or assume data.\n");
+        sb.append("- If the context does not contain enough information to answer, say so clearly and suggest the user check the relevant project or task directly.\n");
+        sb.append("- When referencing a task or project, always include its name (and ID if helpful).\n");
+        sb.append("- Be concise and professional. Avoid unnecessary filler.\n");
+        sb.append("- For lists of tasks or items, use bullet points.\n\n");
         sb.append("Current date: ").append(LocalDate.now()).append("\n");
         sb.append("Current user: ").append(userName).append("\n");
 
         if (!ragContext.isBlank()) {
-            sb.append("\n--- Context from TaskSense ---\n");
+            sb.append("\n## Context from TaskSense (use this to answer)\n");
             sb.append(ragContext);
-            sb.append("--- End of context ---\n");
+            sb.append("\n## End of context\n");
+        } else {
+            sb.append("\n## Context\nNo relevant data was found in the workspace for this query.\n");
         }
 
         return sb.toString();
