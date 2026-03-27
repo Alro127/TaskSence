@@ -76,7 +76,7 @@ export function WorkspaceDetailPage() {
     );
   const projects = projectsData?.data?.data ?? [];
   const totalProjects = projectsData?.data?.totalElements ?? 0;
-  const totalProjectPages = projectsData?.data?.totalPages ?? 1;
+  const totalProjectPages = Math.max(projectsData?.data?.totalPages ?? 1, 1);
 
   const workspacePermissions = workspace?.permissions ?? [];
   const hasWorkspacePermission = (...keys: string[]) =>
