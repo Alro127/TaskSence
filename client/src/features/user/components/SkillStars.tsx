@@ -54,7 +54,7 @@ export function SkillStars({
                 starSize,
                 "transition-colors",
                 star <= value
-                  ? "fill-amber-400 text-amber-400"
+                  ? "fill-[#643300] text-[#643300]"
                   : "fill-transparent text-muted-foreground/30"
               )}
             />

@@ -77,34 +77,34 @@ const STATUS_COLUMNS: {
   {
     value: "TODO",
     label: "Todo",
-    badgeClass: "text-slate-600 bg-slate-100 border-slate-200",
-    headerClass: "border-t-slate-400",
+    badgeClass: "text-[#444651] bg-[rgba(68,70,81,0.08)] border-[rgba(68,70,81,0.2)]",
+    headerClass: "border-t-[#444651]",
   },
   {
     value: "IN_PROGRESS",
     label: "In Progress",
-    badgeClass: "text-blue-600 bg-blue-50 border-blue-200",
-    headerClass: "border-t-blue-500",
+    badgeClass: "text-[#233a87] bg-[rgba(35,58,135,0.08)] border-[rgba(35,58,135,0.2)]",
+    headerClass: "border-t-[#233a87]",
   },
   {
     value: "REVIEW",
     label: "Review",
-    badgeClass: "text-amber-600 bg-amber-50 border-amber-200",
-    headerClass: "border-t-amber-500",
+    badgeClass: "text-[#643300] bg-[rgba(100,51,0,0.08)] border-[rgba(100,51,0,0.2)]",
+    headerClass: "border-t-[#643300]",
   },
   {
     value: "DONE",
     label: "Done",
-    badgeClass: "text-green-600 bg-green-50 border-green-200",
-    headerClass: "border-t-green-500",
+    badgeClass: "text-[#006a61] bg-[rgba(0,106,97,0.08)] border-[rgba(0,106,97,0.2)]",
+    headerClass: "border-t-[#006a61]",
   },
 ];
 
 const PRIORITY_BADGE: Record<TaskPriority, { label: string; class: string }> = {
-  LOW: { label: "Low", class: "text-slate-500 bg-slate-100 border-slate-200" },
-  MEDIUM: { label: "Medium", class: "text-blue-600 bg-blue-50 border-blue-200" },
-  HIGH: { label: "High", class: "text-amber-600 bg-amber-50 border-amber-200" },
-  URGENT: { label: "Urgent", class: "text-red-600 bg-red-50 border-red-200" },
+  LOW: { label: "Low", class: "text-[#444651] bg-[rgba(68,70,81,0.08)] border-[rgba(68,70,81,0.2)]" },
+  MEDIUM: { label: "Medium", class: "text-[#233a87] bg-[rgba(35,58,135,0.08)] border-[rgba(35,58,135,0.2)]" },
+  HIGH: { label: "High", class: "text-[#643300] bg-[rgba(100,51,0,0.08)] border-[rgba(100,51,0,0.2)]" },
+  URGENT: { label: "Urgent", class: "text-[#ba1a1a] bg-[rgba(186,26,26,0.08)] border-[rgba(186,26,26,0.2)]" },
 };
 
 function parseTagIdsParam(tagsParam: string | null): number[] {
@@ -167,10 +167,10 @@ function TaskCard({
       ref={setNodeRef}
       style={isDragOverlay ? undefined : style}
       className={cn(
-        "group relative rounded-lg border bg-card p-3 shadow-sm transition-shadow",
+        "group ghost-border relative rounded-xl bg-white p-3 shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition-all",
         isDragOverlay
-          ? "rotate-1 shadow-lg opacity-95 cursor-grabbing"
-          : "hover:shadow-md",
+          ? "rotate-1 shadow-[0_4px_16px_rgba(0,0,0,0.12)] opacity-95 cursor-grabbing"
+          : "hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)]",
       )}
     >
       {/* Drag handle */}
@@ -310,9 +310,9 @@ function KanbanColumn({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-lg border border-t-4 transition-colors",
+        "flex flex-col rounded-xl border-t-4 transition-colors",
         col.headerClass,
-        isOver ? "bg-muted/50" : "bg-muted/20",
+        isOver ? "bg-[#efeeec]" : "bg-[#f4f3f1]",
       )}
     >
       {/* Column header */}

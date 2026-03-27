@@ -56,12 +56,12 @@ const ROLE_CONFIG: Record<
   OWNER: {
     label: "Owner",
     icon: ShieldCheck,
-    badgeClass: "bg-amber-50 text-amber-700 border-amber-200",
+    badgeClass: "bg-[rgba(100,51,0,0.08)] text-[#643300] border-[rgba(100,51,0,0.2)]",
   },
   MANAGER: {
     label: "Manager",
     icon: Shield,
-    badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+    badgeClass: "bg-[rgba(35,58,135,0.08)] text-[#233a87] border-[rgba(35,58,135,0.2)]",
   },
   MEMBER: {
     label: "Member",
@@ -575,7 +575,7 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
                             <div className="flex items-center gap-2">
                               <Button
                                 size="sm"
-                                className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                                className="gap-1.5 bg-[#006a61] hover:opacity-90 text-white"
                                 disabled={isReviewing}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -644,7 +644,7 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
           </DialogHeader>
 
           {/* Warning box */}
-          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-400">
+          <div className="flex items-start gap-3 rounded-lg border border-[rgba(100,51,0,0.2)] bg-[rgba(100,51,0,0.06)] p-3 text-sm text-[#643300]">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <div className="space-y-1">
               <p className="font-medium">This action cannot be undone</p>

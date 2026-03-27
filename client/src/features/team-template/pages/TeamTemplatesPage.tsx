@@ -53,25 +53,28 @@ export function TeamTemplatesPage() {
   return (
     <div className="space-y-8">
       {/* ── Page Header ── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Team Templates</h1>
-          <p className="text-sm text-muted-foreground">
-            Pre-define groups of members to quickly add them to workspaces or
-            projects.
-          </p>
-        </div>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#444651] mb-1">Collaboration</p>
+        <h1
+          className="text-3xl font-bold text-[#1a1c1b]"
+          style={{ fontFamily: "'Epilogue', 'Inter', sans-serif", letterSpacing: "-0.02em" }}
+        >
+          Team Templates
+        </h1>
+        <p className="text-sm text-[#444651] mt-1">
+          Pre-define groups of members to quickly add them to workspaces or projects.
+        </p>
       </div>
 
       {/* ── Empty State ── */}
       {templates.length === 0 ? (
-        <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed bg-muted/30 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-            <Users className="h-6 w-6 text-muted-foreground" />
+        <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-[rgba(197,197,211,0.5)] bg-[#faf9f7] text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[rgba(35,58,135,0.08)]">
+            <Users className="h-6 w-6 text-[#233a87]" />
           </div>
           <div>
-            <p className="font-medium">No team templates yet</p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="text-sm font-semibold text-[#1a1c1b]">No team templates yet</p>
+            <p className="mt-1 text-xs text-[#444651]">
               Create your first template to get started.
             </p>
           </div>

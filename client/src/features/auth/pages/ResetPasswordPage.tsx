@@ -89,12 +89,15 @@ export function ResetPasswordPage() {
     return (
       <div className="space-y-6">
         <div className="flex flex-col items-center space-y-4 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-            <CheckCircle className="h-8 w-8 text-green-600" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(0,106,97,0.10)]">
+            <CheckCircle className="h-8 w-8 text-[#006a61]" />
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold tracking-tight">
+            <h2
+              className="text-2xl font-bold text-[#1a1c1b]"
+              style={{ fontFamily: "'Epilogue', 'Inter', sans-serif", letterSpacing: "-0.02em" }}
+            >
               Password reset successful!
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -126,9 +129,15 @@ export function ResetPasswordPage() {
         Back to login
       </Link>
 
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold tracking-tight">Reset password</h2>
-        <p className="text-sm text-muted-foreground">
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#444651]">Security</p>
+        <h2
+          className="text-3xl font-bold text-[#1a1c1b]"
+          style={{ fontFamily: "'Epilogue', 'Inter', sans-serif", letterSpacing: "-0.02em" }}
+        >
+          Reset password.
+        </h2>
+        <p className="text-sm text-[#444651] pt-0.5">
           Enter your new password below
         </p>
       </div>

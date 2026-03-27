@@ -168,7 +168,7 @@ export function AddMembersModal({
                     </div>
                     <div className="flex items-center gap-1.5 ml-2">
                       {item.status === "ADDED" ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <CheckCircle2 className="h-4 w-4 text-[#006a61]" />
                       ) : (
                         <AlertCircle className="h-4 w-4 text-muted-foreground" />
                       )}

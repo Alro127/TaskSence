@@ -51,19 +51,19 @@ const STATUS_STYLE: Record<
 > = {
   PLANNING: {
     label: "Planning",
-    className: "text-slate-600 bg-slate-100 border-slate-200",
+    className: "text-[#444651] bg-[rgba(68,70,81,0.08)] border-[rgba(68,70,81,0.2)]",
   },
   ACTIVE: {
     label: "Active",
-    className: "text-blue-600 bg-blue-50 border-blue-200",
+    className: "text-[#233a87] bg-[rgba(35,58,135,0.08)] border-[rgba(35,58,135,0.2)]",
   },
   COMPLETED: {
     label: "Completed",
-    className: "text-green-600 bg-green-50 border-green-200",
+    className: "text-[#006a61] bg-[rgba(0,106,97,0.08)] border-[rgba(0,106,97,0.2)]",
   },
   CANCELLED: {
     label: "Cancelled",
-    className: "text-muted-foreground bg-muted border-border",
+    className: "text-[#444651] bg-[rgba(68,70,81,0.06)] border-[rgba(68,70,81,0.15)]",
   },
 };
 
@@ -104,7 +104,7 @@ function getTimelineMeta(sprint: SprintResponse) {
     const startsIn = Math.floor((start.getTime() - today.getTime()) / dayMs);
     return {
       label: `Starts in ${startsIn} day${startsIn === 1 ? "" : "s"}`,
-      className: "text-blue-600 bg-blue-50 border-blue-200",
+      className: "text-[#233a87] bg-[rgba(35,58,135,0.08)] border-[rgba(35,58,135,0.2)]",
     };
   }
 
@@ -119,7 +119,7 @@ function getTimelineMeta(sprint: SprintResponse) {
   const remaining = Math.floor((end.getTime() - today.getTime()) / dayMs) + 1;
   return {
     label: `Remaining ${remaining} day${remaining === 1 ? "" : "s"}`,
-    className: "text-green-700 bg-green-50 border-green-200",
+    className: "text-[#006a61] bg-[rgba(0,106,97,0.08)] border-[rgba(0,106,97,0.2)]",
   };
 }
 

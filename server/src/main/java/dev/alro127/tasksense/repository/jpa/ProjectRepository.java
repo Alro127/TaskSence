@@ -58,4 +58,14 @@ public interface ProjectRepository extends JpaRepository<ProjectEntity, Long> {
 
     @Query("SELECT p FROM ProjectEntity p JOIN FETCH p.workspace WHERE p.id = :id")
     Optional<ProjectEntity> findByIdWithWorkspace(@Param("id") Long id);
+
+    Long countByWorkspaceId(@Param("id") Long id);
+
+    @Query("""
+        SELECT p.workspace.id, COUNT(p.id)
+        FROM ProjectEntity p
+        WHERE p.workspace.id IN :workspaceIds
+        GROUP BY p.workspace.id
+    """)
+    List<Object[]> countByWorkspaceIds(@Param("workspaceIds") List<Long> workspaceIds);
 }

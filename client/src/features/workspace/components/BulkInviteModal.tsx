@@ -58,10 +58,10 @@ const ROLE_OPTIONS: { value: WorkspaceRole; label: string }[] = [
 ];
 
 const ROLE_CLASSES: Record<WorkspaceRole, string> = {
-  OWNER: "text-amber-600",
-  MANAGER: "text-blue-600",
-  MEMBER: "text-muted-foreground",
-  VIEWER: "text-muted-foreground",
+  OWNER: "text-[#643300]",
+  MANAGER: "text-[#233a87]",
+  MEMBER: "text-[#444651]",
+  VIEWER: "text-[#444651]",
 };
 
 const emailSchema = z.string().email();
@@ -338,14 +338,14 @@ export function BulkInviteModal({
               {/* Success */}
               {result.success.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-green-600 flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-[#006a61] flex items-center gap-1.5">
                     <CheckCircle2 className="h-4 w-4" />
                     {result.success.length} invitation{result.success.length > 1 ? "s" : ""} sent
                   </p>
-                  <div className="max-h-48 overflow-y-auto space-y-1 rounded-md border p-2 bg-green-50/50">
+                  <div className="max-h-48 overflow-y-auto space-y-1 rounded-md border border-[rgba(0,106,97,0.2)] p-2 bg-[rgba(0,106,97,0.04)]">
                     {result.success.map((inv) => (
                       <div key={inv.id} className="flex items-center gap-2 text-sm">
-                        <Mail className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                        <Mail className="h-3.5 w-3.5 shrink-0 text-[#006a61]" />
                         <span className="truncate font-medium">{inv.email}</span>
                         <span className="ml-auto shrink-0 text-xs text-muted-foreground">
                           {inv.role}
@@ -635,7 +635,7 @@ export function BulkInviteModal({
                                           }}
                                         >
                                           {alreadyAdded ? (
-                                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[#006a61]" />
                                           ) : checked ? (
                                             <CheckSquare className="h-3.5 w-3.5 shrink-0 text-primary" />
                                           ) : (

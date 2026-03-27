@@ -153,7 +153,7 @@ function ProfileInfoTab({ avatarState }: ProfileInfoTabProps) {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       {/* Unsaved changes banner */}
       {hasUnsavedChanges && (
-        <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-4 py-2.5 text-sm text-amber-800 dark:text-amber-200">
+        <div className="flex items-center gap-2 rounded-md border border-[rgba(100,51,0,0.2)] bg-[rgba(100,51,0,0.06)] px-4 py-2.5 text-sm text-[#643300]">
           <AlertCircle className="h-4 w-4 shrink-0" />
           You have unsaved changes — click "Save Changes" to apply.
         </div>
@@ -267,7 +267,7 @@ function ProfileInfoTab({ avatarState }: ProfileInfoTabProps) {
         </div>
 
         {/* Divider */}
-        <div className="border-t" />
+        <div className="h-px bg-[#efeeec]" />
 
         {/* Section: Contact */}
         <div className="space-y-4">
@@ -290,7 +290,7 @@ function ProfileInfoTab({ avatarState }: ProfileInfoTabProps) {
         </div>
 
         {/* Divider */}
-        <div className="border-t" />
+        <div className="h-px bg-[#efeeec]" />
 
         {/* Section: Bio */}
         <div className="space-y-3">
@@ -367,11 +367,11 @@ export function ProfilePage() {
         </button>
 
         {/* ── Profile Hero ── */}
-        <div className="rounded-xl border border-border overflow-hidden">
+        <div className="ghost-border rounded-xl overflow-hidden bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
           {/* Cover banner */}
-          <div className="h-28 bg-gradient-to-br from-primary/30 via-primary/15 to-primary/5 relative">
-            {/* Subtle pattern overlay */}
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_20%_50%,white,transparent_60%)]" />
+          <div className="h-28 bg-[#233a87] relative overflow-hidden">
+            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_80%_20%,#86f2e4,transparent_60%)]" />
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_20%_80%,#f5d49e,transparent_50%)]" />
           </div>
 
           {/* Avatar + Identity row */}
@@ -396,7 +396,7 @@ export function ProfilePage() {
                 {user?.email}
               </p>
               {previewUrl && (
-                <p className="text-xs text-amber-600 font-medium mt-1">
+                <p className="text-xs text-[#643300] font-medium mt-1">
                   Avatar preview active
                 </p>
               )}
@@ -419,7 +419,7 @@ export function ProfilePage() {
             <TabsTrigger value="info" className="relative">
               Info
               {(!!selectedFile) && (
-                <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-amber-500" />
+                <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-[#643300]" />
               )}
             </TabsTrigger>
             <TabsTrigger value="skills">Skills</TabsTrigger>

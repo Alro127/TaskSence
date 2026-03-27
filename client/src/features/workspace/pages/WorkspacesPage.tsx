@@ -87,12 +87,18 @@ export function WorkspacesPage() {
       {/* ── Page Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Workspaces</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#444651] mb-1">My spaces</p>
+          <h1
+            className="text-3xl font-bold text-[#1a1c1b]"
+            style={{ fontFamily: "'Epilogue', 'Inter', sans-serif", letterSpacing: "-0.02em" }}
+          >
+            Workspaces
+          </h1>
+          <p className="text-sm text-[#444651] mt-1">
             Organize your projects and team members.
           </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
+        <Button onClick={() => setIsCreateOpen(true)} className="bg-[#233a87] text-white hover:opacity-90">
           <Plus className="mr-2 h-4 w-4" />
           New Workspace
         </Button>
@@ -100,17 +106,17 @@ export function WorkspacesPage() {
 
       {/* ── Empty State ── */}
       {workspaces.length === 0 && (
-        <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed bg-muted/30 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-            <FolderKanban className="h-6 w-6 text-muted-foreground" />
+        <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-[rgba(197,197,211,0.5)] bg-[#faf9f7] text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[rgba(35,58,135,0.08)]">
+            <FolderKanban className="h-6 w-6 text-[#233a87]" />
           </div>
           <div>
-            <p className="text-sm font-medium">No workspaces yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="text-sm font-semibold text-[#1a1c1b]">No workspaces yet</p>
+            <p className="mt-1 text-xs text-[#444651]">
               Create your first workspace to start organizing projects.
             </p>
           </div>
-          <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+          <Button size="sm" onClick={() => setIsCreateOpen(true)} className="bg-[#233a87] text-white hover:opacity-90">
             <Plus className="mr-2 h-4 w-4" />
             Create workspace
           </Button>
@@ -120,9 +126,9 @@ export function WorkspacesPage() {
       {/* ── Pinned Section ── */}
       {pinnedWorkspaces.length > 0 && (
         <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#444651]">
             Pinned
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+            <span className="rounded-full bg-[#e9e8e6] px-2 py-0.5 text-[10px] font-semibold text-[#444651] normal-case tracking-normal">
               {pinnedWorkspaces.length}
             </span>
           </h2>
@@ -135,6 +141,7 @@ export function WorkspacesPage() {
                   onTogglePin={handleTogglePin}
                   onEdit={setEditTarget}
                   onDelete={setDeleteTarget}
+                  projectCount={ws.projectCount}
                   variant="pinned"
                   canEdit={hasWorkspacePermission(ws, "UPDATE")}
                   canDelete={hasWorkspacePermission(ws, "DELETE")}
@@ -148,9 +155,9 @@ export function WorkspacesPage() {
       {/* ── Recent Section ── */}
       {recentWorkspaces.length > 0 && (
         <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#444651]">
             Recent
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+            <span className="rounded-full bg-[#e9e8e6] px-2 py-0.5 text-[10px] font-semibold text-[#444651] normal-case tracking-normal">
               {recentWorkspaces.length}
             </span>
           </h2>
@@ -163,6 +170,7 @@ export function WorkspacesPage() {
                   onTogglePin={handleTogglePin}
                   onEdit={setEditTarget}
                   onDelete={setDeleteTarget}
+                  projectCount={ws.projectCount}
                   canEdit={hasWorkspacePermission(ws, "UPDATE")}
                   canDelete={hasWorkspacePermission(ws, "DELETE")}
                 />
@@ -175,11 +183,11 @@ export function WorkspacesPage() {
       {/* ── All Workspaces Section ── */}
       {workspaces.length > 0 && (
         <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#444651]">
             {pinnedWorkspaces.length > 0 || recentWorkspaces.length > 0
               ? "All workspaces"
               : "Your workspaces"}
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+            <span className="rounded-full bg-[#e9e8e6] px-2 py-0.5 text-[10px] font-semibold text-[#444651] normal-case tracking-normal">
               {workspaces.length}
             </span>
           </h2>
@@ -193,6 +201,7 @@ export function WorkspacesPage() {
                   onTogglePin={handleTogglePin}
                   onEdit={setEditTarget}
                   onDelete={setDeleteTarget}
+                  projectCount={ws.projectCount}
                   canEdit={hasWorkspacePermission(ws, "UPDATE")}
                   canDelete={hasWorkspacePermission(ws, "DELETE")}
                 />

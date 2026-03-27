@@ -159,4 +159,24 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
             """)
     List<SprintTaskStats> getSprintTaskStatsBySprintIds(List<Long> sprintIds);
 
+    Long countByProjectId(Long id);
+
+    Float countByProjectIdAndStatus(Long id, TaskStatus taskStatus);
+
+    @Query("""
+        SELECT t.project.id, COUNT(t.id)
+        FROM TaskEntity t
+        WHERE t.project.id IN :projectIds
+        GROUP BY t.project.id
+    """)
+    List<Object[]> countByProjectIds(List<Long> projectIds);
+
+    @Query("""
+        SELECT t.project.id, COUNT(t.id)
+        FROM TaskEntity t
+        WHERE t.project.id IN :projectIds
+        AND t.status = :status
+        GROUP BY t.project.id
+    """)
+    List<Object[]> countDoneByProjectIds(List<Long> projectIds, TaskStatus status);
 }

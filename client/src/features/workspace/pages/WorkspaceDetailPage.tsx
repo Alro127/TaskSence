@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Pagination,
@@ -160,13 +159,19 @@ export function WorkspaceDetailPage() {
 
       {/* ── Workspace Header ── */}
       <div className="flex items-start gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-          <FolderKanban className="h-6 w-6 text-primary" />
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[rgba(35,58,135,0.08)]">
+          <FolderKanban className="h-6 w-6 text-[#233a87]" />
         </div>
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight">{workspace.name}</h1>
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#444651] mb-1">Workspace</p>
+          <h1
+            className="text-2xl font-bold text-[#1a1c1b]"
+            style={{ fontFamily: "'Epilogue', 'Inter', sans-serif", letterSpacing: "-0.02em" }}
+          >
+            {workspace.name}
+          </h1>
           {workspace.description && (
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-[#444651]">
               {workspace.description}
             </p>
           )}
@@ -365,7 +370,7 @@ export function WorkspaceDetailPage() {
             {/* Danger Zone — OWNER only */}
             {canDeleteWorkspace && (
               <>
-                <Separator />
+                <div className="h-px bg-[#efeeec]" />
 
                 <section className="space-y-4">
                   <div>

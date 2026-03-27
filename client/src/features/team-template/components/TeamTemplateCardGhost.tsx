@@ -1,5 +1,4 @@
 import { Plus } from "lucide-react";
-import { Card } from "@/components/ui/card";
 
 interface TeamTemplateCardGhostProps {
   onClick: () => void;
@@ -7,14 +6,12 @@ interface TeamTemplateCardGhostProps {
 
 export function TeamTemplateCardGhost({ onClick }: TeamTemplateCardGhostProps) {
   return (
-    <Card
+    <button
       onClick={onClick}
-      className="flex min-h-[120px] cursor-pointer items-center justify-center rounded-lg border-dashed bg-muted/30 transition-colors hover:bg-muted/50"
+      className="flex min-h-[120px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[rgba(197,197,211,0.5)] bg-[#faf9f7] text-[#444651] transition-all hover:border-[#233a87]/40 hover:bg-[rgba(35,58,135,0.04)] hover:text-[#233a87]"
     >
-      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-        <Plus className="h-5 w-5" />
-        <span className="text-sm font-medium">New Template</span>
-      </div>
-    </Card>
+      <Plus className="h-5 w-5" />
+      <span className="text-sm font-medium">New Template</span>
+    </button>
   );
 }

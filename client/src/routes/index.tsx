@@ -5,6 +5,7 @@ import {
 } from "react-router-dom";
 
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { LandingPage } from "@/pages/LandingPage";
 
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { MainLayout } from "@/layouts/MainLayout";
@@ -34,6 +35,11 @@ function PlaceholderPage({ title }: { title: string }) {
 }
 
 const routes: RouteObject[] = [
+  // Public landing page — standalone (no app shell)
+  {
+    path: "/",
+    element: <LandingPage />,
+  },
   {
     path: "/auth",
     element: <AuthLayout />,
@@ -68,10 +74,6 @@ const routes: RouteObject[] = [
     path: "/",
     element: <MainLayout />,
     children: [
-      {
-        index: true,
-        element: <Navigate to="/dashboard" replace />,
-      },
       {
         path: "dashboard",
         element: <DashboardPage />,

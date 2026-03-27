@@ -12,22 +12,33 @@ export function NotFoundPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       {/* Logo */}
       <div className="mb-10 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Zap className="h-6 w-6" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#233a87]">
+          <Zap className="h-6 w-6 text-white" />
         </div>
-        <span className="text-2xl font-bold text-foreground">TaskSense</span>
+        <span
+          className="text-2xl font-bold text-[#1a1c1b]"
+          style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}
+        >
+          TaskSense
+        </span>
       </div>
 
       {/* Illustration area */}
-      <div className="mb-6 flex items-center justify-center rounded-full bg-muted p-8">
-        <SearchX className="h-16 w-16 text-muted-foreground" />
+      <div className="mb-6 flex items-center justify-center rounded-full bg-[rgba(35,58,135,0.08)] p-8">
+        <SearchX className="h-16 w-16 text-[#233a87]" />
       </div>
 
       {/* Text content */}
-      <h1 className="mb-2 text-7xl font-extrabold tracking-tight text-primary">
+      <h1
+        className="mb-2 text-7xl font-extrabold text-[#233a87]"
+        style={{ fontFamily: "'Epilogue', 'Inter', sans-serif", letterSpacing: "-0.03em" }}
+      >
         404
       </h1>
-      <h2 className="mb-3 text-2xl font-semibold text-foreground">
+      <h2
+        className="mb-3 text-2xl font-bold text-[#1a1c1b]"
+        style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}
+      >
         Trang không tìm thấy
       </h2>
       <p className="mb-8 max-w-md text-center text-sm text-muted-foreground">

@@ -33,10 +33,14 @@ export function WorkspaceExplorePage() {
     <div className="space-y-6">
       {/* ── Page Header ── */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#444651] mb-1">Community</p>
+        <h1
+          className="text-3xl font-bold text-[#1a1c1b]"
+          style={{ fontFamily: "'Epilogue', 'Inter', sans-serif", letterSpacing: "-0.02em" }}
+        >
           Discover Workspaces
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[#444651] mt-1">
           Search for public workspaces and send a join request.
         </p>
       </div>
@@ -55,13 +59,13 @@ export function WorkspaceExplorePage() {
 
       {/* ── Empty state (before search) ── */}
       {debouncedQuery.trim().length === 0 && (
-        <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed bg-muted/30 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-            <Globe className="h-6 w-6 text-muted-foreground" />
+        <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-[rgba(197,197,211,0.5)] bg-[#faf9f7] text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[rgba(35,58,135,0.08)]">
+            <Globe className="h-6 w-6 text-[#233a87]" />
           </div>
           <div>
-            <p className="text-sm font-medium">Find public workspaces</p>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="text-sm font-semibold text-[#1a1c1b]">Find public workspaces</p>
+            <p className="mt-1 text-xs text-[#444651]">
               Type a workspace name above to discover and join public workspaces.
             </p>
           </div>
@@ -98,9 +102,9 @@ export function WorkspaceExplorePage() {
           )}
 
           {!hasResults && (
-            <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/30 text-center">
-              <p className="text-sm font-medium">No results found</p>
-              <p className="text-xs text-muted-foreground">
+            <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[rgba(197,197,211,0.5)] bg-[#faf9f7] text-center">
+              <p className="text-sm font-semibold text-[#1a1c1b]">No results found</p>
+              <p className="text-xs text-[#444651]">
                 Try a different search term or check the spelling.
               </p>
             </div>

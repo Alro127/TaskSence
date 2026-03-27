@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
 import { useCreateProjectMutation } from "../api/projectApi";
 import { STATUS_CONFIG } from "../components/ProjectCard";
@@ -105,10 +104,16 @@ export function CreateProjectPage() {
 
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Create Project</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#444651] mb-1">New project</p>
+        <h1
+          className="text-2xl font-bold text-[#1a1c1b]"
+          style={{ fontFamily: "'Epilogue', 'Inter', sans-serif", letterSpacing: "-0.02em" }}
+        >
+          Create Project
+        </h1>
+        <p className="mt-1 text-sm text-[#444651]">
           Add a new project to{" "}
-          <span className="font-medium text-foreground">
+          <span className="font-semibold text-[#1a1c1b]">
             {workspace?.name ?? "this workspace"}
           </span>
           .
@@ -116,7 +121,7 @@ export function CreateProjectPage() {
       </div>
 
       {/* Form card */}
-      <Card className="p-6">
+      <div className="ghost-border rounded-xl bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           {/* Name */}
           <div className="space-y-2">
@@ -207,7 +212,7 @@ export function CreateProjectPage() {
             </Button>
           </div>
         </form>
-      </Card>
+      </div>
     </div>
   );
 }

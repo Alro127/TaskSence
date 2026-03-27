@@ -54,28 +54,28 @@ function isImageMime(mimeType: string | null): boolean {
 }
 
 function getFileIcon(mimeType: string | null): React.ReactNode {
-  if (!mimeType) return <File className="h-5 w-5 text-slate-400" />;
+  if (!mimeType) return <File className="h-5 w-5 text-[#444651]" />;
   if (mimeType.startsWith("image/"))
-    return <FileImage className="h-5 w-5 text-blue-500" />;
+    return <FileImage className="h-5 w-5 text-[#233a87]" />;
   if (mimeType === "application/pdf")
-    return <FileText className="h-5 w-5 text-red-500" />;
+    return <FileText className="h-5 w-5 text-[#ba1a1a]" />;
   if (mimeType.includes("word") || mimeType.includes("document"))
-    return <FileText className="h-5 w-5 text-blue-600" />;
+    return <FileText className="h-5 w-5 text-[#233a87]" />;
   if (
     mimeType.includes("excel") ||
     mimeType.includes("spreadsheet") ||
     mimeType === "text/csv"
   )
-    return <FileSpreadsheet className="h-5 w-5 text-green-600" />;
+    return <FileSpreadsheet className="h-5 w-5 text-[#006a61]" />;
   if (mimeType.includes("powerpoint") || mimeType.includes("presentation"))
-    return <File className="h-5 w-5 text-orange-500" />;
+    return <File className="h-5 w-5 text-[#643300]" />;
   if (mimeType.startsWith("video/"))
-    return <FileVideo className="h-5 w-5 text-purple-500" />;
+    return <FileVideo className="h-5 w-5 text-[#444651]" />;
   if (mimeType === "application/zip" || mimeType === "application/x-zip-compressed")
-    return <File className="h-5 w-5 text-amber-500" />;
+    return <File className="h-5 w-5 text-[#643300]" />;
   if (mimeType.startsWith("text/"))
-    return <FileCode className="h-5 w-5 text-green-500" />;
-  return <File className="h-5 w-5 text-slate-400" />;
+    return <FileCode className="h-5 w-5 text-[#006a61]" />;
+  return <File className="h-5 w-5 text-[#444651]" />;
 }
 
 function getDisplayName(fileUrl: string): string {
