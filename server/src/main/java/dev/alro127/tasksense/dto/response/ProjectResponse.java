@@ -23,6 +23,10 @@ public class ProjectResponse {
 
     private ProjectStatus status;
 
+    private Float progress;
+
+    private Long taskCount;
+
     private LocalDate startDate;
 
     private LocalDate endDate;

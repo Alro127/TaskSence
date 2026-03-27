@@ -25,23 +25,23 @@ interface NotificationItemProps {
 }
 
 const TYPE_ICON: Record<NotificationType, React.ReactNode> = {
-  TASK_ASSIGNED: <CheckSquare className="h-4 w-4 text-blue-500" />,
-  TASK_UNASSIGNED: <UserMinus className="h-4 w-4 text-orange-500" />,
-  WORKSPACE_INVITE: <Users className="h-4 w-4 text-green-500" />,
-  WORKSPACE_INVITE_ACCEPT: <UserCheck className="h-4 w-4 text-green-500" />,
-  WORKSPACE_JOIN_REQUEST: <UserPlus className="h-4 w-4 text-cyan-500" />,
-  WORKSPACE_REVIEW_REQUEST: <ClipboardCheck className="h-4 w-4 text-green-500" />,
+  TASK_ASSIGNED: <CheckSquare className="h-4 w-4 text-[#233a87]" />,
+  TASK_UNASSIGNED: <UserMinus className="h-4 w-4 text-[#643300]" />,
+  WORKSPACE_INVITE: <Users className="h-4 w-4 text-[#006a61]" />,
+  WORKSPACE_INVITE_ACCEPT: <UserCheck className="h-4 w-4 text-[#006a61]" />,
+  WORKSPACE_JOIN_REQUEST: <UserPlus className="h-4 w-4 text-[#233a87]" />,
+  WORKSPACE_REVIEW_REQUEST: <ClipboardCheck className="h-4 w-4 text-[#006a61]" />,
   WORKSPACE_REMOVE_MEMBER: <UserMinus className="h-4 w-4 text-destructive" />,
-  WORKSPACE_ROLE_CHANGE: <ShieldCheck className="h-4 w-4 text-amber-500" />,
-  PROJECT_JOIN_REQUEST: <FolderPlus className="h-4 w-4 text-cyan-500" />,
-  PROJECT_REVIEW_REQUEST: <ClipboardCheck className="h-4 w-4 text-green-500" />,
-  PROJECT_ADD_MEMBER: <UserPlus className="h-4 w-4 text-blue-500" />,
+  WORKSPACE_ROLE_CHANGE: <ShieldCheck className="h-4 w-4 text-[#643300]" />,
+  PROJECT_JOIN_REQUEST: <FolderPlus className="h-4 w-4 text-[#233a87]" />,
+  PROJECT_REVIEW_REQUEST: <ClipboardCheck className="h-4 w-4 text-[#006a61]" />,
+  PROJECT_ADD_MEMBER: <UserPlus className="h-4 w-4 text-[#233a87]" />,
   PROJECT_REMOVE_MEMBER: <UserMinus className="h-4 w-4 text-destructive" />,
-  PROJECT_ROLE_CHANGE: <ShieldCheck className="h-4 w-4 text-purple-500" />,
-  COMMENT_MENTION: <MessageSquare className="h-4 w-4 text-amber-500" />,
-  COMMENT_REACTION: <SmilePlus className="h-4 w-4 text-pink-500" />,
-  COMMENT_TASK: <MessageCircle className="h-4 w-4 text-blue-500" />,
-  TASK_REMINDER: <Clock className="h-4 w-4 text-orange-500" />,
+  PROJECT_ROLE_CHANGE: <ShieldCheck className="h-4 w-4 text-[#233a87]" />,
+  COMMENT_MENTION: <MessageSquare className="h-4 w-4 text-[#643300]" />,
+  COMMENT_REACTION: <SmilePlus className="h-4 w-4 text-[#006a61]" />,
+  COMMENT_TASK: <MessageCircle className="h-4 w-4 text-[#233a87]" />,
+  TASK_REMINDER: <Clock className="h-4 w-4 text-[#643300]" />,
 };
 
 export function NotificationItem({

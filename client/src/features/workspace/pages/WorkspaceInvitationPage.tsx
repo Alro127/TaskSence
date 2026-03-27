@@ -78,8 +78,8 @@ export function WorkspaceInvitationPage() {
       <div className="flex min-h-[400px] flex-col items-center justify-center">
         <Card className="w-full max-w-md p-8 text-center">
           <div className="flex justify-center mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
-              <CheckCircle2 className="h-8 w-8 text-green-500" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(0,106,97,0.10)]">
+              <CheckCircle2 className="h-8 w-8 text-[#006a61]" />
             </div>
           </div>
           <h2 className="text-xl font-semibold">You've joined the workspace!</h2>

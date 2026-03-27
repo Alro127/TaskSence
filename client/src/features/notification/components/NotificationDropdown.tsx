@@ -216,10 +216,10 @@ export function NotificationDropdown() {
 
       {/* ── Dropdown Panel ── */}
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-lg border bg-card shadow-lg sm:w-96">
+        <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl ghost-border bg-white shadow-[0_4px_16px_rgba(0,0,0,0.10)] sm:w-96">
           {/* Header */}
-          <div className="flex items-center justify-between border-b px-4 py-3">
-            <h3 className="text-sm font-semibold">Notifications</h3>
+          <div className="flex items-center justify-between bg-[#f4f3f1] px-4 py-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#444651]">Notifications</h3>
             {unreadCount > 0 && (
               <Button
                 variant="ghost"

@@ -3,7 +3,6 @@ import { Users, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +26,7 @@ export function TeamTemplateCard({
   const navigate = useNavigate();
 
   return (
-    <Card className="cursor-pointer rounded-lg p-0 gap-0 transition-shadow hover:shadow-md">
+    <div className="ghost-border cursor-pointer rounded-xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)] transition-all hover:shadow-[0_2px_8px_rgba(0,0,0,0.09)] hover:translate-y-[-1px]">
       {/* Clickable body */}
       <div
         className="flex-1 p-5"
@@ -35,15 +34,15 @@ export function TeamTemplateCard({
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10">
-              <Users className="h-4 w-4 text-primary" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[rgba(35,58,135,0.08)]">
+              <Users className="h-4 w-4 text-[#233a87]" />
             </div>
             <div className="min-w-0">
-              <p className="truncate font-semibold leading-tight">
+              <p className="truncate text-sm font-semibold text-[#1a1c1b] leading-tight">
                 {template.name}
               </p>
               {template.description && (
-                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                <p className="mt-1 line-clamp-2 text-xs text-[#444651]">
                   {template.description}
                 </p>
               )}
@@ -57,7 +56,7 @@ export function TeamTemplateCard({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 shrink-0 text-muted-foreground"
+                  className="h-7 w-7 shrink-0 text-[#444651]"
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -82,15 +81,15 @@ export function TeamTemplateCard({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between border-t px-5 py-3">
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between bg-[#f4f3f1] px-5 py-3 rounded-b-xl">
+        <span className="flex items-center gap-1.5 text-xs text-[#444651]">
           <Users className="h-3.5 w-3.5" />
           {template.memberCount} {template.memberCount === 1 ? "member" : "members"}
         </span>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-[#444651]">
           {format(new Date(template.createdAt), "MMM d, yyyy")}
         </span>
       </div>
-    </Card>
+    </div>
   );
 }

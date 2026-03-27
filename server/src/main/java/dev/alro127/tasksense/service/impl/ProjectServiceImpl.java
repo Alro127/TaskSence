@@ -5,6 +5,7 @@ import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
+import dev.alro127.tasksense.domain.enums.TaskStatus;
 import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.CreateProjectRequest;
 import dev.alro127.tasksense.dto.request.UpdateProjectRequest;
@@ -27,13 +28,14 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -78,7 +80,7 @@ public class ProjectServiceImpl implements ProjectService {
         projectMemberRepository.save(owner);
 
         eventPublisher.publishEvent(new EntityChangedEvent(EntityType.PROJECT, project.getId(), Operation.UPSERT));
-        return toResponseWithPermissions(project);
+        return toResponse(project);
     }
 
     @Override
@@ -90,7 +92,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         validateProjectBelongsToWorkspace(project, workspaceId);
 
-        return toResponseWithPermissions(project);
+        return toResponse(project);
     }
 
     @Override
@@ -100,11 +102,49 @@ public class ProjectServiceImpl implements ProjectService {
         workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
-        Page<ProjectEntity> projectPage = projectRepository.findAllByWorkspaceId(workspaceId, pageable);
+        Page<ProjectEntity> projectPage =
+                projectRepository.findAllByWorkspaceId(workspaceId, pageable);
 
-        List<ProjectResponse> data = projectPage.getContent()
-                .stream()
-                .map(this::toResponseWithPermissions)
+        List<ProjectEntity> projects = projectPage.getContent();
+
+        // ✅ Lấy list project IDs
+        List<Long> projectIds = projects.stream()
+                .map(ProjectEntity::getId)
+                .toList();
+
+        // ✅ Batch query
+        Map<Long, Long> totalTaskMap =
+                toCountMap(taskRepository.countByProjectIds(projectIds));
+
+        Map<Long, Long> doneTaskMap =
+                toCountMap(taskRepository.countDoneByProjectIds(projectIds, TaskStatus.DONE));
+
+        Long currentUserId = securityService.getCurrentUserId();
+
+        List<ProjectResponse> data = projects.stream()
+                .map(project -> {
+                    ProjectResponse res = ProjectResponse.mapToResponse(project);
+
+                    long total = totalTaskMap.getOrDefault(project.getId(), 0L);
+                    long done = doneTaskMap.getOrDefault(project.getId(), 0L);
+
+                    res.setTaskCount(total);
+
+                    res.setProgress(
+                            total != 0
+                                    ? (float) ((done * 100.0) / total)
+                                    : 0
+                    );
+
+                    res.setPermissions(
+                            permissionResolver.resolveProjectPermissions(
+                                    currentUserId,
+                                    project.getId()
+                            )
+                    );
+
+                    return res;
+                })
                 .toList();
 
         return new PageResponse<>(
@@ -143,7 +183,7 @@ public class ProjectServiceImpl implements ProjectService {
         projectRepository.save(project);
 
         eventPublisher.publishEvent(new EntityChangedEvent(EntityType.PROJECT, projectId, Operation.UPSERT));
-        return toResponseWithPermissions(project);
+        return toResponse(project);
     }
 
     @Override
@@ -183,9 +223,21 @@ public class ProjectServiceImpl implements ProjectService {
         }
     }
 
-    private ProjectResponse toResponseWithPermissions(ProjectEntity project) {
+    private Map<Long, Long> toCountMap(List<Object[]> results) {
+        Map<Long, Long> map = new HashMap<>();
+        for (Object[] row : results) {
+            map.put((Long) row[0], (Long) row[1]);
+        }
+        return map;
+    }
+
+    private ProjectResponse toResponse(ProjectEntity project) {
         Long currentUserId = securityService.getCurrentUserId();
         ProjectResponse response = ProjectResponse.mapToResponse(project);
+
+        Long taskCount = taskRepository.countByProjectId(project.getId());
+        response.setProgress(taskCount != 0 ? (taskRepository.countByProjectIdAndStatus(project.getId(), TaskStatus.DONE)/taskCount)*100 : 0);
+        response.setTaskCount(taskCount);
         response.setPermissions(permissionResolver.resolveProjectPermissions(currentUserId, project.getId()));
         return response;
     }

@@ -13,10 +13,10 @@ import { useGetProjectAnalyticsQuery } from "../api/analyticsApi";
 // ─── Colour maps ─────────────────────────────────────────────────────────────
 
 const STATUS_COLOR: Record<string, string> = {
-  TODO: "#94a3b8", IN_PROGRESS: "#3b82f6", REVIEW: "#f59e0b", DONE: "#22c55e",
+  TODO: "#444651", IN_PROGRESS: "#233a87", REVIEW: "#643300", DONE: "#006a61",
 };
 const PRIORITY_COLOR: Record<string, string> = {
-  LOW: "#94a3b8", MEDIUM: "#3b82f6", HIGH: "#f59e0b", URGENT: "#ef4444",
+  LOW: "#444651", MEDIUM: "#233a87", HIGH: "#643300", URGENT: "#ba1a1a",
 };
 const STATUS_LABEL: Record<string, string> = {
   TODO: "To Do", IN_PROGRESS: "In Progress", REVIEW: "Review", DONE: "Done",
@@ -28,9 +28,9 @@ const PRIORITY_LABEL: Record<string, string> = {
 // ─── Health score helpers ─────────────────────────────────────────────────────
 
 function healthColor(score: number) {
-  if (score >= 75) return { bg: "bg-green-100", text: "text-green-700", bar: "#22c55e", label: "Healthy" };
-  if (score >= 50) return { bg: "bg-amber-100", text: "text-amber-700", bar: "#f59e0b", label: "At Risk" };
-  return { bg: "bg-red-100", text: "text-red-700", bar: "#ef4444", label: "Critical" };
+  if (score >= 75) return { bg: "bg-[rgba(0,106,97,0.08)]", text: "text-[#006a61]", bar: "#006a61", label: "Healthy" };
+  if (score >= 50) return { bg: "bg-[rgba(100,51,0,0.08)]", text: "text-[#643300]", bar: "#643300", label: "At Risk" };
+  return { bg: "bg-[rgba(186,26,26,0.08)]", text: "text-[#ba1a1a]", bar: "#ba1a1a", label: "Critical" };
 }
 
 // ─── Reusable components ──────────────────────────────────────────────────────
@@ -145,11 +145,11 @@ export function ProjectAnalyticsTab({ projectId, showMemberWorkload, members, sp
         <StatCard label="Total Tasks" value={analytics.totalTasks}
           icon={<TrendingUp className="h-5 w-5 text-primary" />} accent="bg-primary/10" />
         <StatCard label="Completed" value={`${completionPct}%`}
-          icon={<CheckCircle2 className="h-5 w-5 text-green-600" />} accent="bg-green-50" />
+          icon={<CheckCircle2 className="h-5 w-5 text-[#006a61]" />} accent="bg-[rgba(0,106,97,0.08)]" />
         <StatCard label="Overdue" value={analytics.overdueCount}
           icon={<AlertCircle className="h-5 w-5 text-destructive" />} accent="bg-destructive/10" />
         <StatCard label="Velocity (30d)" value={`${analytics.avgDailyVelocity.toFixed(1)}/day`}
-          icon={<Zap className="h-5 w-5 text-amber-500" />} accent="bg-amber-50" />
+          icon={<Zap className="h-5 w-5 text-[#643300]" />} accent="bg-[rgba(100,51,0,0.08)]" />
       </div>
 
       {/* ── 2. Health score + Projected date ── */}
@@ -178,8 +178,8 @@ export function ProjectAnalyticsTab({ projectId, showMemberWorkload, members, sp
         <Card className="p-5 space-y-3">
           <h3 className="text-sm font-semibold">Projected Completion</h3>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50">
-              <CalendarClock className="h-5 w-5 text-blue-600" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[rgba(35,58,135,0.08)]">
+              <CalendarClock className="h-5 w-5 text-[#233a87]" />
             </div>
             <div>
               <p className={`text-lg ${projectedClass}`}>{projectedLabel}</p>
@@ -311,7 +311,7 @@ export function ProjectAnalyticsTab({ projectId, showMemberWorkload, members, sp
                   {/* Stats row */}
                   <div className="flex gap-4 text-xs text-muted-foreground pl-10">
                     <span>Assigned: <strong className="text-foreground">{m.assignedCount}</strong></span>
-                    <span>Done: <strong className="text-green-600">{m.completedCount}</strong></span>
+                    <span>Done: <strong className="text-[#006a61]">{m.completedCount}</strong></span>
                     <span>Overdue: <strong className={m.overdueCount > 0 ? "text-destructive" : "text-foreground"}>{m.overdueCount}</strong></span>
                   </div>
                 </div>

@@ -78,24 +78,24 @@ const PX_PER_DAY: Record<ZoomLevel, number> = {
 // ─── Status / Priority configs ────────────────────────────────────────────────
 
 const STATUS_BAR: Record<TaskStatus, { bg: string; border: string; text: string }> = {
-  TODO: { bg: "bg-slate-100", border: "border-slate-300", text: "text-slate-700" },
-  IN_PROGRESS: { bg: "bg-blue-100", border: "border-blue-300", text: "text-blue-800" },
-  REVIEW: { bg: "bg-amber-100", border: "border-amber-300", text: "text-amber-800" },
-  DONE: { bg: "bg-green-100", border: "border-green-300", text: "text-green-700" },
+  TODO: { bg: "bg-[rgba(68,70,81,0.10)]", border: "border-[rgba(68,70,81,0.25)]", text: "text-[#444651]" },
+  IN_PROGRESS: { bg: "bg-[rgba(35,58,135,0.10)]", border: "border-[rgba(35,58,135,0.25)]", text: "text-[#233a87]" },
+  REVIEW: { bg: "bg-[rgba(100,51,0,0.10)]", border: "border-[rgba(100,51,0,0.25)]", text: "text-[#643300]" },
+  DONE: { bg: "bg-[rgba(0,106,97,0.10)]", border: "border-[rgba(0,106,97,0.25)]", text: "text-[#006a61]" },
 };
 
 const STATUS_GROUP_STYLE: Record<TaskStatus, { label: string; colorClass: string }> = {
-  TODO: { label: "Todo", colorClass: "text-slate-600 bg-slate-100 border-slate-200" },
-  IN_PROGRESS: { label: "In Progress", colorClass: "text-blue-700 bg-blue-50 border-blue-200" },
-  REVIEW: { label: "Review", colorClass: "text-amber-700 bg-amber-50 border-amber-200" },
-  DONE: { label: "Done", colorClass: "text-green-700 bg-green-50 border-green-200" },
+  TODO: { label: "Todo", colorClass: "text-[#444651] bg-[rgba(68,70,81,0.08)] border-[rgba(68,70,81,0.2)]" },
+  IN_PROGRESS: { label: "In Progress", colorClass: "text-[#233a87] bg-[rgba(35,58,135,0.08)] border-[rgba(35,58,135,0.2)]" },
+  REVIEW: { label: "Review", colorClass: "text-[#643300] bg-[rgba(100,51,0,0.08)] border-[rgba(100,51,0,0.2)]" },
+  DONE: { label: "Done", colorClass: "text-[#006a61] bg-[rgba(0,106,97,0.08)] border-[rgba(0,106,97,0.2)]" },
 };
 
 const PRIORITY_DOT: Record<TaskPriority, string> = {
-  LOW: "bg-slate-400",
-  MEDIUM: "bg-amber-500",
-  HIGH: "bg-orange-500",
-  URGENT: "bg-red-600",
+  LOW: "bg-[#444651]",
+  MEDIUM: "bg-[#233a87]",
+  HIGH: "bg-[#643300]",
+  URGENT: "bg-[#ba1a1a]",
 };
 
 const PRIORITY_LABEL: Record<TaskPriority, string> = {

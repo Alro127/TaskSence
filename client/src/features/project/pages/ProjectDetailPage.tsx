@@ -77,11 +77,11 @@ const JOIN_STATUS_CONFIG: Record<
 > = {
   PENDING: {
     label: "Pending",
-    badgeClass: "text-amber-600 bg-amber-50 border-amber-200",
+    badgeClass: "text-[#643300] bg-[rgba(100,51,0,0.08)] border-[rgba(100,51,0,0.2)]",
   },
   APPROVED: {
     label: "Approved",
-    badgeClass: "text-green-600 bg-green-50 border-green-200",
+    badgeClass: "text-[#006a61] bg-[rgba(0,106,97,0.08)] border-[rgba(0,106,97,0.2)]",
   },
   REJECTED: {
     label: "Rejected",
@@ -164,7 +164,7 @@ function JoinRequestItem({
           <Button
             size="sm"
             variant="outline"
-            className="text-green-600 border-green-200 hover:bg-green-50"
+            className="text-[#006a61] border-[rgba(0,106,97,0.2)] hover:bg-[rgba(0,106,97,0.06)]"
             disabled={isLoading}
             onClick={() => handleReview("APPROVED")}
           >
@@ -496,13 +496,13 @@ export function ProjectDetailPage() {
             </Button>
           </div>
         ) : localJoinRequest.status === "PENDING" ? (
-          <div className="flex items-center gap-4 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100">
-              <Clock className="h-5 w-5 text-amber-600" />
+          <div className="flex items-center gap-4 rounded-xl border border-[rgba(100,51,0,0.2)] bg-[rgba(100,51,0,0.06)] px-5 py-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[rgba(100,51,0,0.10)]">
+              <Clock className="h-5 w-5 text-[#643300]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-amber-800">Join request pending</p>
-              <p className="text-xs text-amber-700 mt-0.5">
+              <p className="text-sm font-semibold text-[#643300]">Join request pending</p>
+              <p className="text-xs text-[#643300]/80 mt-0.5">
                 Your request has been sent. You'll be notified once the manager reviews it.
               </p>
             </div>
@@ -718,7 +718,7 @@ export function ProjectDetailPage() {
               <ClipboardList className="h-4 w-4" />
               Join Requests
               {pendingCount > 0 && (
-                <Badge className="text-xs bg-amber-500 hover:bg-amber-500 text-white">
+                <Badge className="text-xs bg-[#643300] hover:bg-[#643300] text-white">
                   {pendingCount}
                 </Badge>
               )}
@@ -732,9 +732,9 @@ export function ProjectDetailPage() {
 
         {/* ── Overview Tab ── */}
         <TabsContent value="overview" className="mt-6 max-w-2xl space-y-6">
-          <Card className="p-6 space-y-4">
-            <h3 className="text-lg font-semibold">Project Information</h3>
-            <Separator />
+          <div className="ghost-border rounded-xl bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.05)] space-y-4">
+            <h3 className="text-base font-semibold text-[#1a1c1b]" style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}>Project Information</h3>
+            <div className="h-px bg-[#efeeec]" />
 
             <dl className="grid grid-cols-1 gap-y-4 sm:grid-cols-2">
               <div>
@@ -810,7 +810,7 @@ export function ProjectDetailPage() {
 
             {canManageProject && (
               <>
-                <Separator />
+                <div className="h-px bg-[#efeeec]" />
                 <Button
                   variant="outline"
                   size="sm"
@@ -821,7 +821,7 @@ export function ProjectDetailPage() {
                 </Button>
               </>
             )}
-          </Card>
+          </div>
         </TabsContent>
 
         {/* ── Tasks Tab ── */}
@@ -838,30 +838,30 @@ export function ProjectDetailPage() {
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
                   <p className="text-2xl font-bold">{tasks.length}</p>
                 </Card>
-                <Card className="p-4 space-y-1 border-l-4 border-l-slate-400">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Todo</p>
-                  <p className="text-2xl font-bold text-slate-600">
+                <div className="ghost-border rounded-xl p-4 space-y-1 bg-white border-l-4 border-l-[#444651]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[#444651]">Todo</p>
+                  <p className="text-2xl font-bold text-[#444651]">
                     {tasks.filter((t) => t.status === "TODO").length}
                   </p>
-                </Card>
-                <Card className="p-4 space-y-1 border-l-4 border-l-blue-500">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">In Progress</p>
-                  <p className="text-2xl font-bold text-blue-600">
+                </div>
+                <div className="ghost-border rounded-xl p-4 space-y-1 bg-white border-l-4 border-l-[#233a87]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[#444651]">In Progress</p>
+                  <p className="text-2xl font-bold text-[#233a87]">
                     {tasks.filter((t) => t.status === "IN_PROGRESS").length}
                   </p>
-                </Card>
-                <Card className="p-4 space-y-1 border-l-4 border-l-amber-500">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Review</p>
-                  <p className="text-2xl font-bold text-amber-600">
+                </div>
+                <div className="ghost-border rounded-xl p-4 space-y-1 bg-white border-l-4 border-l-[#643300]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[#444651]">Review</p>
+                  <p className="text-2xl font-bold text-[#643300]">
                     {tasks.filter((t) => t.status === "REVIEW").length}
                   </p>
-                </Card>
-                <Card className="p-4 space-y-1 border-l-4 border-l-green-500">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Done</p>
-                  <p className="text-2xl font-bold text-green-600">
+                </div>
+                <div className="ghost-border rounded-xl p-4 space-y-1 bg-white border-l-4 border-l-[#006a61]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[#444651]">Done</p>
+                  <p className="text-2xl font-bold text-[#006a61]">
                     {tasks.filter((t) => t.status === "DONE").length}
                   </p>
-                </Card>
+                </div>
               </div>
 
               {/* ── Progress bar ── */}
@@ -876,7 +876,7 @@ export function ProjectDetailPage() {
                     </div>
                     <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-green-500 transition-all"
+                        className="h-full rounded-full bg-[#006a61] transition-all"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -886,7 +886,7 @@ export function ProjectDetailPage() {
               })()}
 
               {/* ── CTA ── */}
-              <div className="flex items-center justify-between rounded-xl border bg-card p-5">
+              <div className="flex items-center justify-between ghost-border rounded-xl bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
                 <div>
                   <p className="text-sm font-medium">Task Board</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
