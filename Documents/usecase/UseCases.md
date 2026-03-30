@@ -1,230 +1,73 @@
-# Detailed Use Cases Specification (Aligned Scope)
-
-Tài liệu này mô tả các use case đã được đồng bộ theo phạm vi mới:
-
-- **MVP (Phase 1)**: không triển khai AI trực tiếp
-- **Phase 2**: triển khai AI nâng cao
-- **Performance**: không dùng manual timer/time logging
-- **Elasticsearch**: dùng cho search + analytics trong MVP
-
----
-
-## 1. Authentication & User Profile
-
-### UC-AUTH-01: Đăng ký tài khoản
-
-- **Actor**: Guest
-- **Main Flow**:
-
-1. User nhập email/password.
-2. Hệ thống gửi OTP xác thực email.
-3. User xác thực OTP.
-4. Hệ thống tạo tài khoản và profile mặc định.
-
-### UC-AUTH-02: Đăng nhập
-
-- **Actor**: Guest
-- **Main Flow**:
-
-1. User nhập email/password.
-2. Hệ thống xác thực và cấp JWT.
-3. User vào dashboard.
-
-### UC-AUTH-03: Quên mật khẩu
-
-- **Actor**: Guest
-- **Main Flow**:
-
-1. User nhập email.
-2. Hệ thống gửi reset OTP/link.
-3. User đặt mật khẩu mới.
-
-### UC-AUTH-04: Cập nhật hồ sơ
-
-- **Actor**: Authenticated User
-- **Main Flow**:
-
-1. User chỉnh avatar, tên, bio, skills.
-2. Hệ thống validate và lưu.
-
----
-
-## 2. Workspace & Project Management
-
-### UC-WS-01: Tạo workspace
-
-- **Actor**: Authenticated User
-- **Main Flow**:
-
-1. User tạo workspace mới.
-2. Hệ thống gán quyền owner cho user tạo.
-
-### UC-WS-02: Mời thành viên vào workspace
-
-- **Actor**: Workspace Owner/Admin
-- **Main Flow**:
-
-1. Nhập email và role.
-2. Hệ thống thêm member hoặc gửi lời mời.
-
-### UC-PROJ-01: Tạo project
-
-- **Actor**: Workspace Owner/Admin/Manager
-- **Main Flow**:
-
-1. Nhập thông tin project.
-2. Chọn member và role.
-3. Hệ thống tạo project và mapping thành viên.
-
-### UC-PROJ-02: Cập nhật project settings
-
-- **Actor**: Manager
-- **Main Flow**:
-
-1. Sửa thông tin project.
-2. Điều chỉnh membership/permissions theo role.
-
----
-
-## 3. Task Management (MVP Core)
-
-### UC-TASK-01: Tạo task
-
-- **Actor**: Member/Manager
-- **Main Flow**:
-
-1. Nhập title, description, priority, due date.
-2. Chọn assignee (1 hoặc nhiều).
-3. Hệ thống lưu task.
-
-### UC-TASK-02: Quản lý subtask/checklist
-
-- **Actor**: Member/Manager
-- **Main Flow**:
-
-1. Mở task detail.
-2. Thêm/sửa/xóa checklist items.
-3. Hệ thống auto-save.
-
-### UC-TASK-03: Chuyển trạng thái task
-
-- **Actor**: Assignee/Manager
-- **Main Flow**:
-
-1. Kéo thả task trên Kanban.
-2. Hệ thống cập nhật status.
-3. Status dùng cố định: `TODO`, `IN_PROGRESS`, `REVIEW`, `DONE`.
-
-### UC-TASK-04: Đính kèm file
-
-- **Actor**: Member
-- **Main Flow**:
-
-1. Upload file từ task detail.
-2. Backend lưu qua MinIO (MVP).
-3. Hệ thống liên kết file với task.
-
-### UC-TASK-05: Bình luận và mention
-
-- **Actor**: Project Member
-- **Main Flow**:
-
-1. Gửi comment trong task.
-2. Mention thành viên bằng @.
-3. Hệ thống tạo notification cho người liên quan.
-
----
-
-## 4. Search & Analytics (Elasticsearch - MVP)
-
-### UC-SEA-01: Tìm kiếm full-text
-
-- **Actor**: Authenticated User
-- **Main Flow**:
-
-1. User nhập keyword.
-2. Hệ thống tìm trên Task/Project/User profile.
-3. Trả kết quả với filter/sort/highlight.
-
-### UC-SEA-02: Dashboard KPI - Task Throughput
-
-- **Actor**: Project Member/Manager
-- **Main Flow**:
-
-1. User mở dashboard.
-2. Hệ thống truy vấn index analytics.
-3. Hiển thị số task done theo ngày/tuần.
-
-### UC-SEA-03: Dashboard KPI - Overdue Trends
-
-- **Actor**: Project Member/Manager
-- **Main Flow**:
-
-1. User mở dashboard.
-2. Hệ thống tính xu hướng task quá hạn theo thời gian.
-3. Hiển thị chart xu hướng.
-
-### UC-SEA-04: Đồng bộ dữ liệu sang Elasticsearch
-
-- **Actor**: System Scheduler/Admin
-- **Main Flow**:
-
-1. Batch job chạy theo lịch.
-2. Đồng bộ dữ liệu từ PostgreSQL sang Elasticsearch.
-3. Admin có thể chạy manual reindex command khi cần.
-
----
-
-## 5. Notifications
-
-### UC-NOTI-01: Nhận và xem thông báo
-
-- **Actor**: User
-- **Main Flow**:
-
-1. Sự kiện xảy ra (mention/assign/update liên quan).
-2. Hệ thống tạo notification.
-3. UI hiển thị badge trên chuông.
-4. User mở danh sách và điều hướng tới task/project.
-
-> MVP realtime scope: ưu tiên realtime cho notification bell.
-
----
-
-## 6. AI Features (Phase 2)
-
-### UC-AI-01: AI Smart Assign
-
-- **Actor**: Manager
-- **Main Flow**:
-
-1. User chọn AI suggest tại assignee field.
-2. AI trả danh sách ứng viên phù hợp.
-3. User chọn và xác nhận.
-
-### UC-AI-02: AI Auto Subtask Generation
-
-- **Actor**: Manager/Member
-- **Main Flow**:
-
-1. User nhập mô tả task lớn.
-2. AI sinh danh sách subtasks.
-3. User duyệt và tạo checklist/subtasks.
-
-### UC-AI-03: AI Chatbot RAG
-
-- **Actor**: Authenticated User
-- **Main Flow**:
-
-1. User đặt câu hỏi về tiến độ dự án.
-2. Chatbot truy vấn retrieval từ Elasticsearch.
-3. LLM tổng hợp câu trả lời và trả kết quả.
-
-### UC-AI-04: AI Performance Evaluation
-
-- **Actor**: Manager
-- **Main Flow**:
-
-1. Hệ thống thu thập activity signals.
-2. AI phân tích xu hướng hiệu suất.
-3. Trả báo cáo đánh giá và cảnh báo rủi ro.
+﻿# Use Cases (Danh sách 46 Use Cases chuẩn)
+
+Tài liệu này đồng bộ danh sách Use Case từ file Documents.md chính thức.
+
+## 1. Authentication & Profile (Xác thực & Cá nhân)
+
+- **UC-01 - Đăng ký tài khoản:** Khách truy cập đăng ký tài khoản mới.
+- **UC-02 - Đăng nhập:** Người dùng đăng nhập hệ thống.
+- **UC-03 - Đăng xuất:** Người dùng thoát phiên làm việc an toàn.
+- **UC-04 - Cập nhật thông tin cá nhân:** Thay đổi thông tin hồ sơ (avatar, tên...).
+
+## 2. Workspace Management (Quản lý Workspace)
+
+- **UC-05 - Tạo workspace:** Tạo không gian làm việc mới.
+- **UC-06 - Cập nhật workspace:** Tùy chỉnh thông tin workspace.
+- **UC-07 - Xóa workspace:** Hủy bỏ workspace (dành cho owner).
+- **UC-08 - Xem danh sách workspace:** Xem các workspace mình tham gia.
+- **UC-09 - Thêm thành viên vào workspace:** Mời thành viên mới.
+- **UC-10 - Xóa thành viên khỏi workspace:** Loại bỏ người dùng khỏi workspace.
+- **UC-11 - Rời workspace:** Tự động rút lui không tham gia workspace nữa.
+- **UC-12 - Yêu cầu tham gia workspace:** Gửi request xin vào một workspace.
+- **UC-13 - Hủy yêu cầu tham gia workspace:** Rút lại request xin vào.
+- **UC-14 - Xử lý yêu cầu tham gia workspace:** Phê duyệt / từ chối người xin vào.
+
+## 3. Project Management (Quản lý Project)
+
+- **UC-15 - Tạo project:** Tạo dự án mới trong thư mục workspace.
+- **UC-16 - Cập nhật project:** Đổi tên hoặc cấu hình dự án.
+- **UC-17 - Xóa project:** Bỏ dự án không còn chạy.
+- **UC-18 - Xem danh sách project:** Hiển thị và tìm kiếm các project.
+- **UC-19 - Thêm thành viên vào project:** Kéo user từ workspace vào project.
+- **UC-20 - Xóa thành viên khỏi project:** Loại user khỏi project.
+- **UC-21 - Rời project:** Tự rút khỏi project.
+- **UC-22 - Yêu cầu tham gia project:** Xin phép vào xem dự án.
+- **UC-23 - Hủy yêu cầu tham gia project:** Hủy việc xin phép.
+- **UC-24 - Xử lý yêu cầu tham gia project:** Duyệt/từ chối member xin vào project.
+
+## 4. Task & Collaboration (Quản lý công việc và cộng tác)
+
+- **UC-25 - Tạo task:** Tạo một công việc mới, gán ngày tháng, mô tả.
+- **UC-26 - Cập nhật task:** Đổi trạng thái, đổi người làm, sửa mô tả task.
+- **UC-27 - Xóa task:** Xóa hoặc lưu trữ task.
+- **UC-28 - Xem danh sách task:** Hiển thị danh sách task trong project.
+- **UC-29 - Xem chi tiết task:** Đọc chi tiết nội dung, mô tả của một công việc.
+- **UC-30 - Bình luận vào task:** Thảo luận, mention đồng nghiệp ngay trong task.
+- **UC-31 - Đính kèm file vào task:** Tải file lên công việc (hình ảnh, tài liệu).
+
+## 5. AI Support (Hỗ trợ nghiệp vụ AI)
+
+- **UC-32 - Gợi ý task nên thực hiện tiếp theo:** AI đánh giá độ mức độ và gợi ý what to do next.
+- **UC-33 - Cảnh báo overload:** AI nhận diện khối lượng công việc quá tải và đưa ra cảnh báo.
+
+## 6. Reporting (Báo cáo)
+
+- **UC-34 - Tạo báo cáo tiến độ:** Xuất báo cáo hiệu năng, phân tích dữ liệu dự án.
+
+## 7. Workflow Sharing (Chia sẻ quy trình)
+
+- **UC-35 - Tạo workflow từ project:** Xuất cấu trúc project thành template mẫu.
+- **UC-36 - Chỉnh sửa workflow:** Chỉnh lý lại các nội dung của template.
+- **UC-37 - Chia sẻ workflow:** Public quy trình để cộng đồng tham khảo.
+- **UC-38 - Khám phá workflow:** Duyệt và tìm kiếm danh sách template public.
+- **UC-39 - Xem chi tiết workflow:** Hiển thị phân mảnh kiến trúc mẫu.
+- **UC-40 - Đánh giá workflow:** Chấm điểm template.
+- **UC-41 - Bình luận workflow:** Góp ý dưới mẫu chia sẻ.
+- **UC-42 - Lưu workflow yêu thích:** Đánh dấu (bookmark) để dùng sau.
+- **UC-43 - Tạo project từ workflow:** Import workflow template biến thành project thực tế của mình.
+- **UC-44 - Xem workflow đã đăng:** Quản lý các mẫu mình đóng góp.
+
+## 8. Dashboard
+
+- **UC-45 - Xem dashboard project:** Xem tổng quan tốc độ hoàn thành tại dự án.
+- **UC-46 - Xem dashboard cá nhân:** View biểu đồ, đánh giá hiệu suất riêng của cá nhân.
