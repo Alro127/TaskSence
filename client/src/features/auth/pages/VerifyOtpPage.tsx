@@ -110,9 +110,15 @@ export function VerifyOtpPage() {
         Back to registration
       </Link>
 
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold tracking-tight">Verify your email</h2>
-        <p className="text-sm text-muted-foreground">
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#444651]">Email verification</p>
+        <h2
+          className="text-3xl font-bold text-[#1a1c1b]"
+          style={{ fontFamily: "'Epilogue', 'Inter', sans-serif", letterSpacing: "-0.02em" }}
+        >
+          Verify your email.
+        </h2>
+        <p className="text-sm text-[#444651] pt-0.5">
           We've sent a 6-digit verification code to
         </p>
         <div className="flex items-center gap-2 text-sm font-medium">

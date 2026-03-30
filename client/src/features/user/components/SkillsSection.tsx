@@ -21,19 +21,19 @@ import {
 // Level badge + progress bar styling maps
 // ---------------------------------------------------------------------------
 const LEVEL_BADGE_STYLES: Record<number, string> = {
-  1: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-  2: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
-  3: "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
-  4: "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300",
-  5: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300",
+  1: "bg-[rgba(68,70,81,0.08)] text-[#444651]",
+  2: "bg-[rgba(35,58,135,0.08)] text-[#233a87]",
+  3: "bg-[rgba(0,106,97,0.08)] text-[#006a61]",
+  4: "bg-[rgba(35,58,135,0.12)] text-[#233a87]",
+  5: "bg-[rgba(100,51,0,0.08)] text-[#643300]",
 };
 
 const LEVEL_PROGRESS_COLORS: Record<number, string> = {
-  1: "bg-slate-400",
-  2: "bg-blue-500",
-  3: "bg-green-500",
-  4: "bg-purple-500",
-  5: "bg-amber-500",
+  1: "bg-[#444651]",
+  2: "bg-[#233a87]",
+  3: "bg-[#006a61]",
+  4: "bg-[#233a87]",
+  5: "bg-[#643300]",
 };
 
 // ---------------------------------------------------------------------------

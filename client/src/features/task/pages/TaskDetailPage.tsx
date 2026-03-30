@@ -70,24 +70,24 @@ function toDatetimeLocal(iso: string): string {
 }
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string; badgeClass: string }[] = [
-  { value: "TODO", label: "Todo", badgeClass: "text-slate-600 bg-slate-100 border-slate-200" },
+  { value: "TODO", label: "Todo", badgeClass: "text-[#444651] bg-[rgba(68,70,81,0.08)] border-[rgba(68,70,81,0.2)]" },
   {
     value: "IN_PROGRESS",
     label: "In Progress",
-    badgeClass: "text-blue-600 bg-blue-50 border-blue-200",
+    badgeClass: "text-[#233a87] bg-[rgba(35,58,135,0.08)] border-[rgba(35,58,135,0.2)]",
   },
-  { value: "REVIEW", label: "Review", badgeClass: "text-amber-600 bg-amber-50 border-amber-200" },
-  { value: "DONE", label: "Done", badgeClass: "text-green-600 bg-green-50 border-green-200" },
+  { value: "REVIEW", label: "Review", badgeClass: "text-[#643300] bg-[rgba(100,51,0,0.08)] border-[rgba(100,51,0,0.2)]" },
+  { value: "DONE", label: "Done", badgeClass: "text-[#006a61] bg-[rgba(0,106,97,0.08)] border-[rgba(0,106,97,0.2)]" },
 ];
 
 const PRIORITY_OPTIONS: { value: TaskPriority; label: string; badgeClass: string }[] = [
-  { value: "LOW", label: "Low", badgeClass: "text-slate-600 bg-slate-100 border-slate-200" },
-  { value: "MEDIUM", label: "Medium", badgeClass: "text-blue-600 bg-blue-50 border-blue-200" },
-  { value: "HIGH", label: "High", badgeClass: "text-amber-600 bg-amber-50 border-amber-200" },
+  { value: "LOW", label: "Low", badgeClass: "text-[#444651] bg-[rgba(68,70,81,0.08)] border-[rgba(68,70,81,0.2)]" },
+  { value: "MEDIUM", label: "Medium", badgeClass: "text-[#233a87] bg-[rgba(35,58,135,0.08)] border-[rgba(35,58,135,0.2)]" },
+  { value: "HIGH", label: "High", badgeClass: "text-[#643300] bg-[rgba(100,51,0,0.08)] border-[rgba(100,51,0,0.2)]" },
   {
     value: "URGENT",
     label: "Urgent",
-    badgeClass: "text-red-600 bg-red-50 border-red-200",
+    badgeClass: "text-[#ba1a1a] bg-[rgba(186,26,26,0.08)] border-[rgba(186,26,26,0.2)]",
   },
 ];
 
@@ -552,7 +552,7 @@ export function TaskDetailPage() {
               {subtasks.length > 0 && (
                 <div className="ml-2 h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full rounded-full bg-green-500 transition-all"
+                    className="h-full rounded-full bg-[#006a61] transition-all"
                     style={{
                       width: `${Math.round((doneSubs / subtasks.length) * 100)}%`,
                     }}
@@ -574,12 +574,12 @@ export function TaskDetailPage() {
                         onClick={() => toggleSubtaskDone(st.id, st.status)}
                         disabled={!canToggleSubtask}
                         className={cn(
-                          "shrink-0 text-muted-foreground transition-colors hover:text-green-600",
+                          "shrink-0 text-muted-foreground transition-colors hover:text-[#006a61]",
                           !canToggleSubtask && "opacity-40 cursor-not-allowed",
                         )}
                       >
                         {st.status === "DONE" ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <CheckCircle2 className="h-4 w-4 text-[#006a61]" />
                         ) : (
                           <Circle className="h-4 w-4" />
                         )}

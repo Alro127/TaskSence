@@ -3,7 +3,6 @@ import { FolderKanban, MoreVertical, Pin, PinOff, Globe, Lock } from "lucide-rea
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,13 +40,13 @@ export function WorkspaceCard({
   const hasActionMenu = canEdit || canDelete;
 
   return (
-    <Card
+    <div
       className={cn(
-        "cursor-pointer rounded-lg p-0 gap-0 transition-shadow hover:shadow-md",
-        variant === "pinned" && "border-primary/30 bg-primary/5",
+        "ghost-border cursor-pointer rounded-xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)] transition-all hover:shadow-[0_2px_8px_rgba(0,0,0,0.09)] hover:translate-y-[-1px]",
+        variant === "pinned" && "bg-[rgba(35,58,135,0.04)]",
       )}
     >
-      {/* Clickable body — navigates to detail */}
+      {/* Clickable body */}
       <div
         className="flex-1 p-5"
         onClick={() => navigate(`/workspaces/${workspace.id}`)}
@@ -55,18 +54,18 @@ export function WorkspaceCard({
         <div className="flex items-start justify-between gap-2">
           {/* Icon + Name + Description */}
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10">
-              <FolderKanban className="h-5 w-5 text-primary" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[rgba(35,58,135,0.08)]">
+              <FolderKanban className="h-5 w-5 text-[#233a87]" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold truncate">{workspace.name}</h3>
-              <p className="text-xs text-muted-foreground truncate mt-0.5">
+              <h3 className="text-sm font-semibold truncate text-[#1a1c1b]">{workspace.name}</h3>
+              <p className="text-xs text-[#444651] truncate mt-0.5">
                 {workspace.description ?? "No description"}
               </p>
             </div>
           </div>
 
-          {/* Actions — stop propagation so click doesn't navigate */}
+          {/* Actions */}
           <div
             className="flex shrink-0 items-center gap-1"
             onClick={(e) => e.stopPropagation()}
@@ -74,7 +73,7 @@ export function WorkspaceCard({
             <Button
               variant="ghost"
               size="icon-sm"
-              className={cn(isPinned && "text-amber-500 hover:text-amber-600")}
+              className={cn(isPinned && "text-[#643300] hover:text-[#643300]")}
               title={isPinned ? "Unpin workspace" : "Pin workspace"}
               onClick={() => onTogglePin(workspace.id)}
             >
@@ -115,7 +114,7 @@ export function WorkspaceCard({
         </div>
 
         {/* Footer meta */}
-        <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="mt-4 flex items-center gap-2 text-xs text-[#444651]">
           <span>
             {projectCount} project{projectCount !== 1 ? "s" : ""}
           </span>
@@ -137,6 +136,6 @@ export function WorkspaceCard({
           </span>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

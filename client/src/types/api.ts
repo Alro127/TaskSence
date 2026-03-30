@@ -79,6 +79,7 @@ export interface Workspace {
   name: string;
   description: string | null;
   ownerId: number;
+  projectCount?: number;
   permissions?: string[];
   isPublic?: boolean;
   createdAt: string;
@@ -245,6 +246,8 @@ export interface Project {
   name: string;
   description: string | null;
   status: ProjectStatus;
+  progress?: number;
+  taskCount?: number;
   permissions?: string[];
   startDate: string | null;
   endDate: string | null;

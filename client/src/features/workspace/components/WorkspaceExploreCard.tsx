@@ -73,7 +73,7 @@ export function WorkspaceExploreCard({
 
     if (localRequest.status === "APPROVED") {
       return (
-        <Badge className="bg-green-50 text-green-700 border-green-200">
+        <Badge className="bg-[rgba(0,106,97,0.08)] text-[#006a61] border-[rgba(0,106,97,0.2)]">
           Approved
         </Badge>
       );
@@ -81,7 +81,7 @@ export function WorkspaceExploreCard({
 
     if (localRequest.status === "REJECTED") {
       return (
-        <Badge className="bg-red-50 text-red-700 border-red-200">
+        <Badge className="bg-[rgba(186,26,26,0.08)] text-[#ba1a1a] border-[rgba(186,26,26,0.2)]">
           Rejected
         </Badge>
       );
@@ -96,23 +96,23 @@ export function WorkspaceExploreCard({
 
   return (
     <>
-      <div className="flex flex-col gap-4 rounded-lg border bg-card p-5 transition-shadow hover:shadow-sm">
+      <div className="ghost-border flex flex-col gap-4 rounded-xl bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.06)] transition-all hover:shadow-[0_2px_8px_rgba(0,0,0,0.09)]">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-            <FolderKanban className="h-5 w-5 text-primary" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[rgba(35,58,135,0.08)]">
+            <FolderKanban className="h-5 w-5 text-[#233a87]" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <p className="truncate text-sm font-semibold">{workspace.name}</p>
-              <Globe className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <p className="truncate text-sm font-semibold text-[#1a1c1b]">{workspace.name}</p>
+              <Globe className="h-3 w-3 shrink-0 text-[#444651]" />
             </div>
             {workspace.description ? (
-              <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+              <p className="mt-0.5 line-clamp-2 text-xs text-[#444651]">
                 {workspace.description}
               </p>
             ) : (
-              <p className="mt-0.5 text-xs italic text-muted-foreground">
+              <p className="mt-0.5 text-xs italic text-[#444651]">
                 No description
               </p>
             )}
@@ -121,7 +121,7 @@ export function WorkspaceExploreCard({
 
         {/* Footer */}
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-[#444651]">
             Created{" "}
             {formatDistanceToNow(new Date(workspace.createdAt), {
               addSuffix: true,

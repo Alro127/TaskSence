@@ -27,7 +27,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -65,7 +67,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         workspaceMemberRepository.save(member);
 
-        return toResponseWithPermissions(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -73,16 +75,42 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         WorkspaceEntity workspace = workspaceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
-        // @PreAuthorize đã đảm bảo user là workspace member
-        return toResponseWithPermissions(workspace);
+        return toResponse(workspace);
     }
 
     @Override
     public PageResponse<WorkspaceResponse> getMyWorkspaces(Pageable pageable) {
         UserEntity currentUser = securityService.getCurrentUser();
 
-        Page<WorkspaceResponse> responsePage = workspaceRepository.findAllByMemberUserId(currentUser.getId(), pageable)
-                .map(this::toResponseWithPermissions);
+        Page<WorkspaceEntity> workspacePage =
+                workspaceRepository.findAllByMemberUserId(currentUser.getId(), pageable);
+
+        // ✅ Lấy list ID
+        List<Long> workspaceIds = workspacePage.getContent()
+                .stream()
+                .map(WorkspaceEntity::getId)
+                .toList();
+
+        // ✅ Query 1 lần
+        Map<Long, Long> countMap = toCountMap(
+                projectRepository.countByWorkspaceIds(workspaceIds)
+        );
+
+        // ✅ Map sang response
+        Page<WorkspaceResponse> responsePage = workspacePage.map(workspace -> {
+            WorkspaceResponse res = WorkspaceResponse.mapToResponse(workspace);
+
+            res.setProjectCount(countMap.getOrDefault(workspace.getId(), 0L));
+
+            res.setPermissions(
+                    permissionResolver.resolveWorkspacePermissions(
+                            securityService.getCurrentUserId(),
+                            workspace.getId()
+                    )
+            );
+
+            return res;
+        });
 
         return new PageResponse<>(
                 responsePage.getContent(),
@@ -113,7 +141,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         workspaceRepository.save(workspace);
 
-        return toResponseWithPermissions(workspace);
+        return toResponse(workspace);
     }
 
     @Override
@@ -149,7 +177,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         List<WorkspaceEntity> workspaces = workspaceRepository.searchWorkspaces(name, cursor, pageable);
 
         return workspaces.stream()
-                .map(this::toResponseWithPermissions)
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -157,7 +185,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     public PageResponse<WorkspaceResponse> getPublicWorkspaces(Long userId, Pageable pageable) {
 
         Page<WorkspaceResponse> responsePage = workspaceRepository.findPublicWorkspacesByOwner(userId, pageable)
-                .map(this::toResponseWithPermissions);
+                .map(this::toResponse);
 
         return new PageResponse<>(
                 responsePage.getContent(),
@@ -167,9 +195,22 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 responsePage.getTotalPages());
     }
 
-    private WorkspaceResponse toResponseWithPermissions(WorkspaceEntity workspace) {
+    private Map<Long, Long> toCountMap(List<Object[]> results) {
+        Map<Long, Long> map = new HashMap<>();
+        for (Object[] row : results) {
+            Long workspaceId = (Long) row[0];
+            Long count = (Long) row[1];
+            map.put(workspaceId, count);
+        }
+        return map;
+    }
+
+    private WorkspaceResponse toResponse(WorkspaceEntity workspace) {
         Long currentUserId = securityService.getCurrentUserId();
         WorkspaceResponse response = WorkspaceResponse.mapToResponse(workspace);
+        response.setProjectCount(
+                projectRepository.countByWorkspaceId(workspace.getId())
+        );
         response.setPermissions(permissionResolver.resolveWorkspacePermissions(currentUserId, workspace.getId()));
         return response;
     }

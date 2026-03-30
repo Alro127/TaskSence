@@ -176,9 +176,15 @@ export function RegisterPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold tracking-tight">Create an account</h2>
-        <p className="text-sm text-muted-foreground">
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#444651]">Get started</p>
+        <h2
+          className="text-3xl font-bold text-[#1a1c1b]"
+          style={{ fontFamily: "'Epilogue', 'Inter', sans-serif", letterSpacing: "-0.02em" }}
+        >
+          Create an account.
+        </h2>
+        <p className="text-sm text-[#444651] pt-0.5">
           Enter your details to get started with TaskSense
         </p>
       </div>

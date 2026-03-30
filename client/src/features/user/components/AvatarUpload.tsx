@@ -67,7 +67,7 @@ export function AvatarUpload({
       {/* Unsaved-preview indicator dot */}
       {isPreviewMode && (
         <span
-          className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 border-2 border-background"
+          className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#643300] border-2 border-background"
           title="Preview not saved yet"
         >
           <span className="text-[8px] text-white font-bold leading-none">!</span>

@@ -43,97 +43,173 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+    /* Extended surface palette */
+    --color-surface-low: var(--surface-low);
+    --color-surface-high: var(--surface-high);
+    --color-teal: var(--teal);
+    --color-teal-container: var(--teal-container);
+    --color-amber: var(--amber);
 }
 
+/* ─── Academic Atelier — Light Mode ─────────────────────────────────────────── */
 :root {
-    --radius: 0.625rem;
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.546 0.245 262.881);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0.014 254.604);
-    --secondary-foreground: oklch(0.351 0.211 264.376);
-    --muted: oklch(0.967 0.003 264.542);
-    --muted-foreground: oklch(0.551 0.027 264.364);
-    --accent: oklch(0.97 0.014 254.604);
-    --accent-foreground: oklch(0.351 0.211 264.376);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.928 0.006 264.531);
-    --input: oklch(0.928 0.006 264.531);
-    --ring: oklch(0.546 0.245 262.881);
-    --chart-1: oklch(0.546 0.245 262.881);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.546 0.245 262.881);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0.014 254.604);
-    --sidebar-accent-foreground: oklch(0.351 0.211 264.376);
-    --sidebar-border: oklch(0.928 0.006 264.531);
-    --sidebar-ring: oklch(0.546 0.245 262.881);
+    /* Base radius: 4px — crisp, editorial */
+    --radius: 0.25rem;
+
+    /* ── Surface hierarchy (Warm Paper) ── */
+    --background: #faf9f7;          /* surface / desk */
+    --surface-low: #f4f3f1;         /* surface-container-low / notebook */
+    --surface-high: #e9e8e6;        /* surface-container-high / hover */
+
+    /* ── Text ── */
+    --foreground: #1a1c1b;          /* on-surface */
+
+    /* ── Cards = surface-container-lowest (white lift) ── */
+    --card: #ffffff;
+    --card-foreground: #1a1c1b;
+
+    /* ── Popover ── */
+    --popover: #ffffff;
+    --popover-foreground: #1a1c1b;
+
+    /* ── Primary: Deep Indigo #233a87 ── */
+    --primary: #233a87;
+    --primary-foreground: #ffffff;
+
+    /* ── Secondary: surface-container-low (shadcn secondary = subtle bg) ── */
+    --secondary: #f4f3f1;
+    --secondary-foreground: #1a1c1b;
+
+    /* ── Muted: surface-container #efeeec ── */
+    --muted: #efeeec;
+    --muted-foreground: #444651;    /* on-surface-variant */
+
+    /* ── Accent: surface-container-high (hover state) ── */
+    --accent: #e9e8e6;
+    --accent-foreground: #1a1c1b;
+
+    /* ── Destructive ── */
+    --destructive: #ba1a1a;
+
+    /* ── Ghost border: outline-variant at low opacity (no-line rule) ── */
+    --border: rgba(197, 197, 211, 0.35);
+    --input: rgba(197, 197, 211, 0.35);
+
+    /* ── Ring: Teal for focus (accessible, intentional) ── */
+    --ring: #006a61;
+
+    /* ── Charts ── */
+    --chart-1: #233a87;
+    --chart-2: #006a61;
+    --chart-3: #86f2e4;
+    --chart-4: #b7c4ff;
+    --chart-5: #ffdcc3;
+
+    /* ── Extended palette for feature components ── */
+    --teal: #006a61;
+    --teal-container: #86f2e4;
+    --amber: #643300;
+
+    /* ── Sidebar: surface-container-low (warm, borderless) ── */
+    --sidebar: #f4f3f1;
+    --sidebar-foreground: #1a1c1b;
+    --sidebar-primary: #233a87;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #e9e8e6;
+    --sidebar-accent-foreground: #1a1c1b;
+    --sidebar-border: transparent;
+    --sidebar-ring: #006a61;
 }
 
+/* ─── Dark Mode ──────────────────────────────────────────────────────────────── */
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --background: #121412;
+    --surface-low: #1e201f;
+    --surface-high: #2a2c2b;
+    --foreground: #e2e3e1;
+    --card: #1e201f;
+    --card-foreground: #e2e3e1;
+    --popover: #1e201f;
+    --popover-foreground: #e2e3e1;
+    --primary: #b7c4ff;
+    --primary-foreground: #001552;
+    --secondary: #2a2c2b;
+    --secondary-foreground: #e2e3e1;
+    --muted: #252726;
+    --muted-foreground: #9b9da0;
+    --accent: #333534;
+    --accent-foreground: #e2e3e1;
+    --destructive: #cf6679;
+    --border: rgba(197, 197, 211, 0.12);
+    --input: rgba(197, 197, 211, 0.12);
+    --ring: #6bd8cb;
+    --chart-1: #b7c4ff;
+    --chart-2: #6bd8cb;
+    --chart-3: #ffb77d;
+    --chart-4: #3d52a0;
+    --chart-5: #86f2e4;
+    --teal: #6bd8cb;
+    --teal-container: #005049;
+    --amber: #ffb77d;
+    --sidebar: #1e201f;
+    --sidebar-foreground: #e2e3e1;
+    --sidebar-primary: #b7c4ff;
+    --sidebar-primary-foreground: #001552;
+    --sidebar-accent: #2a2c2b;
+    --sidebar-accent-foreground: #e2e3e1;
+    --sidebar-border: transparent;
+    --sidebar-ring: #6bd8cb;
 }
 
+/* ─── Base layer ─────────────────────────────────────────────────────────────── */
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+    * {
+        @apply border-border outline-ring/50;
     }
-  body {
-    @apply bg-background text-foreground;
+    body {
+        @apply bg-background text-foreground;
+        font-family: 'Inter', sans-serif;
+        line-height: 1.6;
+    }
+    h1, h2, h3 {
+        font-family: 'Epilogue', 'Inter', sans-serif;
+        line-height: 1.25;
+        letter-spacing: -0.01em;
     }
 }
 
-/* Bell shake animation for new notifications */
+/* ─── Ghost border utility ───────────────────────────────────────────────────── */
+.ghost-border {
+    outline: 1px solid rgba(197, 197, 211, 0.25);
+}
+
+/* ─── Skeleton loader ────────────────────────────────────────────────────────── */
+.skeleton {
+    background: linear-gradient(90deg, #f4f3f1 25%, #e9e8e6 50%, #f4f3f1 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ─── Hide scrollbar ─────────────────────────────────────────────────────────── */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─── Bell shake animation ───────────────────────────────────────────────────── */
 @keyframes bell-shake {
-  0%, 100% { transform: rotate(0deg); }
-  15%       { transform: rotate(12deg); }
-  30%       { transform: rotate(-10deg); }
-  45%       { transform: rotate(8deg); }
-  60%       { transform: rotate(-6deg); }
-  75%       { transform: rotate(4deg); }
-  90%       { transform: rotate(-2deg); }
+    0%, 100% { transform: rotate(0deg); }
+    15%       { transform: rotate(12deg); }
+    30%       { transform: rotate(-10deg); }
+    45%       { transform: rotate(8deg); }
+    60%       { transform: rotate(-6deg); }
+    75%       { transform: rotate(4deg); }
+    90%       { transform: rotate(-2deg); }
 }
 
 .bell-shake {
-  animation: bell-shake 0.6s ease-in-out;
+    animation: bell-shake 0.6s ease-in-out;
 }

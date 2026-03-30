@@ -47,17 +47,17 @@ const ADD_STATUS_CONFIG: Record<
   CREATED: {
     label: "Added",
     icon: CheckCircle2,
-    className: "text-green-600 bg-green-50 border-green-200",
+    className: "text-[#006a61] bg-[rgba(0,106,97,0.08)] border-[rgba(0,106,97,0.2)]",
   },
   RESTORED: {
     label: "Restored",
     icon: RefreshCw,
-    className: "text-blue-600 bg-blue-50 border-blue-200",
+    className: "text-[#233a87] bg-[rgba(35,58,135,0.08)] border-[rgba(35,58,135,0.2)]",
   },
   ALREADY_EXISTS: {
     label: "Already a member",
     icon: AlertCircle,
-    className: "text-amber-600 bg-amber-50 border-amber-200",
+    className: "text-[#643300] bg-[rgba(100,51,0,0.08)] border-[rgba(100,51,0,0.2)]",
   },
   NOT_FOUND: {
     label: "Not found",

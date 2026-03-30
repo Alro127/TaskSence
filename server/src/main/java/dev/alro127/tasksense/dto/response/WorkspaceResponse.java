@@ -17,6 +17,8 @@ public class WorkspaceResponse {
 
     private String description;
 
+    private Long projectCount;
+
     private Long ownerId;
 
     private Boolean isPublic;
