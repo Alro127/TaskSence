@@ -118,13 +118,13 @@ function JoinRequestItem({
   };
 
   return (
-    <div className="flex items-start gap-4 rounded-lg border p-4">
+    <div className="flex flex-wrap items-start gap-4 rounded-lg border p-4">
       {/* Avatar */}
       {request.user.avatarUrl ? (
         <img
           src={request.user.avatarUrl}
           alt={request.user.fullName ?? request.user.email}
-          className="h-10 w-10 rounded-full object-cover shrink-0"
+          className="h-10 w-10 shrink-0 rounded-full object-cover"
         />
       ) : (
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
@@ -133,8 +133,8 @@ function JoinRequestItem({
       )}
 
       {/* Info */}
-      <div className="flex-1 min-w-0 space-y-1">
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="min-w-0 flex-1 space-y-1" style={{ minWidth: "160px" }}>
+        <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-semibold">
             {request.user.fullName ?? request.user.email}
           </p>
@@ -149,7 +149,7 @@ function JoinRequestItem({
         </div>
         <p className="text-xs text-muted-foreground">{request.user.email}</p>
         {request.message && (
-          <p className="text-sm text-muted-foreground italic mt-1">
+          <p className="mt-1 text-sm italic text-muted-foreground">
             &ldquo;{request.message}&rdquo;
           </p>
         )}
@@ -160,7 +160,7 @@ function JoinRequestItem({
 
       {/* Actions — only for PENDING and if user can manage */}
       {canReview && request.status === "PENDING" && (
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             size="sm"
             variant="outline"
@@ -496,7 +496,7 @@ export function ProjectDetailPage() {
             </Button>
           </div>
         ) : localJoinRequest.status === "PENDING" ? (
-          <div className="flex items-center gap-4 rounded-xl border border-[rgba(100,51,0,0.2)] bg-[rgba(100,51,0,0.06)] px-5 py-4">
+          <div className="flex flex-wrap items-center gap-4 rounded-xl border border-[rgba(100,51,0,0.2)] bg-[rgba(100,51,0,0.06)] px-5 py-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[rgba(100,51,0,0.10)]">
               <Clock className="h-5 w-5 text-[#643300]" />
             </div>
@@ -522,7 +522,7 @@ export function ProjectDetailPage() {
             </Button>
           </div>
         ) : localJoinRequest.status === "REJECTED" ? (
-          <div className="flex items-center gap-4 rounded-xl border border-destructive/20 bg-destructive/5 px-5 py-4">
+          <div className="flex flex-wrap items-center gap-4 rounded-xl border border-destructive/20 bg-destructive/5 px-5 py-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
               <XCircle className="h-5 w-5 text-destructive" />
             </div>
@@ -635,7 +635,7 @@ export function ProjectDetailPage() {
       </nav>
 
       {/* ── Project Header ── */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-4 min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
             <LayoutGrid className="h-6 w-6 text-primary" />
@@ -663,7 +663,7 @@ export function ProjectDetailPage() {
 
         {/* Header actions — MANAGER only */}
         {canManageProject && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Button
               variant="outline"
               size="sm"
@@ -687,6 +687,7 @@ export function ProjectDetailPage() {
 
       {/* ── Tabs ── */}
       <Tabs defaultValue={defaultTab}>
+        <div className="overflow-x-auto hide-scrollbar">
         <TabsList>
           <TabsTrigger value="overview" className="gap-2">
             <Settings className="h-4 w-4" />
@@ -729,6 +730,7 @@ export function ProjectDetailPage() {
             Analytics
           </TabsTrigger>
         </TabsList>
+        </div>
 
         {/* ── Overview Tab ── */}
         <TabsContent value="overview" className="mt-6 max-w-2xl space-y-6">

@@ -100,7 +100,7 @@ function WorkspaceSection() {
           </button>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {sortedWorkspaces.map((ws) => (
             <button
               key={ws.id}
@@ -129,7 +129,7 @@ export function DashboardPage() {
   const currentUser = useAppSelector((s) => s.user.currentUser);
 
   return (
-    <div className="space-y-10 max-w-5xl">
+    <div className="w-full max-w-5xl space-y-8 md:space-y-10">
 
       {/* Editorial greeting */}
       <div>
@@ -137,7 +137,7 @@ export function DashboardPage() {
           Welcome back
         </p>
         <h1
-          className="text-4xl font-bold text-[#1a1c1b] leading-tight"
+          className="text-2xl font-bold text-[#1a1c1b] leading-tight sm:text-3xl md:text-4xl"
           style={{ fontFamily: "'Epilogue', 'Inter', sans-serif", letterSpacing: "-0.02em" }}
         >
           {currentUser?.fullName
@@ -161,7 +161,7 @@ export function DashboardPage() {
           My Tasks
         </h2>
 
-        <div className="grid gap-5 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {mockTaskColumns.map((column) => {
             const StatusIcon = column.icon;
             return (

@@ -1,18 +1,17 @@
 import { useEffect, useState } from "react";
 import { NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
 import {
-  BarChart3,
-  Calendar,
-  Compass,
   FolderKanban,
+  Globe,
   LayoutDashboard,
   LogOut,
   Settings,
   User,
-  Users,
   X,
-  CheckSquare,
   BookOpen,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Menu,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,25 +27,188 @@ import { NotificationDropdown } from "@/features/notification/components/Notific
 import { useNotificationSocket } from "@/features/notification/hooks/useNotificationSocket";
 import { clearNotifications } from "@/features/notification/notificationSlice";
 
-const navItems = [
+const topNavItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "Workspaces", to: "/workspaces", icon: FolderKanban },
-  { label: "Explore", to: "/workspaces/explore", icon: Compass, indent: true },
-  { label: "Team Templates", to: "/team-templates", icon: Users },
-  { label: "My Tasks", to: "/tasks", icon: CheckSquare },
-  { label: "Calendar", to: "/calendar", icon: Calendar },
-  { label: "Analytics", to: "/analytics", icon: BarChart3 },
+  { label: "My Workspace", to: "/workspaces", icon: FolderKanban },
+  { label: "Community", to: "/workspaces/explore", icon: Globe },
   { label: "Profile", to: "/profile", icon: User },
+];
+
+const bottomNavItems = [
   { label: "Settings", to: "/settings", icon: Settings },
 ];
 
+// ---------------------------------------------------------------------------
+// Sidebar content — reused for both desktop and mobile overlay
+// ---------------------------------------------------------------------------
+interface SidebarContentProps {
+  collapsed: boolean;
+  onNavClick?: () => void;
+  onLogout: () => void;
+  isLogoutLoading: boolean;
+  onToggleCollapse?: () => void;
+}
+
+function SidebarContent({
+  collapsed,
+  onNavClick,
+  onLogout,
+  isLogoutLoading,
+  onToggleCollapse,
+}: SidebarContentProps) {
+  return (
+    <>
+      {/* Brand */}
+      <div
+        className={[
+          "shrink-0 pb-6",
+          collapsed ? "flex justify-center px-3" : "px-5",
+        ].join(" ")}
+      >
+        {collapsed ? (
+          <div className="flex h-8 w-8 items-center justify-center rounded bg-[#233a87]">
+            <BookOpen className="h-4 w-4 text-white" />
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[#233a87]">
+                <BookOpen className="h-4 w-4 text-white" />
+              </div>
+              <h1
+                className="text-lg font-bold tracking-tight text-[#1a1c1b]"
+                style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}
+              >
+                TaskSense
+              </h1>
+            </div>
+            <p className="mt-1 pl-[2.625rem] text-[11px] font-medium uppercase tracking-widest text-[#444651]">
+              Academic Workspace
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* Top nav */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <nav className="flex-1 min-h-0 overflow-y-auto space-y-0.5 px-2">
+          {topNavItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.label}
+                to={item.to}
+                end
+                onClick={onNavClick}
+                title={collapsed ? item.label : undefined}
+                className={({ isActive }) =>
+                  [
+                    "flex items-center py-2.5 text-sm transition-colors",
+                    collapsed ? "justify-center px-2" : "gap-3",
+                    isActive
+                      ? collapsed
+                        ? "bg-[#e9e8e6] text-[#233a87] rounded-md"
+                        : "border-l-4 border-[#233a87] bg-[#e9e8e6] pl-2 pr-3 text-[#233a87] font-semibold rounded-r-md"
+                      : "px-3 rounded-md text-[#444651] hover:bg-[#e9e8e6] hover:text-[#1a1c1b]",
+                  ].join(" ")
+                }
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {!collapsed && <span>{item.label}</span>}
+              </NavLink>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Bottom nav — account */}
+      <div className="shrink-0 px-2 space-y-0.5">
+        {bottomNavItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.label}
+              to={item.to}
+              end
+              onClick={onNavClick}
+              title={collapsed ? item.label : undefined}
+              className={({ isActive }) =>
+                [
+                  "flex items-center py-2.5 text-sm transition-colors",
+                  collapsed ? "justify-center px-2" : "gap-3",
+                  isActive
+                    ? collapsed
+                      ? "bg-[#e9e8e6] text-[#233a87] rounded-md"
+                      : "border-l-4 border-[#233a87] bg-[#e9e8e6] pl-2 pr-3 text-[#233a87] font-semibold rounded-r-md"
+                    : "px-3 rounded-md text-[#444651] hover:bg-[#e9e8e6] hover:text-[#1a1c1b]",
+                ].join(" ")
+              }
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              {!collapsed && <span>{item.label}</span>}
+            </NavLink>
+          );
+        })}
+        <button
+          onClick={onLogout}
+          disabled={isLogoutLoading}
+          title={collapsed ? "Logout" : undefined}
+          className={[
+            "flex w-full items-center py-2.5 text-sm rounded-md transition-colors text-[#444651] hover:bg-[#e9e8e6] hover:text-[#c0392b]",
+            collapsed ? "justify-center px-2" : "gap-3 px-3",
+          ].join(" ")}
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          {!collapsed && (
+            <span>{isLogoutLoading ? "Logging out…" : "Logout"}</span>
+          )}
+        </button>
+      </div>
+
+      {/* Collapse toggle — desktop only */}
+      {onToggleCollapse && (
+        <div
+          className={[
+            "shrink-0 pt-4 flex items-center",
+            collapsed ? "justify-center px-3" : "justify-between px-5",
+          ].join(" ")}
+        >
+          {!collapsed && (
+            <p className="text-[11px] text-[#444651]">
+              &copy; {new Date().getFullYear()} TaskSense
+            </p>
+          )}
+          <button
+            onClick={onToggleCollapse}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#444651] transition-colors hover:bg-[#e9e8e6] hover:text-[#1a1c1b]"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MainLayout
+// ---------------------------------------------------------------------------
 export function MainLayout() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const refreshToken = useAppSelector((state) => state.auth.refreshToken);
   const currentUser = useAppSelector((state) => state.user.currentUser);
+
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   const [logoutApi, { isLoading: isLogoutLoading }] = useLogoutMutation();
   const { data: userData } = useGetCurrentUserQuery();
 
@@ -83,89 +245,91 @@ export function MainLayout() {
       dispatch(clearWorkspace());
       dispatch(clearNotifications());
       setIsProfileDrawerOpen(false);
+      setIsMobileSidebarOpen(false);
       toast.success("Logged out successfully");
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex min-h-screen">
+    <div className="h-screen overflow-hidden bg-[#faf9f7]">
+      <div className="flex h-full">
 
-        {/* ── Sidebar ── */}
-        <aside className="w-64 flex flex-col bg-[#f4f3f1] py-6">
-          {/* Brand */}
-          <div className="px-5 pb-6">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[#233a87]">
-                <BookOpen className="h-4 w-4 text-white" />
-              </div>
-              <h1
-                className="text-lg font-bold tracking-tight text-[#1a1c1b]"
-                style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}
-              >
-                TaskSense
-              </h1>
-            </div>
-            <p className="mt-1 pl-[2.625rem] text-[11px] font-medium uppercase tracking-widest text-[#444651]">
-              Academic Workspace
-            </p>
-          </div>
-
-          {/* Nav */}
-          <nav className="flex-1 space-y-0.5 px-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <NavLink
-                  key={item.label}
-                  to={item.to}
-                  end={item.to === "/workspaces"}
-                  className={({ isActive }) =>
-                    [
-                      "flex items-center gap-3 py-2.5 text-sm transition-colors",
-                      item.indent ? "ml-5" : "",
-                      isActive
-                        ? "border-l-4 border-[#233a87] bg-[#e9e8e6] pl-2 pr-3 text-[#233a87] font-semibold rounded-r-md"
-                        : "px-3 rounded-md text-[#444651] hover:bg-[#e9e8e6] hover:text-[#1a1c1b]",
-                    ].join(" ")
-                  }
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  <span>{item.label}</span>
-                </NavLink>
-              );
-            })}
-          </nav>
-
-          {/* Footer user hint */}
-          <div className="px-5 pt-4">
-            <p className="text-[11px] text-[#444651]">
-              &copy; {new Date().getFullYear()} TaskSense
-            </p>
-          </div>
+        {/* ── Desktop Sidebar ── */}
+        <aside
+          className={[
+            "hidden md:flex flex-col h-full bg-[#f4f3f1] py-6 transition-all duration-200 shrink-0",
+            isSidebarCollapsed ? "w-16" : "w-64",
+          ].join(" ")}
+        >
+          <SidebarContent
+            collapsed={isSidebarCollapsed}
+            onLogout={handleLogout}
+            isLogoutLoading={isLogoutLoading}
+            onToggleCollapse={() => setIsSidebarCollapsed((v) => !v)}
+          />
         </aside>
 
-        {/* ── Main area ── */}
-        <div className="flex min-w-0 flex-1 flex-col">
+        {/* ── Mobile Sidebar Overlay ── */}
+        {isMobileSidebarOpen && (
+          <>
+            {/* Backdrop */}
+            <button
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm md:hidden"
+              onClick={() => setIsMobileSidebarOpen(false)}
+              aria-label="Close sidebar"
+            />
 
-          {/* Top app bar — no border, transparent */}
-          <header className="flex h-16 items-center justify-between bg-background px-8">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-widest text-[#444651]">
+            {/* Drawer */}
+            <aside className="fixed left-0 top-0 z-50 flex h-full w-64 flex-col bg-[#f4f3f1] py-6 shadow-[0_1px_32px_rgba(0,0,0,0.12)] md:hidden">
+              {/* Close button */}
+              <button
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-md text-[#444651] hover:bg-[#e9e8e6]"
+                aria-label="Close sidebar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <SidebarContent
+                collapsed={false}
+                onNavClick={() => setIsMobileSidebarOpen(false)}
+                onLogout={handleLogout}
+                isLogoutLoading={isLogoutLoading}
+              />
+            </aside>
+          </>
+        )}
+
+        {/* ── Main area ── */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+
+          {/* Top app bar */}
+          <header className="flex h-14 shrink-0 items-center justify-between bg-[#faf9f7] px-4 md:px-8">
+            <div className="flex items-center gap-3">
+              {/* Hamburger — mobile only */}
+              <button
+                onClick={() => setIsMobileSidebarOpen(true)}
+                className="flex h-8 w-8 items-center justify-center rounded-md text-[#444651] transition-colors hover:bg-[#f4f3f1] md:hidden"
+                aria-label="Open sidebar"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+
+              <p className="hidden text-xs font-medium uppercase tracking-widest text-[#444651] md:block">
                 Workspace
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               <NotificationDropdown />
               <button
                 onClick={() => setIsProfileDrawerOpen(true)}
-                className="flex items-center gap-2.5 rounded-md bg-[#f4f3f1] px-3 py-2 text-sm font-medium text-[#1a1c1b] transition-colors hover:bg-[#e9e8e6]"
+                className="flex items-center gap-2 rounded-md bg-[#f4f3f1] px-2.5 py-1.5 text-sm font-medium text-[#1a1c1b] transition-colors hover:bg-[#e9e8e6] md:gap-2.5 md:px-3 md:py-2"
               >
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#233a87] text-[10px] font-bold text-white">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#233a87] text-[10px] font-bold text-white">
                   {currentUser?.fullName?.charAt(0)?.toUpperCase() ?? "U"}
                 </div>
-                <span className="max-w-[120px] truncate">
+                <span className="hidden max-w-[120px] truncate sm:block">
                   {currentUser?.fullName || "Profile"}
                 </span>
               </button>
@@ -173,7 +337,7 @@ export function MainLayout() {
           </header>
 
           {/* Page content */}
-          <main className="flex-1 overflow-auto p-8">
+          <main className="flex-1 overflow-auto p-4 md:p-8">
             <Outlet />
           </main>
         </div>
@@ -188,7 +352,7 @@ export function MainLayout() {
             aria-label="Close profile drawer"
           />
 
-          <div className="fixed right-0 top-0 z-50 h-full w-full max-w-md bg-background shadow-[0_1px_32px_rgba(0,0,0,0.10)] p-6">
+          <div className="fixed right-0 top-0 z-50 h-full w-full max-w-sm bg-[#faf9f7] shadow-[0_1px_32px_rgba(0,0,0,0.10)] p-6 md:max-w-md">
             <div className="mb-6 flex items-center justify-between">
               <h3
                 className="text-lg font-bold text-[#1a1c1b]"
@@ -211,7 +375,7 @@ export function MainLayout() {
                 <button
                   onClick={() => {
                     setIsProfileDrawerOpen(false);
-                    navigate("/dashboard/edit-profile");
+                    navigate("/profile");
                   }}
                   className="flex-1 rounded-md border border-[rgba(197,197,211,0.4)] bg-transparent px-4 py-2.5 text-sm font-medium text-[#233a87] transition-colors hover:bg-[#f4f3f1]"
                 >

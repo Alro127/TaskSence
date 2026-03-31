@@ -4,8 +4,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { cn, getApiErrorMessage } from "@/lib/utils";
 import type { UserSkill } from "@/types/api";
 import { SkillStars, LEVEL_LABELS } from "./SkillStars";
@@ -63,8 +61,8 @@ function SkillEditRow({
   label = "Save",
 }: SkillEditRowProps) {
   return (
-    <div className="rounded-lg border border-primary/40 bg-muted/30 p-4 space-y-3 shadow-sm">
-      <p className="text-xs font-semibold text-primary uppercase tracking-wider">
+    <div className="rounded-lg border border-[rgba(35,58,135,0.3)] bg-[rgba(35,58,135,0.03)] p-4 space-y-3 shadow-sm">
+      <p className="text-xs font-semibold text-[#233a87] uppercase tracking-wider">
         {label === "Save" ? "Edit Skill" : "New Skill"}
       </p>
 
@@ -132,8 +130,8 @@ function SkillEditRow({
 
       {/* Progress bar preview */}
       <div className="space-y-1">
-        <p className="text-[10px] text-muted-foreground">Level preview</p>
-        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+        <p className="text-[10px] text-[#444651]">Level preview</p>
+        <div className="h-1.5 rounded-full bg-[#efeeec] overflow-hidden">
           <div
             className={cn(
               "h-full rounded-full transition-all duration-300",
@@ -168,9 +166,9 @@ function SkillCardRow({
   isDeleting,
 }: SkillCardRowProps) {
   return (
-    <div className="group flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:border-primary/30 hover:shadow-sm transition-all">
+    <div className="group flex items-center gap-3 rounded-lg border border-[rgba(197,197,211,0.35)] bg-white px-4 py-3 hover:border-[rgba(35,58,135,0.25)] hover:shadow-sm transition-all">
       {/* Rank */}
-      <span className="w-5 shrink-0 text-xs text-muted-foreground text-right font-mono select-none">
+      <span className="w-5 shrink-0 text-xs text-[#444651] text-right font-mono select-none">
         {index + 1}
       </span>
 
@@ -179,7 +177,7 @@ function SkillCardRow({
         <p className="text-sm font-medium leading-none truncate">
           {skill.skillName}
         </p>
-        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+        <div className="h-1.5 rounded-full bg-[#efeeec] overflow-hidden">
           <div
             className={cn(
               "h-full rounded-full transition-all",
@@ -340,76 +338,83 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
   // Loading skeleton
   if (isLoading) {
     return (
-      <Card className="p-6 space-y-3">
-        <div className="h-5 w-36 rounded bg-muted animate-pulse" />
-        <div className="h-1 w-full rounded bg-muted animate-pulse" />
+      <div className="ghost-border rounded-xl bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.06)] space-y-3">
+        <div className="h-4 w-36 rounded bg-[#efeeec] animate-pulse" />
+        <div className="h-px w-full bg-[#efeeec]" />
         {[1, 2, 3].map((i) => (
-          <div key={i} className="rounded-lg border border-border p-4 space-y-2">
+          <div key={i} className="rounded-lg border border-[rgba(197,197,211,0.35)] p-4 space-y-2">
             <div className="flex items-center gap-3">
-              <div className="h-4 w-4 rounded bg-muted animate-pulse" />
-              <div className="h-4 flex-1 rounded bg-muted animate-pulse" />
-              <div className="h-5 w-20 rounded-full bg-muted animate-pulse" />
+              <div className="h-4 w-4 rounded bg-[#efeeec] animate-pulse" />
+              <div className="h-4 flex-1 rounded bg-[#efeeec] animate-pulse" />
+              <div className="h-5 w-20 rounded-full bg-[#efeeec] animate-pulse" />
             </div>
-            <div className="h-1.5 rounded-full bg-muted animate-pulse" />
+            <div className="h-1.5 rounded-full bg-[#efeeec] animate-pulse" />
           </div>
         ))}
-      </Card>
+      </div>
     );
   }
 
   // ---------------------------------------------------------------------------
   return (
-    <Card className="p-6 space-y-4">
+    <div className="ghost-border rounded-xl bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.06)] space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Skills</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#444651]">
+            Skills
+          </p>
+          <p className="mt-0.5 text-sm text-[#444651]">
             {isOwnProfile
               ? "Showcase your technical and professional skills."
               : "Skills declared by this user."}
           </p>
         </div>
-          <div className="flex items-center gap-2">
-            {totalElements > 0 && (
-              <span className="text-xs text-muted-foreground">
-                {totalElements} skill{totalElements !== 1 ? "s" : ""}
-              </span>
-            )}
-            {isOwnProfile && (
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleShowAddForm}
-            disabled={showAddForm}
-          >
-            <Plus className="mr-1.5 h-4 w-4" />
-            Add Skill
-          </Button>
-            )}
-          </div>
+        <div className="flex items-center gap-2">
+          {totalElements > 0 && (
+            <span className="rounded-full bg-[#e9e8e6] px-2 py-0.5 text-[10px] font-semibold text-[#444651]">
+              {totalElements}
+            </span>
+          )}
+          {isOwnProfile && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleShowAddForm}
+              disabled={showAddForm}
+              className="bg-[#233a87] text-white hover:opacity-90"
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add Skill
+            </Button>
+          )}
+        </div>
       </div>
 
-      <Separator />
+      <div className="h-px bg-[#efeeec]" />
 
       {/* Empty state */}
       {skills.length === 0 && !showAddForm && (
-        <div className="flex flex-col items-center gap-3 py-10 text-center">
-          <div className="rounded-full bg-muted p-4">
-            <Sparkles className="h-7 w-7 text-muted-foreground" />
+        <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[rgba(197,197,211,0.5)] bg-[#faf9f7] py-10 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(35,58,135,0.08)]">
+            <Sparkles className="h-6 w-6 text-[#233a87]" />
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-semibold">
+            <p className="text-sm font-semibold text-[#1a1c1b]">
               {isOwnProfile ? "No skills added yet" : "No skills listed"}
             </p>
-            <p className="text-xs text-muted-foreground max-w-xs">
+            <p className="max-w-xs text-xs text-[#444651]">
               {isOwnProfile
                 ? "Showcase your expertise — add your technical, design, or soft skills."
                 : "This user hasn't added any skills to their profile yet."}
             </p>
           </div>
           {isOwnProfile && (
-            <Button size="sm" onClick={handleShowAddForm}>
+            <Button
+              size="sm"
+              onClick={handleShowAddForm}
+              className="bg-[#233a87] text-white hover:opacity-90"
+            >
               <Plus className="mr-1.5 h-4 w-4" />
               Add Your First Skill
             </Button>
@@ -479,7 +484,7 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
         {/* Pagination controls */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between pt-1">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[#444651]">
               Page {page + 1} of {totalPages}
             </p>
             <div className="flex items-center gap-1">
@@ -508,6 +513,6 @@ export function SkillsSection({ userId }: SkillsSectionProps) {
             </div>
           </div>
         )}
-    </Card>
+    </div>
   );
 }

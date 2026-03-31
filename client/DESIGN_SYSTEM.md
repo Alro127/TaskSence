@@ -73,33 +73,31 @@ export const STATUS_CONFIG = {
 
 ### Status Colors: Task
 
-Định nghĩa tập trung tại `src/features/task/constants/taskStatus.ts`:
+Định nghĩa inline trong `TaskDetailPage.tsx` dưới dạng `STATUS_OPTIONS`. Dùng cùng palette rgba:
 
 ```tsx
-export const taskStatusConfig = {
-  todo:        { label: "To Do",       className: "bg-slate-100 text-slate-600" },
-  in_progress: { label: "In Progress", className: "bg-blue-100 text-blue-700" },
-  done:        { label: "Done",        className: "bg-green-100 text-green-700" },
-  overdue:     { label: "Overdue",     className: "bg-red-100 text-red-700" },
-  blocked:     { label: "Blocked",     className: "bg-amber-100 text-amber-700" },
-  cancelled:   { label: "Cancelled",   className: "bg-gray-100 text-gray-500" },
-};
+const STATUS_OPTIONS = [
+  { value: "TODO",        label: "Todo",        badgeClass: "text-[#444651] bg-[rgba(68,70,81,0.08)] border-[rgba(68,70,81,0.2)]" },
+  { value: "IN_PROGRESS", label: "In Progress", badgeClass: "text-[#233a87] bg-[rgba(35,58,135,0.08)] border-[rgba(35,58,135,0.2)]" },
+  { value: "REVIEW",      label: "Review",      badgeClass: "text-[#643300] bg-[rgba(100,51,0,0.08)] border-[rgba(100,51,0,0.2)]" },
+  { value: "DONE",        label: "Done",        badgeClass: "text-[#006a61] bg-[rgba(0,106,97,0.08)] border-[rgba(0,106,97,0.2)]" },
+];
 ```
 
 ### Priority Colors: Task
 
-Định nghĩa tập trung tại `src/features/task/constants/taskPriority.ts` — chỉ ảnh hưởng text/icon color, không dùng background:
+Định nghĩa inline trong `TaskDetailPage.tsx` dưới dạng `PRIORITY_OPTIONS`. Cùng badge pattern (text + bg + border):
 
 ```tsx
-export const taskPriorityConfig = {
-  low:    { label: "Low",    className: "text-slate-400",              iconClass: "text-slate-400" },
-  medium: { label: "Medium", className: "text-amber-500",             iconClass: "text-amber-500" },
-  high:   { label: "High",   className: "text-orange-500",            iconClass: "text-orange-500" },
-  urgent: { label: "Urgent", className: "text-red-600 font-semibold", iconClass: "text-red-600" },
-};
+const PRIORITY_OPTIONS = [
+  { value: "LOW",    label: "Low",    badgeClass: "text-[#444651] bg-[rgba(68,70,81,0.08)] border-[rgba(68,70,81,0.2)]" },
+  { value: "MEDIUM", label: "Medium", badgeClass: "text-[#233a87] bg-[rgba(35,58,135,0.08)] border-[rgba(35,58,135,0.2)]" },
+  { value: "HIGH",   label: "High",   badgeClass: "text-[#643300] bg-[rgba(100,51,0,0.08)] border-[rgba(100,51,0,0.2)]" },
+  { value: "URGENT", label: "Urgent", badgeClass: "text-[#ba1a1a] bg-[rgba(186,26,26,0.08)] border-[rgba(186,26,26,0.2)]" },
+];
 ```
 
-> **Rule**: Không dùng `taskStatusConfig` để render priority và ngược lại. Tách biệt hoàn toàn.
+> **Rule**: Task status và priority dùng cùng badge pattern với project status, không dùng Tailwind utility colors (slate, blue, green...).
 
 ---
 
@@ -293,11 +291,11 @@ Dùng shadcn `Button` component. **Không override bằng inline styles** trừ 
 <div className="space-y-2">
   <Label htmlFor="name">Name</Label>
   <Input id="name" placeholder="Enter name..." />
-  {error && <p className="text-sm text-destructive">{error}</p>}
+  {error && <p className="text-sm text-[#ba1a1a]">{error}</p>}
 </div>
 ```
 
-- **Error**: `border-destructive` + error message below
+- **Error**: `border-[#ba1a1a]` + error message below
 - **Disabled**: `disabled` attribute (opacity auto)
 - **Focus ring**: `focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring` (teal — `#006a61`)
 
@@ -346,7 +344,9 @@ Dùng shadcn `Button` component. **Không override bằng inline styles** trừ 
 - Sidebar width: `w-64` (256px), `bg-[#f4f3f1]`
 - Active nav item: `border-l-4 border-[#233a87] bg-[#e9e8e6] pl-2 pr-3 text-[#233a87] font-semibold rounded-r-md`
 - Inactive nav item: `px-3 rounded-md text-[#444651] hover:bg-[#e9e8e6] hover:text-[#1a1c1b]`
-- Header: `bg-background/80 backdrop-blur-md sticky top-0 border-b z-40`
+- Header: `flex h-14 shrink-0 items-center justify-between bg-[#faf9f7] px-4 md:px-8`
+- Desktop sidebar: `hidden md:flex` (hidden on mobile)
+- Mobile: hamburger `<Menu>` icon in header (`md:hidden`), fixed drawer overlay with `backdrop-blur-sm`
 
 ### Z-Index System
 
@@ -520,7 +520,8 @@ Mobile-first: base = mobile, `md:` = tablet+, `lg:` = desktop+.
 - Dùng `p-5` cho card padding (không phải `p-6`)
 - Dùng `cn()` để merge classes có điều kiện
 - Dùng `STATUS_CONFIG` (ProjectCard) cho project status badges
-- Dùng `taskStatusConfig` cho task status — `taskPriorityConfig` cho priority (tách riêng)
+- Dùng `STATUS_OPTIONS` / `PRIORITY_OPTIONS` (TaskDetailPage) cho task status/priority badges
+- Dùng `<div className="h-px bg-[#efeeec]" />` thay vì `<Separator />` (shadcn component)
 - Dùng Skeleton thay Spinner cho danh sách đang load
 - Dùng `sonner` toast cho server responses
 - Dùng `getApiErrorMessage(err, fallback)` trong mọi catch block
@@ -532,7 +533,7 @@ Mobile-first: base = mobile, `md:` = tablet+, `lg:` = desktop+.
 - Dùng inline styles ngoại trừ `fontFamily` và `letterSpacing` cho page title
 - Sửa files trong `components/ui/` (auto-generated bởi shadcn)
 - Để màn hình trống — luôn dùng empty state pattern khi không có data
-- Dùng `taskStatusConfig` để render priority và ngược lại
+- Dùng `<Separator />` shadcn — thay bằng `<div className="h-px bg-[#efeeec]" />`
 - Dùng `} catch {` không bind error
 
 ---

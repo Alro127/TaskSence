@@ -871,7 +871,7 @@ export function TaskBoardPage() {
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-3">
           {/* Search */}
-          <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <div className="relative w-full min-w-0 sm:flex-1 sm:min-w-[200px] sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             {isFetching && !isLoading && (
               <Loader2 className="absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 animate-spin text-muted-foreground" />
@@ -1021,7 +1021,7 @@ export function TaskBoardPage() {
                 value={filterPriority}
                 onValueChange={(v) => setFilterPriority(v as TaskPriority | "ALL")}
               >
-                <SelectTrigger className="h-8 w-36 text-sm">
+                <SelectTrigger className="h-8 w-full sm:w-36 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1043,7 +1043,7 @@ export function TaskBoardPage() {
                   setFilterAssigneeId(v === "ALL" ? "ALL" : Number(v))
                 }
               >
-                <SelectTrigger className="h-8 w-44 text-sm">
+                <SelectTrigger className="h-8 w-full sm:w-44 text-sm">
                   <SelectValue placeholder="Anyone" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1064,7 +1064,7 @@ export function TaskBoardPage() {
                 value={filterSprintId === "ALL" ? "ALL" : String(filterSprintId)}
                 onValueChange={(v) => setFilterSprintId(v === "ALL" ? "ALL" : Number(v))}
               >
-                <SelectTrigger className="h-8 w-44 text-sm">
+                <SelectTrigger className="h-8 w-full sm:w-44 text-sm">
                   <SelectValue placeholder="Any sprint" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1079,7 +1079,7 @@ export function TaskBoardPage() {
             </div>
 
             {/* Tags */}
-            <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
+            <div className="flex w-full flex-1 flex-col gap-1.5 sm:min-w-[220px]">
               <label className="text-xs font-medium text-muted-foreground">Tags</label>
               <div className="flex min-h-8 flex-wrap items-center gap-1.5 rounded-md border bg-background px-2 py-1.5">
                 {tags.length === 0 && (
@@ -1262,7 +1262,7 @@ export function TaskBoardPage() {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid min-h-[400px] grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid min-h-[400px] grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
             {STATUS_COLUMNS.filter((col) => !hiddenColumns.has(col.value)).map((col) => {
               const colTasks = grouped.get(col.value) ?? [];
               const visibleTasks = colTasks.slice(0, boardVisibleCount[col.value]);

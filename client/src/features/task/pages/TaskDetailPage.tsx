@@ -19,7 +19,6 @@ import { format } from "date-fns";
 import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -119,7 +118,7 @@ function UserAvatar({
     <div
       className={cn(
         sizeClass,
-        "rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center shrink-0",
+        "rounded-full bg-[rgba(35,58,135,0.08)] text-[#233a87] font-semibold flex items-center justify-center shrink-0",
       )}
     >
       {initial}
@@ -331,7 +330,7 @@ export function TaskDetailPage() {
   if (isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Loader2 className="h-6 w-6 animate-spin text-[#444651]" />
       </div>
     );
   }
@@ -339,7 +338,7 @@ export function TaskDetailPage() {
   if (isError || !task) {
     return (
       <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
-        <p className="text-sm text-muted-foreground">Task not found.</p>
+        <p className="text-sm text-[#444651]">Task not found.</p>
         <Button
           variant="outline"
           size="sm"
@@ -371,28 +370,28 @@ export function TaskDetailPage() {
 
   return (
     <div className="space-y-6">
-      <nav className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
-        <Link to="/workspaces" className="hover:text-foreground transition-colors">
+      <nav className="flex items-center gap-1 text-xs text-[#444651] flex-wrap">
+        <Link to="/workspaces" className="hover:text-[#1a1c1b] transition-colors">
           Workspaces
         </Link>
         <ChevronRight className="h-3 w-3" />
         <Link
           to={`/workspaces/${workspaceId}`}
-          className="hover:text-foreground transition-colors"
+          className="hover:text-[#1a1c1b] transition-colors"
         >
           {workspaceName}
         </Link>
         <ChevronRight className="h-3 w-3" />
         <Link
           to={`/workspaces/${workspaceId}/projects/${projectId}`}
-          className="hover:text-foreground transition-colors"
+          className="hover:text-[#1a1c1b] transition-colors"
         >
           {projectName}
         </Link>
         <ChevronRight className="h-3 w-3" />
         <Link
           to={`/workspaces/${workspaceId}/projects/${projectId}/tasks`}
-          className="hover:text-foreground transition-colors"
+          className="hover:text-[#1a1c1b] transition-colors"
         >
           Tasks
         </Link>
@@ -401,14 +400,14 @@ export function TaskDetailPage() {
           <>
             <Link
               to={`/workspaces/${workspaceId}/projects/${projectId}/tasks/${parentTask.id}`}
-              className="max-w-[150px] truncate hover:text-foreground transition-colors"
+              className="max-w-[150px] truncate hover:text-[#1a1c1b] transition-colors"
             >
               {parentTask.title}
             </Link>
             <ChevronRight className="h-3 w-3" />
           </>
         )}
-        <span className="max-w-[200px] truncate font-medium text-foreground">
+        <span className="max-w-[200px] truncate font-medium text-[#1a1c1b]">
           {task.title}
         </span>
       </nav>
@@ -434,7 +433,7 @@ export function TaskDetailPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
+                className="text-[#ba1a1a] focus:text-[#ba1a1a]"
                 onClick={() => setShowDeleteDialog(true)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -445,7 +444,7 @@ export function TaskDetailPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px] lg:grid-cols-[1fr_300px]">
         <div className="space-y-4">
           <Card className="p-5">
             {editingTitle ? (
@@ -458,7 +457,7 @@ export function TaskDetailPage() {
                   if (e.key === "Enter") saveTitle();
                   if (e.key === "Escape") setEditingTitle(false);
                 }}
-                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xl font-bold focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full rounded-md border border-input bg-white px-3 py-1.5 text-xl font-bold focus:outline-none focus:ring-2 focus:ring-ring"
               />
             ) : canEdit ? (
               <button
@@ -466,7 +465,7 @@ export function TaskDetailPage() {
                   setTitleDraft(task.title);
                   setEditingTitle(true);
                 }}
-                className="-mx-2 w-full rounded-md px-2 py-1 text-left text-xl font-bold transition-colors hover:bg-muted/50"
+                className="-mx-2 w-full rounded-md px-2 py-1 text-left text-xl font-bold transition-colors hover:bg-[rgba(68,70,81,0.05)]"
               >
                 {task.title}
               </button>
@@ -475,11 +474,11 @@ export function TaskDetailPage() {
             )}
 
             {task.parentTaskId && (
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-xs text-[#444651]">
                 Subtask of{" "}
                 <Link
                   to={`/workspaces/${workspaceId}/projects/${projectId}/tasks/${task.parentTaskId}`}
-                  className="text-primary hover:underline"
+                  className="text-[#233a87] hover:underline"
                 >
                   {parentTask?.title ?? `Task #${task.parentTaskId}`}
                 </Link>
@@ -488,7 +487,7 @@ export function TaskDetailPage() {
           </Card>
 
           <Card className="p-5">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[#444651]">
               Description
             </p>
             {editingDesc ? (
@@ -502,7 +501,7 @@ export function TaskDetailPage() {
                 }}
                 rows={5}
                 placeholder="Add a description..."
-                className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full resize-none rounded-md border border-input bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             ) : canEdit ? (
               <button
@@ -510,14 +509,14 @@ export function TaskDetailPage() {
                   setDescDraft(task.description ?? "");
                   setEditingDesc(true);
                 }}
-                className="-mx-2 min-h-[80px] w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted/50"
+                className="-mx-2 min-h-[80px] w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-[rgba(68,70,81,0.05)]"
               >
                 {task.description ? (
-                  <span className="whitespace-pre-wrap text-foreground">
+                  <span className="whitespace-pre-wrap text-[#1a1c1b]">
                     {task.description}
                   </span>
                 ) : (
-                  <span className="italic text-muted-foreground">
+                  <span className="italic text-[#444651]">
                     Click to add description...
                   </span>
                 )}
@@ -525,11 +524,11 @@ export function TaskDetailPage() {
             ) : (
               <div className="-mx-2 min-h-[80px] px-2 py-1.5 text-sm">
                 {task.description ? (
-                  <span className="whitespace-pre-wrap text-foreground">
+                  <span className="whitespace-pre-wrap text-[#1a1c1b]">
                     {task.description}
                   </span>
                 ) : (
-                  <span className="italic text-muted-foreground">No description.</span>
+                  <span className="italic text-[#444651]">No description.</span>
                 )}
               </div>
             )}
@@ -541,16 +540,16 @@ export function TaskDetailPage() {
               className="flex w-full items-center gap-2 text-left"
             >
               {subtasksExpanded ? (
-                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <ChevronDown className="h-4 w-4 shrink-0 text-[#444651]" />
               ) : (
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-[#444651]" />
               )}
               <span className="text-sm font-medium">Subtasks</span>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+              <span className="rounded-full bg-[#efeeec] px-2 py-0.5 text-xs text-[#444651]">
                 {doneSubs}/{subtasks.length}
               </span>
               {subtasks.length > 0 && (
-                <div className="ml-2 h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                <div className="ml-2 h-1.5 flex-1 overflow-hidden rounded-full bg-[#efeeec]">
                   <div
                     className="h-full rounded-full bg-[#006a61] transition-all"
                     style={{
@@ -568,13 +567,13 @@ export function TaskDetailPage() {
                   return (
                     <div
                       key={st.id}
-                      className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/40"
+                      className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-[rgba(68,70,81,0.04)]"
                     >
                       <button
                         onClick={() => toggleSubtaskDone(st.id, st.status)}
                         disabled={!canToggleSubtask}
                         className={cn(
-                          "shrink-0 text-muted-foreground transition-colors hover:text-[#006a61]",
+                          "shrink-0 text-[#444651] transition-colors hover:text-[#006a61]",
                           !canToggleSubtask && "opacity-40 cursor-not-allowed",
                         )}
                       >
@@ -591,8 +590,8 @@ export function TaskDetailPage() {
                           )
                         }
                         className={cn(
-                          "flex-1 cursor-pointer text-sm hover:text-primary hover:underline",
-                          st.status === "DONE" && "line-through text-muted-foreground",
+                          "flex-1 cursor-pointer text-sm hover:text-[#233a87] hover:underline",
+                          st.status === "DONE" && "line-through text-[#444651]",
                         )}
                       >
                         {st.title}
@@ -611,7 +610,7 @@ export function TaskDetailPage() {
                 {canCreateTask && (
                   <div className="mt-2 space-y-1.5">
                     <div className="flex items-center gap-2">
-                      <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <Plus className="h-4 w-4 shrink-0 text-[#444651]" />
                       <input
                         value={newSubtaskTitle}
                         onChange={(e) => setNewSubtaskTitle(e.target.value)}
@@ -619,7 +618,7 @@ export function TaskDetailPage() {
                           if (e.key === "Enter" && newSubtaskTitle.trim()) addSubtask();
                         }}
                         placeholder="Quick add (Enter to save)..."
-                        className="flex-1 rounded-md border-0 bg-transparent px-2 py-1 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        className="flex-1 rounded-md border-0 bg-transparent px-2 py-1 text-sm placeholder:text-[#444651] focus:outline-none focus:ring-1 focus:ring-ring"
                       />
                       {newSubtaskTitle.trim() && (
                         <Button size="sm" className="h-6 text-xs" onClick={addSubtask}>
@@ -643,11 +642,11 @@ export function TaskDetailPage() {
           <AttachmentSection taskId={taskId} />
         </div>
 
-        <div className="space-y-4 lg:sticky lg:top-20 self-start">
-          <Card className="p-4 space-y-4 bg-card/90 backdrop-blur-sm border-border/70">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+        <div className="space-y-4 md:sticky md:top-20 self-start">
+          <Card className="p-4 space-y-4 bg-white/90 backdrop-blur-sm border-[rgba(197,197,211,0.3)]">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-1">
               <div className="space-y-1.5">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#444651]">
                   Status
                 </p>
                 <Select
@@ -669,7 +668,7 @@ export function TaskDetailPage() {
               </div>
 
               <div className="space-y-1.5">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#444651]">
                   Priority
                 </p>
                 <Select
@@ -682,7 +681,7 @@ export function TaskDetailPage() {
                   <SelectTrigger
                     className={cn(
                       "border font-medium",
-                      priorityCfg ? priorityCfg.badgeClass : "text-muted-foreground",
+                      priorityCfg ? priorityCfg.badgeClass : "text-[#444651]",
                     )}
                   >
                     <SelectValue placeholder="No priority" />
@@ -699,7 +698,7 @@ export function TaskDetailPage() {
               </div>
             </div>
 
-            <Separator />
+            <div className="h-px bg-[#efeeec]" />
 
             <TaskTagSelector
               projectId={projectId}
@@ -712,12 +711,12 @@ export function TaskDetailPage() {
           </Card>
 
           <Card className="p-4 space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#444651]">
               Schedule
             </p>
             <div className="space-y-2">
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Start Date</p>
+                <p className="text-xs text-[#444651]">Start Date</p>
                 {editingStartDate ? (
                   <input
                     autoFocus
@@ -727,32 +726,32 @@ export function TaskDetailPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Escape") setEditingStartDate(false);
                     }}
-                    className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full rounded-md border border-input bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 ) : canEdit ? (
                   <button
                     onClick={() => setEditingStartDate(true)}
-                    className="w-full rounded-md border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
+                    className="w-full rounded-md border bg-white px-3 py-2 text-left text-sm transition-colors hover:bg-[rgba(68,70,81,0.05)]"
                   >
                     {task.startDate ? (
                       format(new Date(task.startDate), "MMM d, yyyy · HH:mm")
                     ) : (
-                      <span className="italic text-muted-foreground">Not set</span>
+                      <span className="italic text-[#444651]">Not set</span>
                     )}
                   </button>
                 ) : (
-                  <div className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+                  <div className="w-full rounded-md border bg-white px-3 py-2 text-sm">
                     {task.startDate ? (
                       format(new Date(task.startDate), "MMM d, yyyy · HH:mm")
                     ) : (
-                      <span className="italic text-muted-foreground">Not set</span>
+                      <span className="italic text-[#444651]">Not set</span>
                     )}
                   </div>
                 )}
               </div>
 
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Due Date</p>
+                <p className="text-xs text-[#444651]">Due Date</p>
                 {editingDueDate ? (
                   <input
                     autoFocus
@@ -762,41 +761,41 @@ export function TaskDetailPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Escape") setEditingDueDate(false);
                     }}
-                    className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full rounded-md border border-input bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 ) : canEdit ? (
                   <button
                     onClick={() => setEditingDueDate(true)}
-                    className="w-full rounded-md border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
+                    className="w-full rounded-md border bg-white px-3 py-2 text-left text-sm transition-colors hover:bg-[rgba(68,70,81,0.05)]"
                   >
                     {task.dueDate ? (
                       <span
                         className={cn(
                           new Date(task.dueDate) < new Date() && task.status !== "DONE"
-                            ? "font-medium text-destructive"
+                            ? "font-medium text-[#ba1a1a]"
                             : "",
                         )}
                       >
                         {format(new Date(task.dueDate), "MMM d, yyyy · HH:mm")}
                       </span>
                     ) : (
-                      <span className="italic text-muted-foreground">Not set</span>
+                      <span className="italic text-[#444651]">Not set</span>
                     )}
                   </button>
                 ) : (
-                  <div className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+                  <div className="w-full rounded-md border bg-white px-3 py-2 text-sm">
                     {task.dueDate ? (
                       <span
                         className={cn(
                           new Date(task.dueDate) < new Date() && task.status !== "DONE"
-                            ? "font-medium text-destructive"
+                            ? "font-medium text-[#ba1a1a]"
                             : "",
                         )}
                       >
                         {format(new Date(task.dueDate), "MMM d, yyyy · HH:mm")}
                       </span>
                     ) : (
-                      <span className="italic text-muted-foreground">Not set</span>
+                      <span className="italic text-[#444651]">Not set</span>
                     )}
                   </div>
                 )}
@@ -806,24 +805,24 @@ export function TaskDetailPage() {
 
           <Card className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#444651]">
                 Assignees
               </p>
-              <span className="text-xs text-muted-foreground">{task.assignees.length}</span>
+              <span className="text-xs text-[#444651]">{task.assignees.length}</span>
             </div>
 
             <div className="space-y-1.5">
               {task.assignees.map((a) => (
                 <div
                   key={a.id}
-                  className="group flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-muted/40"
+                  className="group flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-[rgba(68,70,81,0.04)]"
                 >
                   <UserAvatar user={a} size="sm" />
                   <span className="flex-1 truncate text-sm">{a.fullName ?? a.email}</span>
                   {canEdit && (
                     <button
                       onClick={() => removeAssignee(a.id)}
-                      className="invisible text-muted-foreground transition-colors hover:text-destructive group-hover:visible"
+                      className="invisible text-[#444651] transition-colors hover:text-[#ba1a1a] group-hover:visible"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -842,7 +841,7 @@ export function TaskDetailPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="max-h-48 w-56 overflow-y-auto">
                   {unassigned.length === 0 ? (
-                    <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                    <p className="px-2 py-3 text-center text-xs text-[#444651]">
                       All members assigned
                     </p>
                   ) : (
@@ -862,12 +861,12 @@ export function TaskDetailPage() {
             )}
           </Card>
 
-          <Card className="p-4 space-y-2 text-xs text-muted-foreground">
+          <Card className="p-4 space-y-2 text-xs text-[#444651]">
             <div className="flex items-center gap-2">
               <UserAvatar user={task.createdBy} size="xs" />
               <span>
                 Created by{" "}
-                <span className="font-medium text-foreground">
+                <span className="font-medium text-[#1a1c1b]">
                   {task.createdBy.fullName ?? task.createdBy.email}
                 </span>
               </span>
