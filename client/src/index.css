@@ -49,6 +49,37 @@
     --color-teal: var(--teal);
     --color-teal-container: var(--teal-container);
     --color-amber: var(--amber);
+
+    /* ── Brand palette aliases (use these instead of hardcoded hex) ── */
+    /* Primary / Brand */
+    --color-brand:            #233a87;  /* bg-brand / text-brand */
+    --color-brand-fg:         #ffffff;  /* text-brand-fg (on brand bg) */
+    --color-brand-subtle:     rgba(35,58,135,0.08);   /* bg-brand-subtle */
+    --color-brand-muted:      rgba(35,58,135,0.04);   /* bg-brand-muted (pinned card) */
+    --color-brand-border:     rgba(35,58,135,0.2);    /* border-brand-border */
+    /* Surfaces */
+    --color-surface-bg:       #faf9f7;  /* bg-surface-bg (page bg) */
+    --color-surface-card:     #ffffff;  /* bg-surface-card */
+    --color-surface-sidebar:  #f4f3f1;  /* bg-surface-sidebar */
+    --color-surface-hover:    #e9e8e6;  /* bg-surface-hover */
+    --color-divider:          #efeeec;  /* bg-divider / border-divider */
+    /* Text */
+    --color-text-primary:     #1a1c1b;  /* text-text-primary */
+    --color-text-secondary:   #444651;  /* text-text-secondary */
+    /* Semantic */
+    --color-success:          #006a61;  /* text-success */
+    --color-success-subtle:   rgba(0,106,97,0.08);    /* bg-success-subtle */
+    --color-success-border:   rgba(0,106,97,0.2);     /* border-success-border */
+    --color-warning:          #643300;  /* text-warning */
+    --color-warning-subtle:   rgba(100,51,0,0.08);    /* bg-warning-subtle */
+    --color-warning-border:   rgba(100,51,0,0.2);     /* border-warning-border */
+    --color-error:            #ba1a1a;  /* text-error */
+    --color-error-subtle:     rgba(186,26,26,0.08);   /* bg-error-subtle */
+    --color-error-border:     rgba(186,26,26,0.2);    /* border-error-border */
+    /* Ghost border */
+    --color-ghost-border:     rgba(197,197,211,0.25); /* outline-ghost-border */
+    --color-card-border:      rgba(197,197,211,0.35); /* border-card-border */
+    --color-dashed-border:    rgba(197,197,211,0.5);  /* border-dashed-border */
 }
 
 /* ─── Academic Atelier — Light Mode ─────────────────────────────────────────── */

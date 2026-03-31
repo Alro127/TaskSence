@@ -85,7 +85,7 @@ export function WorkspacesPage() {
   return (
     <div className="space-y-8">
       {/* ── Page Header ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-[#444651] mb-1">My spaces</p>
           <h1
@@ -98,9 +98,10 @@ export function WorkspacesPage() {
             Organize your projects and team members.
           </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} className="bg-[#233a87] text-white hover:opacity-90">
+        <Button onClick={() => setIsCreateOpen(true)} className="shrink-0 bg-[#233a87] text-white hover:opacity-90">
           <Plus className="mr-2 h-4 w-4" />
-          New Workspace
+          <span className="hidden sm:inline">New Workspace</span>
+          <span className="sm:hidden">New</span>
         </Button>
       </div>
 

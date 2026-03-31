@@ -158,7 +158,7 @@ export function WorkspaceDetailPage() {
       </nav>
 
       {/* ── Workspace Header ── */}
-      <div className="flex items-start gap-4">
+      <div className="flex flex-wrap items-start gap-4">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[rgba(35,58,135,0.08)]">
           <FolderKanban className="h-6 w-6 text-[#233a87]" />
         </div>
@@ -180,25 +180,27 @@ export function WorkspaceDetailPage() {
 
       {/* ── Tabs ── */}
       <Tabs defaultValue={defaultTab}>
-        <TabsList>
-          <TabsTrigger value="projects" className="gap-2">
-            <LayoutGrid className="h-4 w-4" />
-            Projects
-            <Badge variant="secondary" className="text-xs">
-              {isProjectsLoading ? "…" : totalProjects}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="members" className="gap-2">
-            <Users className="h-4 w-4" />
-            Members
-          </TabsTrigger>
-          {canManageSettings && (
-            <TabsTrigger value="settings" className="gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
+        <div className="overflow-x-auto hide-scrollbar">
+          <TabsList>
+            <TabsTrigger value="projects" className="gap-2">
+              <LayoutGrid className="h-4 w-4" />
+              Projects
+              <Badge variant="secondary" className="text-xs">
+                {isProjectsLoading ? "…" : totalProjects}
+              </Badge>
             </TabsTrigger>
-          )}
-        </TabsList>
+            <TabsTrigger value="members" className="gap-2">
+              <Users className="h-4 w-4" />
+              Members
+            </TabsTrigger>
+            {canManageSettings && (
+              <TabsTrigger value="settings" className="gap-2">
+                <Settings className="h-4 w-4" />
+                Settings
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </div>
 
         {/* ── Projects Tab ── */}
         <TabsContent value="projects" className="mt-6 space-y-4">
@@ -290,7 +292,7 @@ export function WorkspaceDetailPage() {
 
         {/* ── Settings Tab ── */}
         {canManageSettings && (
-          <TabsContent value="settings" className="mt-6 max-w-xl space-y-8">
+          <TabsContent value="settings" className="mt-6 w-full max-w-xl space-y-8">
             {/* General settings */}
             <section className="space-y-4">
               <div>
@@ -382,7 +384,7 @@ export function WorkspaceDetailPage() {
                     </p>
                   </div>
                   <div className="rounded-lg border border-destructive/30 p-4">
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
                         <p className="text-sm font-medium">Delete this workspace</p>
                         <p className="text-xs text-muted-foreground">
@@ -392,6 +394,7 @@ export function WorkspaceDetailPage() {
                       <Button
                         variant="destructive"
                         size="sm"
+                        className="shrink-0"
                         onClick={() => setIsDeleteOpen(true)}
                       >
                         Delete workspace
