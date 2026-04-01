@@ -8,10 +8,12 @@ import {
   ListTodo,
   Lock,
   Loader2,
+  LogOut,
   Pencil,
   Trash2,
   UserPlus,
   Users,
+  AlertTriangle,
   Settings,
   LayoutGrid,
   ClipboardList,
@@ -45,7 +47,7 @@ import type { JoinRequestStatus, ProjectJoinRequest, ProjectMember } from "@/typ
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import { useGetProjectByIdQuery } from "../api/projectApi";
 import { useGetWorkspaceByIdQuery } from "@/features/workspace/api/workspaceApi";
-import { useGetMembersQuery, useUpdateMemberRoleMutation } from "../api/projectMemberApi";
+import { useGetMembersQuery, useUpdateMemberRoleMutation, useLeaveProjectMutation } from "../api/projectMemberApi";
 import { useGetJoinRequestsQuery, useReviewJoinRequestMutation, useCancelJoinRequestMutation } from "../api/projectJoinRequestApi";
 import { useGetTasksByProjectQuery } from "@/features/task/api/taskApi";
 import { ProjectAnalyticsTab } from "@/features/analytics/components/ProjectAnalyticsTab";
@@ -395,7 +397,19 @@ export function ProjectDetailPage() {
   const [transferSourceId, setTransferSourceId] = useState<number | null>(null);
   const [localJoinRequest, setLocalJoinRequest] = useState<ProjectJoinRequest | null>(null);
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+  const [isLeaveProjectOpen, setIsLeaveProjectOpen] = useState(false);
   const [cancelJoinRequest, { isLoading: isCancellingJoin }] = useCancelJoinRequestMutation();
+  const [leaveProject, { isLoading: isLeavingProject }] = useLeaveProjectMutation();
+
+  const handleLeaveProject = async () => {
+    try {
+      await leaveProject({ workspaceId, projectId }).unwrap();
+      toast.success("You have left the project.");
+      navigate(`/workspaces/${workspaceId}`);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to leave project."));
+    }
+  };
 
   // ── Loading ──
   if (isProjectLoading) {
@@ -929,12 +943,25 @@ export function ProjectDetailPage() {
             <p className="text-sm text-muted-foreground">
               {totalMembers} member{totalMembers !== 1 ? "s" : ""}
             </p>
-            {canManageMembers && (
-              <Button size="sm" onClick={() => setIsAddMembersOpen(true)}>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Add Members
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {currentUserMember && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/5 hover:text-destructive"
+                  onClick={() => setIsLeaveProjectOpen(true)}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Leave Project
+                </Button>
+              )}
+              {canManageMembers && (
+                <Button size="sm" onClick={() => setIsAddMembersOpen(true)}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Add Members
+                </Button>
+              )}
+            </div>
           </div>
 
           {isMembersLoading ? (
@@ -1150,6 +1177,50 @@ export function ProjectDetailPage() {
         sourceManagerId={transferSourceId}
         members={allMembers}
       />
+
+      {/* ── Leave Project Dialog ── */}
+      <Dialog
+        open={isLeaveProjectOpen}
+        onOpenChange={(open) => !open && !isLeavingProject && setIsLeaveProjectOpen(false)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Leave project</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to leave this project?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-start gap-3 rounded-lg border border-[rgba(100,51,0,0.2)] bg-[rgba(100,51,0,0.06)] p-3 text-sm text-[#643300]">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="space-y-1">
+              <p className="font-medium">You will lose access immediately</p>
+              <p className="text-xs">
+                You will be removed from this project and lose access to its tasks and sprints.
+                A project manager can re-add you later if needed.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsLeaveProjectOpen(false)}
+              disabled={isLeavingProject}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleLeaveProject}
+              disabled={isLeavingProject}
+            >
+              {isLeavingProject && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Leave Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

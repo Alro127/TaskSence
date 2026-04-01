@@ -83,6 +83,17 @@ export const projectMemberApi = createApi({
         { type: "ProjectMember", id: projectId },
       ],
     }),
+
+    /** DELETE /workspaces/{workspaceId}/projects/{projectId}/leave */
+    leaveProject: builder.mutation<ApiResponse<void>, { workspaceId: number; projectId: number }>({
+      query: ({ workspaceId, projectId }) => ({
+        url: `/workspaces/${workspaceId}/projects/${projectId}/leave`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: "ProjectMember", id: projectId },
+      ],
+    }),
   }),
 });
 
@@ -91,4 +102,5 @@ export const {
   useAddMembersMutation,
   useUpdateMemberRoleMutation,
   useRemoveMemberMutation,
+  useLeaveProjectMutation,
 } = projectMemberApi;

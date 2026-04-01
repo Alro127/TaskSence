@@ -168,4 +168,39 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
                                 .payload(Map.of("referenceName", member.getWorkspace().getName()))
                                 .build());
         }
+
+        @Override
+        @Transactional
+        public void leaveWorkspace(Long workspaceId) {
+                UserEntity currentUser = securityService.getCurrentUser();
+
+                WorkspaceMemberEntity member = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, currentUser.getId())
+                                .orElseThrow(() -> new ResourceNotFoundException("You are not a member of this workspace"));
+
+                if (member.getRole() == WorkspaceRole.OWNER) {
+                        long ownerCount = workspaceMemberRepository.countByWorkspaceIdAndRole(workspaceId, WorkspaceRole.OWNER);
+                        if (ownerCount <= 1) {
+                                throw new ConflictException("Cannot leave: you are the only workspace owner.");
+                        }
+                }
+
+                OffsetDateTime now = OffsetDateTime.now();
+                member.setDeletedAt(now);
+                projectMemberRepository.softDeleteByWorkspaceIdAndUserId(workspaceId, currentUser.getId(), now);
+                workspaceMemberRepository.save(member);
+                permissionResolver.evictAllPermissionCache();
+
+                workspaceMemberRepository
+                                .findByWorkspaceIdAndRoleIn(workspaceId, List.of(WorkspaceRole.OWNER, WorkspaceRole.MANAGER))
+                                .stream()
+                                .filter(m -> !m.getUser().getId().equals(currentUser.getId()))
+                                .forEach(m -> notificationService.saveAndPublish(NotificationMessage.builder()
+                                                .receiverId(m.getUser().getId())
+                                                .actorId(currentUser.getId())
+                                                .type(NotificationType.WORKSPACE_LEAVE)
+                                                .referenceType(EntityType.WORKSPACE)
+                                                .referenceId(workspaceId)
+                                                .payload(Map.of("actorName", currentUser.getFullName(), "referenceName", member.getWorkspace().getName()))
+                                                .build()));
+        }
 }

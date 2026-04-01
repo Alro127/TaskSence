@@ -5,6 +5,7 @@ import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.CreateWorkspaceRequest;
 import dev.alro127.tasksense.dto.request.UpdateWorkspaceRequest;
 import dev.alro127.tasksense.dto.response.WorkspaceResponse;
+import dev.alro127.tasksense.service.WorkspaceMemberService;
 import dev.alro127.tasksense.service.WorkspaceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.List;
 public class WorkspaceController {
 
         private final WorkspaceService workspaceService;
+        private final WorkspaceMemberService workspaceMemberService;
 
         @PostMapping
         public ResponseEntity<ApiResponse<WorkspaceResponse>> createWorkspace(
@@ -70,6 +72,13 @@ public class WorkspaceController {
                                 null);
 
                 return ResponseEntity.ok(response);
+        }
+
+        @DeleteMapping("/{workspaceId}/leave")
+        @PreAuthorize("@perm.workspaceMember(#workspaceId)")
+        public ResponseEntity<ApiResponse<Void>> leaveWorkspace(@PathVariable Long workspaceId) {
+                workspaceMemberService.leaveWorkspace(workspaceId);
+                return ResponseEntity.ok(new ApiResponse<>("200", "Leave workspace successfully", null, null));
         }
 
         @DeleteMapping("/{id}")

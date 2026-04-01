@@ -18,4 +18,6 @@ public interface WorkspaceMemberService {
 
     void removeMember(Long workspaceId, Long memberId);
 
+    void leaveWorkspace(Long workspaceId);
+
 }
