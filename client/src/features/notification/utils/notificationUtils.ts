@@ -62,6 +62,10 @@ export function getNotificationText(
       title: "Role changed",
       description: `Your role in "${workspaceName}" has been updated`,
     },
+    WORKSPACE_LEAVE: {
+      title: "Member left workspace",
+      description: `${actorName} left "${workspaceName}"`,
+    },
     PROJECT_JOIN_REQUEST: {
       title: "Project join request",
       description: `${actorName} requested to join "${projectName}"`,
@@ -85,6 +89,10 @@ export function getNotificationText(
     PROJECT_ROLE_CHANGE: {
       title: "Project role changed",
       description: `Your role in "${projectName}" has been updated`,
+    },
+    PROJECT_LEAVE: {
+      title: "Member left project",
+      description: `${actorName} left "${projectName}"`,
     },
     COMMENT_MENTION: {
       title: "You were mentioned",
@@ -151,6 +159,10 @@ export function getNotificationTarget(notification: NotificationResponse): strin
     case "WORKSPACE_REMOVE_MEMBER": {
       return "/workspaces";
     }
+    case "WORKSPACE_LEAVE": {
+      const workspaceId = notification.referenceId;
+      return workspaceId ? `/workspaces/${workspaceId}?tab=members` : "/workspaces";
+    }
     case "WORKSPACE_ROLE_CHANGE": {
       const workspaceId = notification.referenceId ?? (payload.workspaceId as number | undefined);
       return workspaceId ? `/workspaces/${workspaceId}` : "/workspaces";
@@ -175,6 +187,13 @@ export function getNotificationTarget(notification: NotificationResponse): strin
     }
     case "PROJECT_REMOVE_MEMBER": {
       return "/workspaces";
+    }
+    case "PROJECT_LEAVE": {
+      const workspaceId = payload.workspaceId as number | undefined;
+      const projectId = notification.referenceId;
+      return workspaceId && projectId
+        ? `/workspaces/${workspaceId}/projects/${projectId}`
+        : "/workspaces";
     }
     case "PROJECT_ROLE_CHANGE": {
       const workspaceId = payload.workspaceId as number | undefined;

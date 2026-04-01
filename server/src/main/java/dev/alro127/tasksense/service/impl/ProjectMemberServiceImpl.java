@@ -17,6 +17,7 @@ import dev.alro127.tasksense.dto.response.AddProjectMemberResultItem;
 import dev.alro127.tasksense.dto.response.ProjectMemberResponse;
 import dev.alro127.tasksense.dto.response.ProjectResponse;
 import dev.alro127.tasksense.exception.BadRequestException;
+import dev.alro127.tasksense.exception.ConflictException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
@@ -237,6 +238,37 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                         .referenceId(projectId)
                         .payload(Map.of("referenceName", project.getName()))
                         .build());
+        }
+
+        @Override
+        @Transactional
+        public void leaveProject(Long projectId) {
+                UserEntity currentUser = securityService.getCurrentUser();
+
+                ProjectMemberEntity member = projectMemberRepository.findByProjectIdAndUserId(projectId, currentUser.getId())
+                                .orElseThrow(() -> new ResourceNotFoundException("You are not a member of this project"));
+
+                if (member.getRole() == ProjectMemberRole.MANAGER) {
+                        long managerCount = projectMemberRepository.countByProjectIdAndRole(projectId, ProjectMemberRole.MANAGER);
+                        if (managerCount <= 1) {
+                                throw new ConflictException("Cannot leave: you are the only project manager. Transfer the role first.");
+                        }
+                }
+
+                member.setDeletedAt(OffsetDateTime.now());
+                projectMemberRepository.save(member);
+                permissionResolver.evictAllPermissionCache();
+
+                projectMemberRepository.findAllByProjectIdAndRole(projectId, ProjectMemberRole.MANAGER).stream()
+                                .filter(m -> !m.getUser().getId().equals(currentUser.getId()))
+                                .forEach(m -> notificationService.saveAndPublish(NotificationMessage.builder()
+                                                .receiverId(m.getUser().getId())
+                                                .actorId(currentUser.getId())
+                                                .type(NotificationType.PROJECT_LEAVE)
+                                                .referenceType(EntityType.PROJECT)
+                                                .referenceId(projectId)
+                                                .payload(Map.of("actorName", currentUser.getFullName(),"referenceName", member.getProject().getName()))
+                                                .build()));
         }
 
         @Override

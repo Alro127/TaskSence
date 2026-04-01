@@ -32,6 +32,8 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
 
     long countByWorkspaceIdAndRole(Long workspaceId, WorkspaceRole workspaceRole);
 
+    List<WorkspaceMemberEntity> findByWorkspaceIdAndRoleIn(Long workspaceId, List<WorkspaceRole> roles);
+
     Optional<WorkspaceMemberEntity> findByIdAndWorkspaceId(Long memberId, Long workspaceId);
 
     boolean existsByWorkspaceIdAndUserId(Long workspaceId, Long userId);

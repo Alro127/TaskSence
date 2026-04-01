@@ -20,5 +20,7 @@ public interface ProjectMemberService {
 
     void removeMember(Long projectId, Long userId);
 
+    void leaveProject(Long projectId);
+
     String getCurrentUserRole(Long projectId);
 }

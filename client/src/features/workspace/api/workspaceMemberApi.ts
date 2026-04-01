@@ -60,6 +60,16 @@ export const workspaceMemberApi = createApi({
         { type: "WorkspaceMember", id: workspaceId },
       ],
     }),
+
+    leaveWorkspace: builder.mutation<ApiResponse<void>, { workspaceId: number }>({
+      query: ({ workspaceId }) => ({
+        url: `/workspaces/${workspaceId}/leave`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { workspaceId }) => [
+        { type: "WorkspaceMember", id: workspaceId },
+      ],
+    }),
   }),
 });
 
@@ -67,4 +77,5 @@ export const {
   useGetWorkspaceMembersQuery,
   useUpdateMemberRoleMutation,
   useRemoveMemberMutation,
+  useLeaveWorkspaceMutation,
 } = workspaceMemberApi;

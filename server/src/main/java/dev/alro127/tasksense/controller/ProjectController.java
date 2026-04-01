@@ -5,6 +5,7 @@ import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.CreateProjectRequest;
 import dev.alro127.tasksense.dto.request.UpdateProjectRequest;
 import dev.alro127.tasksense.dto.response.ProjectResponse;
+import dev.alro127.tasksense.service.ProjectMemberService;
 import dev.alro127.tasksense.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.List;
 public class ProjectController {
 
         private final ProjectService projectService;
+        private final ProjectMemberService projectMemberService;
 
         @PostMapping
         @PreAuthorize("@perm.workspace(#workspaceId, 'CREATE_PROJECT')")
@@ -82,6 +84,19 @@ public class ProjectController {
                                 null);
 
                 return ResponseEntity.ok(response);
+        }
+
+        @DeleteMapping("/{projectId}/leave")
+        @PreAuthorize("@perm.project(#projectId, 'VIEW')")
+        public ResponseEntity<ApiResponse<Void>> leaveProject(
+                @PathVariable Long workspaceId,
+                @PathVariable Long projectId) {
+
+                projectMemberService.leaveProject(projectId);
+
+                return ResponseEntity.ok(
+                        new ApiResponse<>("200", "Leave project successfully", null, null)
+                );
         }
 
         @DeleteMapping("/{projectId}")

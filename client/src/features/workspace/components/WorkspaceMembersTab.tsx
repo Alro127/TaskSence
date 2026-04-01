@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   ChevronDown,
@@ -6,6 +7,7 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  LogOut,
   MoreHorizontal,
   UserPlus,
   Users,
@@ -42,7 +44,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAppSelector } from "@/app/hooks";
 import { UserProfileDrawer } from "@/features/user/components/UserProfileDrawer";
-import { useGetWorkspaceMembersQuery, useUpdateMemberRoleMutation, useRemoveMemberMutation } from "../api/workspaceMemberApi";
+import { useGetWorkspaceMembersQuery, useUpdateMemberRoleMutation, useRemoveMemberMutation, useLeaveWorkspaceMutation } from "../api/workspaceMemberApi";
 import { useGetWorkspaceInvitesQuery, useRevokeInviteMutation } from "../api/workspaceInviteApi";
 import { useGetWorkspaceJoinRequestsQuery, useReviewJoinRequestMutation } from "../api/workspaceJoinRequestApi";
 import { BulkInviteModal } from "./BulkInviteModal";
@@ -102,6 +104,7 @@ interface WorkspaceMembersTabProps {
 // ─── Main Component ──────────────────────────────────────────────────────────
 export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
   const currentUserId = useAppSelector((state) => state.user.currentUser?.id);
+  const navigate = useNavigate();
 
   const { data: membersData, isLoading: membersLoading } =
     useGetWorkspaceMembersQuery(workspaceId);
@@ -124,10 +127,12 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
 
   const [updateRole, { isLoading: isUpdatingRole }] = useUpdateMemberRoleMutation();
   const [removeMember, { isLoading: isRemoving }] = useRemoveMemberMutation();
+  const [leaveWorkspace, { isLoading: isLeaving }] = useLeaveWorkspaceMutation();
   const [revokeInvite, { isLoading: isRevoking }] = useRevokeInviteMutation();
   const [reviewJoinRequest] = useReviewJoinRequestMutation();
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isLeaveOpen, setIsLeaveOpen] = useState(false);
   const [profileUserId, setProfileUserId] = useState<number | null>(null);
   const [removeTarget, setRemoveTarget] = useState<WorkspaceMember | null>(null);
   const [expandedRequestId, setExpandedRequestId] = useState<number | null>(null);
@@ -194,6 +199,17 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
     }
   };
 
+  // ── Leave workspace ────────────────────────────────────────────────────────
+  const handleLeave = async () => {
+    try {
+      await leaveWorkspace({ workspaceId }).unwrap();
+      toast.success("You have left the workspace.");
+      navigate("/workspaces");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to leave workspace."));
+    }
+  };
+
   // ── Revoke invite ──────────────────────────────────────────────────────────
   const handleRevoke = async (inviteId: number, email: string) => {
     try {
@@ -241,12 +257,23 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
             Manage who has access to this workspace and their permissions.
           </p>
         </div>
-        {canInvite && (
-          <Button size="sm" onClick={() => setIsInviteOpen(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Invite Member
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-destructive border-destructive/30 hover:bg-destructive/5 hover:text-destructive"
+            onClick={() => setIsLeaveOpen(true)}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Leave Workspace
           </Button>
-        )}
+          {canInvite && (
+            <Button size="sm" onClick={() => setIsInviteOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Invite Member
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* ── Members list ── */}
@@ -670,6 +697,50 @@ export function WorkspaceMembersTab({ workspaceId }: WorkspaceMembersTabProps) {
             >
               {isRemoving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Leave Confirmation Dialog ── */}
+      <Dialog
+        open={isLeaveOpen}
+        onOpenChange={(open) => !open && !isLeaving && setIsLeaveOpen(false)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Leave workspace</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to leave this workspace?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-start gap-3 rounded-lg border border-[rgba(100,51,0,0.2)] bg-[rgba(100,51,0,0.06)] p-3 text-sm text-[#643300]">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="space-y-1">
+              <p className="font-medium">You will lose access immediately</p>
+              <p className="text-xs">
+                You will be removed from this workspace and all its projects.
+                You can request to rejoin later if the workspace allows it.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsLeaveOpen(false)}
+              disabled={isLeaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleLeave}
+              disabled={isLeaving}
+            >
+              {isLeaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Leave Workspace
             </Button>
           </DialogFooter>
         </DialogContent>
