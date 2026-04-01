@@ -1,7 +1,7 @@
 # TaskSense - Frontend Project Context
 
 > File này dùng để giữ context cho AI và developers. Cập nhật sau mỗi sprint/thay đổi lớn.
-> **Cập nhật lần cuối**: Sprint 12 — Analytics (Elasticsearch aggregations)
+> **Cập nhật lần cuối**: Sprint 13 — Leave Project / Leave Workspace
 
 ## 📋 Thông tin dự án
 
@@ -43,6 +43,7 @@
   - `GET /workspaces/:id/members` → danh sách members (embed `UserSummaryResponse`)
   - `PATCH /workspaces/:id/members/:memberId` → body: `{role}` → update role
   - `DELETE /workspaces/:id/members/:memberId` → xóa member
+  - `DELETE /workspaces/:workspaceId/leave` → rời workspace (current user tự rời)
 - **Workspace Invite Endpoints**:
   - `POST /workspaces/:id/invites` → body: `{email, role}` → gửi email mời (single)
   - `POST /workspaces/:id/invites/bulk` → body: `{invites: [{email, role}]}` → `BulkInviteResult` (batch)
@@ -67,6 +68,7 @@
   - `POST /projects/:projectId/members` → body: `{members: [{userId, role}]}` → `AddProjectMemberResultItem[]`
   - `PATCH /projects/:projectId/members/:userId/role` → body: `{role}` → `ProjectMember`
   - `DELETE /projects/:projectId/members/:userId` → xóa member
+  - `DELETE /workspaces/:workspaceId/projects/:projectId/leave` → rời project (current user tự rời)
 - **Project Join Request Endpoints**:
   - `POST /projects/:projectId/join-requests` → body: `{message?}` → `ProjectJoinRequest`
   - `GET /projects/:projectId/join-requests` → danh sách join requests → `ProjectJoinRequest[]`
@@ -194,7 +196,7 @@ client/
 │   │   ├── project/                       ← Sprint 7 — HOÀN THÀNH
 │   │   │   ├── api/
 │   │   │   │   ├── projectApi.ts          ← RTK Query CRUD + getCurrentUserRole
-│   │   │   │   ├── projectMemberApi.ts    ← RTK Query member management
+│   │   │   │   ├── projectMemberApi.ts    ← RTK Query member management (incl. leaveProject)
 │   │   │   │   └── projectJoinRequestApi.ts ← RTK Query join request management
 │   │   │   ├── components/
 │   │   │   │   ├── ProjectCard.tsx        ← Card + STATUS_CONFIG + ROLE_LABEL exports
@@ -253,7 +255,7 @@ client/
 │   ├── types/api.ts          ← Đầy đủ tất cả types: Auth, User, Workspace, WorkspaceMember/Invite,
    │                            WorkspaceJoinRequest, TeamTemplate, Project, ProjectMember, ProjectJoinRequest,
    │                            Task (incl. UpdateTaskStatusRequest), UserSkill,
-   │                            Notification (incl. WORKSPACE_REVIEW_REQUEST),
+   │                            Notification (incl. WORKSPACE_REVIEW_REQUEST, WORKSPACE_LEAVE, PROJECT_LEAVE),
    │                            Comment (CommentResponse, CommentCreateRequest, CommentUpdateRequest, CommentReactionRequest),
    │                            Analytics (DayCount, SprintVelocity, MemberPerformance, ProjectAnalyticsResponse)
 │   ├── App.tsx
@@ -338,7 +340,7 @@ client/
   - `WorkspaceMember` — embed `UserSummaryResponse`, có `role`, `joinedAt`
   - `WorkspaceInvite` — `email`, `role`, `status`, `invitedAt`, `expiredAt`, `acceptedAt`
   - `CreateWorkspaceInviteRequest`, `UpdateWorkspaceRoleRequest`
-- ✅ **workspaceMemberApi** — RTK Query với 3 endpoints: `getWorkspaceMembers`, `updateMemberRole`, `removeMember`
+- ✅ **workspaceMemberApi** — RTK Query với 4 endpoints: `getWorkspaceMembers`, `updateMemberRole`, `removeMember`, `leaveWorkspace`
 - ✅ **workspaceInviteApi** — RTK Query với 5 endpoints: `getWorkspaceInvites`, `inviteMember`, `acceptInvite`, `revokeInvite`, `bulkInviteMembers`
 - ✅ **WorkspaceMembersTab** (`features/workspace/components/WorkspaceMembersTab.tsx`):
   - Section **Members**: list tất cả members với avatar, tên, email, role badge
@@ -348,6 +350,7 @@ client/
     - **Remove**: mở confirmation Dialog
   - Section **Pending Invitations** (chỉ OWNER/MANAGER thấy): list pending invites với nút Revoke
   - Nút **Invite Member** (chỉ OWNER/MANAGER): mở `BulkInviteModal`
+  - Nút **Leave Workspace** (outline/destructive, hiện cho tất cả members): mở confirmation dialog → gọi `leaveWorkspace` → navigate về `/workspaces`; block nếu là OWNER duy nhất (409 từ backend)
   - Permission logic: OWNER manage tất cả; MANAGER manage MEMBER/VIEWER; không được tự manage mình
 - ✅ **InviteMemberModal** — giữ lại trong codebase (không xóa), hiện được thay bằng `BulkInviteModal`
 
@@ -445,7 +448,7 @@ client/
 
 - ✅ **Types** — thêm vào `types/api.ts`:
   - `EntityType` type: `'WORKSPACE' | 'PROJECT' | 'TASK' | 'INVITATION' | 'COMMENT'`
-  - `NotificationType` type: 9 loại — `TASK_ASSIGNED`, `WORKSPACE_INVITE`, `WORKSPACE_INVITE_ACCEPT`, `WORKSPACE_JOIN_REQUEST`, `WORKSPACE_REMOVE_MEMBER`, `WORKSPACE_ROLE_CHANGE`, `PROJECT_JOIN_REQUEST`, `COMMENT_MENTION`, `PROJECT_ROLE_UPDATED`
+  - `NotificationType` type: 11 loại — `TASK_ASSIGNED`, `WORKSPACE_INVITE`, `WORKSPACE_INVITE_ACCEPT`, `WORKSPACE_JOIN_REQUEST`, `WORKSPACE_REMOVE_MEMBER`, `WORKSPACE_ROLE_CHANGE`, `PROJECT_JOIN_REQUEST`, `COMMENT_MENTION`, `PROJECT_ROLE_UPDATED`, `WORKSPACE_LEAVE`, `PROJECT_LEAVE`
   - `NotificationResponse` — `id, type, actorId, receiverId, referenceType (EntityType), referenceId, payload, read, createdAt`
   - `NotificationSocketMessage` — cùng shape với `NotificationResponse` (backend có `id`)
   - `DeleteNotificationsRequest` — `{ids: number[]}`
@@ -676,6 +679,36 @@ client/
 - ✅ Cập nhật **store.ts**: đăng ký `analyticsApi` reducer + middleware
 - ✅ **Phân quyền**: MANAGER thấy Member Performance; MEMBER/VIEWER thấy tất cả phần còn lại
 
+### Sprint 13 - Leave Project / Leave Workspace ✅ COMPLETED
+
+> Users can voluntarily leave a project or workspace. Soft-delete with cascade, last-owner/manager guard, and admin notifications.
+
+**Backend**:
+- ✅ `NotificationType` enum — added `WORKSPACE_LEAVE`, `PROJECT_LEAVE`
+- ✅ `ProjectMemberRepository` — added `countByProjectIdAndRole`, `findAllByProjectIdAndRole` (Spring Data derived queries)
+- ✅ `WorkspaceMemberRepository` — added `findByWorkspaceIdAndRoleIn`
+- ✅ `ProjectMemberService` + impl — `leaveProject(projectId)`: guard last MANAGER (ConflictException 409), soft-delete, evict permission cache, notify remaining MANAGERs with `PROJECT_LEAVE`
+- ✅ `WorkspaceMemberService` + impl — `leaveWorkspace(workspaceId)`: guard last OWNER (ConflictException 409), soft-delete + cascade all project memberships (`softDeleteByWorkspaceIdAndUserId`), evict cache, notify all OWNERs+MANAGERs with `WORKSPACE_LEAVE`
+- ✅ `WorkspaceController` — `DELETE /{workspaceId}/leave` → full path `DELETE /workspaces/{workspaceId}/leave` (placed here to avoid `@PathVariable Long` type-mismatch in `WorkspaceMemberController`)
+- ✅ `ProjectController` — `DELETE /{projectId}/leave` → full path `DELETE /workspaces/{workspaceId}/projects/{projectId}/leave` (same reason — avoids `/{userId}` conflict in `ProjectMemberController`)
+
+**Frontend API**:
+- ✅ `workspaceMemberApi` — added `leaveWorkspace` mutation: `DELETE /workspaces/:workspaceId/leave`, invalidates `WorkspaceMember:{workspaceId}`; exports `useLeaveWorkspaceMutation`
+- ✅ `projectMemberApi` — added `leaveProject` mutation: `DELETE /workspaces/:workspaceId/projects/:projectId/leave`, invalidates `ProjectMember:{projectId}`; exports `useLeaveProjectMutation`
+
+**Frontend UI**:
+- ✅ `WorkspaceMembersTab` — "Leave Workspace" button (outline/destructive) in header → confirmation Dialog with `AlertTriangle` warning → on success navigate to `/workspaces`
+- ✅ `ProjectDetailPage` — "Leave Project" button in Members tab header (visible when `currentUserMember` truthy) → confirmation Dialog → on success navigate to `/workspaces/${workspaceId}`
+- ✅ `notificationUtils.ts` — added `WORKSPACE_LEAVE` and `PROJECT_LEAVE` cases in `getNotificationText()` and `getNotificationTarget()`
+- ✅ `NotificationItem` — added `LogOut` icon (red-500) for both leave types
+- ✅ `types/api.ts` — extended `NotificationType` with `"WORKSPACE_LEAVE"` and `"PROJECT_LEAVE"`
+
+**Business rules**:
+- Last workspace OWNER → 409 ConflictException (must transfer ownership first)
+- Last project MANAGER → 409 ConflictException (must transfer role first)
+- Non-member calls leave → 404 ResourceNotFoundException
+- Workspace leave cascades: soft-deletes all project memberships in that workspace
+
 ### Sprint 7 - Project CRUD & Member Management ✅ COMPLETED
 
 - ✅ **Types** — thêm vào `types/api.ts`:
@@ -695,6 +728,7 @@ client/
   - `getProjectById` — tag `Project:{id}`
   - `createProject`, `updateProject`, `deleteProject` — invalidate workspace tag
   - `getCurrentUserRole` — `GET /projects/:id/members/me/role` → `ProjectMemberRole`
+- ✅ **projectMemberApi** — RTK Query 5 endpoints: `getMembers`, `addMembers`, `updateMemberRole`, `removeMember`, `leaveProject`
 - ✅ **projectMemberApi** — RTK Query với 4 endpoints: `getMembers`, `addMembers`, `updateMemberRole`, `removeMember`
 - ✅ **projectJoinRequestApi** — RTK Query với 4 endpoints: `sendJoinRequest`, `getJoinRequests`, `reviewJoinRequest`, `cancelJoinRequest`
 - ✅ **WorkspaceDetailPage** — Projects tab thay MOCK_PROJECTS bằng real API (`useGetProjectsByWorkspaceQuery`):
@@ -714,7 +748,7 @@ client/
 - ✅ **ProjectDetailPage** (`/workspaces/:id/projects/:projectId`) — 4 tabs:
   - **Overview tab**: Project info card (status, members count, start/end date, description). Edit button cho MANAGER.
   - **Tasks tab**: Placeholder UI (dành cho sprint sau)
-  - **Members tab**: Grid `MemberCard` component. "Add Members" button cho MANAGER.
+  - **Members tab**: Grid `MemberCard` component. "Add Members" button cho MANAGER. "Leave Project" button (outline/destructive, hiện khi `currentUserMember` truthy) → confirmation dialog → gọi `leaveProject` → navigate về `/workspaces/${workspaceId}`; block nếu là MANAGER duy nhất (409 từ backend).
   - **Join Requests tab** (chỉ MANAGER thấy): list `JoinRequestItem` với Approve/Reject actions. Badge hiện pending count.
   - Header: Project name + status badge + description + current user role. Edit/Delete button cho MANAGER.
   - Breadcrumb: `Workspaces > [workspaceName] > [projectName]`. `workspaceName` lấy từ `location.state` (truyền từ ProjectCard navigate) hoặc gọi API nếu không có.
