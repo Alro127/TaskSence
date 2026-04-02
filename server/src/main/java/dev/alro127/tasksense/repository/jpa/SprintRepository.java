@@ -5,9 +5,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
+
 public interface SprintRepository extends JpaRepository<SprintEntity, Long> {
 
     Page<SprintEntity> findByProjectId(Long projectId, Pageable pageable);
+
+    List<SprintEntity> findAllByProjectIdOrderByStartDateAscIdAsc(Long projectId);
 
 
 
