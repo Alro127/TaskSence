@@ -28,6 +28,10 @@ public class WorkflowDraftResponse {
 
     private Boolean aiRefinementRequested;
 
+    private OffsetDateTime publishedAt;
+
+    private Integer publicationVersion;
+
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;

@@ -52,6 +52,13 @@ public class WorkflowEntity {
     @Builder.Default
     private Boolean aiRefinementRequested = false;
 
+    @Column(name = "published_at")
+    private OffsetDateTime publishedAt;
+
+    @Column(name = "publication_version", nullable = false)
+    @Builder.Default
+    private Integer publicationVersion = 1;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;

@@ -3,6 +3,7 @@ package dev.alro127.tasksense.security.permission;
 import dev.alro127.tasksense.domain.entity.TaskEntity;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
 import dev.alro127.tasksense.exception.UnauthorizedException;
+import dev.alro127.tasksense.repository.jpa.WorkflowRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.service.SecurityService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class PermissionChecker {
 
     private final SecurityService securityService;
     private final WorkspaceMemberRepository workspaceMemberRepository;
+    private final WorkflowRepository workflowRepository;
     private final EffectivePermissionResolver resolver;
 
     // ==================== @PreAuthorize SpEL methods ====================
@@ -60,6 +62,27 @@ public class PermissionChecker {
     public boolean workspaceMember(Long workspaceId) {
         Long userId = securityService.getCurrentUserId();
         return workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userId);
+    }
+
+    /**
+     * Check current request is authenticated.
+     * Dùng: @PreAuthorize("@perm.authenticated()")
+     */
+    public boolean authenticated() {
+        try {
+            return securityService.getCurrentUserId() != null;
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
+    /**
+     * Check ownership of a workflow.
+     * Dùng: @PreAuthorize("@perm.workflowOwner(#workflowId)")
+     */
+    public boolean workflowOwner(Long workflowId) {
+        Long userId = securityService.getCurrentUserId();
+        return workflowRepository.findByIdAndCreatedById(workflowId, userId).isPresent();
     }
 
     // ==================== Service-layer helpers ====================

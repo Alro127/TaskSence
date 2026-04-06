@@ -5,6 +5,8 @@ import dev.alro127.tasksense.domain.entity.SprintEntity;
 import dev.alro127.tasksense.domain.entity.TaskEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.entity.WorkflowEntity;
+import dev.alro127.tasksense.domain.entity.WorkflowFavoriteEntity;
+import dev.alro127.tasksense.domain.entity.WorkflowRatingEntity;
 import dev.alro127.tasksense.domain.entity.WorkflowStepEntity;
 import dev.alro127.tasksense.domain.entity.WorkflowStepTaskEntity;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
@@ -12,12 +14,19 @@ import dev.alro127.tasksense.domain.enums.WorkflowGenerationSource;
 import dev.alro127.tasksense.domain.enums.WorkflowStatus;
 import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.CreateWorkflowFromProjectRequest;
+import dev.alro127.tasksense.dto.request.UpsertWorkflowRatingRequest;
 import dev.alro127.tasksense.dto.request.UpdateWorkflowDraftRequest;
 import dev.alro127.tasksense.dto.response.WorkflowDraftResponse;
+import dev.alro127.tasksense.dto.response.WorkflowFavoriteToggleResponse;
+import dev.alro127.tasksense.dto.response.WorkflowRatingResponse;
+import dev.alro127.tasksense.dto.response.WorkflowRatingSummaryResponse;
 import dev.alro127.tasksense.dto.response.WorkflowStepResponse;
 import dev.alro127.tasksense.dto.response.WorkflowStepTaskSummaryResponse;
 import dev.alro127.tasksense.exception.BadRequestException;
+import dev.alro127.tasksense.exception.ForbiddenException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
+import dev.alro127.tasksense.repository.jpa.WorkflowFavoriteRepository;
+import dev.alro127.tasksense.repository.jpa.WorkflowRatingRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.SprintRepository;
 import dev.alro127.tasksense.repository.jpa.TaskRepository;
@@ -28,10 +37,16 @@ import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.WorkflowService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -51,6 +66,8 @@ public class WorkflowServiceImpl implements WorkflowService {
     private final WorkflowRepository workflowRepository;
     private final WorkflowStepRepository workflowStepRepository;
     private final WorkflowStepTaskRepository workflowStepTaskRepository;
+    private final WorkflowRatingRepository workflowRatingRepository;
+    private final WorkflowFavoriteRepository workflowFavoriteRepository;
     private final SecurityService securityService;
 
     @Override
@@ -253,10 +270,41 @@ public class WorkflowServiceImpl implements WorkflowService {
         WorkflowEntity workflow = getOwnedWorkflowOrThrow(workflowId);
 
         if (workflow.getStatus() != WorkflowStatus.DRAFT) {
-            throw new BadRequestException("Only draft workflow can be published");
+            throw new BadRequestException("Workflow is not in draft status and cannot be published");
+        }
+
+        String name = workflow.getName() != null ? workflow.getName().trim() : "";
+        if (name.isBlank()) {
+            throw new BadRequestException("Workflow name is required before publishing");
+        }
+
+        String description = workflow.getDescription() != null ? workflow.getDescription().trim() : "";
+        if (description.isBlank() || description.length() < 20) {
+            throw new BadRequestException("Workflow description must be at least 20 characters before publishing");
+        }
+
+        List<WorkflowStepEntity> steps = workflowStepRepository.findAllByWorkflowIdOrderByPositionAscIdAsc(workflowId);
+        if (steps.isEmpty()) {
+            throw new BadRequestException("Workflow must have at least one step before publishing");
+        }
+
+        List<Long> stepIds = steps.stream()
+                .map(WorkflowStepEntity::getId)
+                .toList();
+        List<WorkflowStepTaskEntity> stepTasks = workflowStepTaskRepository.findAllByWorkflowStepIdIn(stepIds);
+        Map<Long, Long> taskCountByStepId = stepTasks.stream()
+                .collect(Collectors.groupingBy(stepTask -> stepTask.getWorkflowStep().getId(), Collectors.counting()));
+
+        boolean hasStepWithoutTasks = steps.stream()
+                .anyMatch(step -> taskCountByStepId.getOrDefault(step.getId(), 0L) == 0L);
+        if (hasStepWithoutTasks) {
+            throw new BadRequestException("Each workflow step must have at least one mapped task before publishing");
         }
 
         workflow.setStatus(WorkflowStatus.PUBLIC);
+        if (workflow.getPublishedAt() == null) {
+            workflow.setPublishedAt(OffsetDateTime.now());
+        }
         WorkflowEntity saved = workflowRepository.save(workflow);
         return toWorkflowDraftResponse(saved);
     }
@@ -281,6 +329,125 @@ public class WorkflowServiceImpl implements WorkflowService {
                 workflows.getTotalPages());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<WorkflowDraftResponse> explorePublicWorkflows(String keyword, Pageable pageable) {
+        Pageable effectivePageable = pageable.getSort().isUnsorted()
+                ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "publishedAt"))
+                : pageable;
+
+        String normalizedKeyword = keyword != null ? keyword.trim() : null;
+        Page<WorkflowEntity> workflows = (normalizedKeyword == null || normalizedKeyword.isEmpty())
+                ? workflowRepository.findByStatus(WorkflowStatus.PUBLIC, effectivePageable)
+                : workflowRepository.searchByStatusAndKeyword(WorkflowStatus.PUBLIC, normalizedKeyword, effectivePageable);
+        List<WorkflowDraftResponse> data = workflows.getContent().stream()
+                .map(this::toWorkflowDraftResponse)
+                .toList();
+
+        return new PageResponse<>(
+                data,
+                workflows.getNumber(),
+                workflows.getSize(),
+                workflows.getTotalElements(),
+                workflows.getTotalPages());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WorkflowDraftResponse getWorkflowDetail(Long workflowId) {
+        WorkflowEntity workflow = workflowRepository.findById(workflowId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workflow not found"));
+
+        if (workflow.getStatus() == WorkflowStatus.PUBLIC) {
+            return toWorkflowDraftResponse(workflow);
+        }
+
+        Long currentUserId = getCurrentUserIdOrNull();
+        if (workflow.getStatus() == WorkflowStatus.DRAFT) {
+            if (currentUserId == null) {
+                throw new ResourceNotFoundException("Workflow not found");
+            }
+            if (!workflow.getCreatedBy().getId().equals(currentUserId)) {
+                throw new AccessDeniedException("You do not have permission to access this workflow");
+            }
+            return toWorkflowDraftResponse(workflow);
+        }
+
+        throw new ResourceNotFoundException("Workflow not found");
+    }
+
+    @Override
+    @Transactional
+    public WorkflowRatingResponse upsertWorkflowRating(Long workflowId, UpsertWorkflowRatingRequest request) {
+        WorkflowEntity workflow = getPublicWorkflowOrThrow(workflowId);
+        UserEntity currentUser = securityService.getCurrentUser();
+
+        if (workflow.getCreatedBy().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException("You cannot rate your own workflow");
+        }
+
+        WorkflowRatingEntity rating = workflowRatingRepository.findByWorkflowIdAndUserId(workflowId, currentUser.getId())
+                .orElseGet(() -> WorkflowRatingEntity.builder()
+                        .workflow(workflow)
+                        .user(currentUser)
+                        .build());
+
+        String reviewText = request.getReviewText();
+        if (reviewText != null) {
+            reviewText = reviewText.trim();
+            if (reviewText.isBlank()) {
+                reviewText = null;
+            }
+        }
+
+        rating.setStars(request.getStars());
+        rating.setReviewText(reviewText);
+
+        WorkflowRatingEntity saved = workflowRatingRepository.save(rating);
+        return toWorkflowRatingResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WorkflowRatingSummaryResponse getWorkflowRatingSummary(Long workflowId) {
+        getPublicWorkflowOrThrow(workflowId);
+
+        Double averageStars = workflowRatingRepository.findAverageStarsByWorkflowId(workflowId);
+        long totalRatings = workflowRatingRepository.countByWorkflowId(workflowId);
+
+        return WorkflowRatingSummaryResponse.builder()
+                .workflowId(workflowId)
+                .averageStars(averageStars)
+                .totalRatings(totalRatings)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public WorkflowFavoriteToggleResponse toggleWorkflowFavorite(Long workflowId) {
+        WorkflowEntity workflow = getPublicWorkflowOrThrow(workflowId);
+        UserEntity currentUser = securityService.getCurrentUser();
+        Long currentUserId = currentUser.getId();
+
+        if (workflowFavoriteRepository.existsByWorkflowIdAndUserId(workflowId, currentUserId)) {
+            workflowFavoriteRepository.deleteByWorkflowIdAndUserId(workflowId, currentUserId);
+            return WorkflowFavoriteToggleResponse.builder()
+                    .workflowId(workflowId)
+                    .favorited(false)
+                    .build();
+        }
+
+        workflowFavoriteRepository.save(WorkflowFavoriteEntity.builder()
+                .workflow(workflow)
+                .user(currentUser)
+                .build());
+
+        return WorkflowFavoriteToggleResponse.builder()
+                .workflowId(workflowId)
+                .favorited(true)
+                .build();
+    }
+
     private WorkflowStepTaskSummaryResponse toTaskSummary(TaskEntity task) {
         return WorkflowStepTaskSummaryResponse.builder()
                 .id(task.getId())
@@ -295,6 +462,24 @@ public class WorkflowServiceImpl implements WorkflowService {
         Long currentUserId = securityService.getCurrentUserId();
         return workflowRepository.findByIdAndCreatedById(workflowId, currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workflow not found"));
+    }
+
+    private WorkflowEntity getPublicWorkflowOrThrow(Long workflowId) {
+        return workflowRepository.findByIdAndStatus(workflowId, WorkflowStatus.PUBLIC)
+                .orElseThrow(() -> new ResourceNotFoundException("Workflow not found"));
+    }
+
+    private Long getCurrentUserIdOrNull() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            return null;
+        }
+
+        try {
+            return securityService.getCurrentUserId();
+        } catch (RuntimeException ex) {
+            return null;
+        }
     }
 
     private WorkflowDraftResponse toWorkflowDraftResponse(WorkflowEntity workflow) {
@@ -344,9 +529,22 @@ public class WorkflowServiceImpl implements WorkflowService {
                 .status(workflow.getStatus())
                 .generationSource(workflow.getGenerationSource())
                 .aiRefinementRequested(workflow.getAiRefinementRequested())
+                .publishedAt(workflow.getPublishedAt())
+                .publicationVersion(workflow.getPublicationVersion())
                 .createdAt(workflow.getCreatedAt())
                 .updatedAt(workflow.getUpdatedAt())
                 .steps(steps)
+                .build();
+    }
+
+    private WorkflowRatingResponse toWorkflowRatingResponse(WorkflowRatingEntity rating) {
+        return WorkflowRatingResponse.builder()
+                .workflowId(rating.getWorkflow().getId())
+                .userId(rating.getUser().getId())
+                .stars(rating.getStars())
+                .reviewText(rating.getReviewText())
+                .createdAt(rating.getCreatedAt())
+                .updatedAt(rating.getUpdatedAt())
                 .build();
     }
 
