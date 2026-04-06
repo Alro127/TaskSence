@@ -6,6 +6,7 @@ import {
 
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { LandingPage } from "@/pages/LandingPage";
+import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { MainLayout } from "@/layouts/MainLayout";
@@ -22,17 +23,7 @@ import { WorkspacesPage, WorkspaceDetailPage, WorkspaceInvitationPage, Workspace
 import { TeamTemplatesPage, TeamTemplateDetailPage } from "@/features/team-template/pages";
 import { CreateProjectPage, ProjectDetailPage } from "@/features/project/pages";
 import { TaskBoardPage, TaskDetailPage } from "@/features/task/pages";
-
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="rounded-lg border border-dashed bg-muted p-6">
-      <h2 className="text-xl font-semibold">{title}</h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        This section is mocked for quick access and will be implemented in a future sprint.
-      </p>
-    </div>
-  );
-}
+import { MyWorkflowsPage, WorkflowEditorPage } from "@/features/workflow/pages";
 
 const routes: RouteObject[] = [
   // Public landing page — standalone (no app shell)
@@ -117,6 +108,14 @@ const routes: RouteObject[] = [
       {
         path: "workspaces/:id/projects/:projectId/tasks/:taskId",
         element: <TaskDetailPage />,
+      },
+      {
+        path: "workflows",
+        element: <MyWorkflowsPage />,
+      },
+      {
+        path: "workflows/:workflowId",
+        element: <WorkflowEditorPage />,
       },
       {
         path: "team-templates",
