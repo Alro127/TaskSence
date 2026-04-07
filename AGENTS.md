@@ -35,6 +35,7 @@ Repository guidance for coding agents working in **TaskSense**.
   - `npm run lint -- src/features/workspace/pages/WorkspacesPage.tsx`
 
 Notes:
+
 - `client/package.json` currently has **no** `test` script.
 - Do not invent a test command unless you also add test tooling in a separate task.
 
@@ -101,6 +102,7 @@ Notes:
 - Use skeletons for list loading states and explicit empty states for no-data scenarios.
 
 Design-system precedence note:
+
 - `client/DESIGN_SYSTEM.md` explicitly mandates the project palette/classes.
 - If any older instruction conflicts with this file, prefer `client/DESIGN_SYSTEM.md` for UI styling decisions.
 
@@ -163,6 +165,29 @@ Design-system precedence note:
    - Frontend: `npm run lint` and/or targeted lint command.
    - Backend: `mvnw.cmd -DskipTests compile` and relevant test command.
 5. Ensure API contract consistency between backend DTOs and frontend types.
+
+## 14) Skill routing for normal prompts
+
+- Team members do not need to call skill names manually.
+- Agents should infer intent and auto-route to the relevant skills.
+- For multi-step software requests, default to `agent-execution-workflow`.
+- For context continuity, finalize with `context-doc-sync`.
+- Context loading read order:
+  1. `Documents/ai-context/INDEX.md`
+  2. Latest snapshot in `Documents/ai-context/snapshots/`
+  3. Latest run records in `Documents/ai-context/runs/`
+  4. `Documents/ai-context/LEDGER.md`
+
+Skill map by intent:
+
+- Clarify requirement: `requirements-analysis`
+- Design and planning: `architecture-design`
+- API contract alignment: `api-contract-sync`
+- Build and refactor: `feature-implementation`
+- Testing strategy and cases: `test-generation`
+- Review gate before merge: `code-review-gate`
+- Security and privacy checks: `security-check`
+- Go/no-go release check: `release-readiness`
 
 ## 12) Current test reality
 

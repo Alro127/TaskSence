@@ -1,0 +1,34 @@
+# AI Context Index
+
+## Read Protocol
+
+Agents must read in this order:
+
+1. This index file
+2. Latest snapshot file in snapshots/
+3. Latest 5 run files in runs/
+4. LEDGER.md
+
+## Latest Snapshot
+
+- None yet
+
+## Recent Runs
+
+| Run ID | Date | Summary | Linked Files |
+| ------ | ---- | ------- | ------------ |
+
+## Open Decisions
+
+| Date | Decision Needed | Owner | Due | Status |
+| ---- | --------------- | ----- | --- | ------ |
+
+## Active Constraints
+
+| Date | Constraint | Impact |
+| ---- | ---------- | ------ |
+
+## Risk Register
+
+| Date | Risk | Severity | Mitigation |
+| ---- | ---- | -------- | ---------- |

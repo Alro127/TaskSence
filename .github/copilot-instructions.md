@@ -5,6 +5,33 @@
 - These instructions are workspace-wide and apply to all agents operating in this repository.
 - For frontend work, treat `client/DESIGN_SYSTEM.md` and `client/PROJECT_CONTEXT.md` as source-of-truth references.
 
+## Skill Auto-Routing Policy (Team Default)
+
+- Agents must auto-select and apply the most relevant skill(s) based on user intent, even when users do not explicitly mention a skill name.
+- For software-delivery requests that involve multiple phases (clarify, plan, implement, validate, release), prefer end-to-end orchestration with `agent-execution-workflow`.
+- For context continuity requests, always apply `context-doc-sync` at run finalization.
+- Always load project context docs before planning or implementation:
+  - `Documents/ai-context/INDEX.md`
+  - latest snapshot in `Documents/ai-context/snapshots/`
+  - latest run files in `Documents/ai-context/runs/`
+  - `Documents/ai-context/LEDGER.md`
+- If a request maps to a single phase, route directly to specialized skills:
+  - Clarification -> `requirements-analysis`
+  - Design/architecture -> `architecture-design`
+  - API alignment -> `api-contract-sync`
+  - Implementation -> `feature-implementation`
+  - Testing -> `test-generation`
+  - Pre-merge review -> `code-review-gate`
+  - Security verification -> `security-check`
+  - Release decision -> `release-readiness`
+
+### Auto-Routing Guardrails
+
+- Do not require users to memorize or type skill names.
+- If intent is ambiguous, infer likely phase from prompt and proceed with explicit assumptions.
+- If workflow has multiple phases, use orchestration instead of isolated one-off skill execution.
+- Do not close a significant run without context sync.
+
 ## Code Style
 
 - Keep existing style and naming in each module; do not reformat unrelated code.
