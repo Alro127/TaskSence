@@ -345,9 +345,36 @@ export interface WorkflowDraftResponse {
   status: WorkflowStatus;
   generationSource: WorkflowGenerationSource;
   aiRefinementRequested: boolean;
+  publishedAt?: string | null;
+  publicationVersion?: number | null;
   createdAt: string;
   updatedAt: string;
   steps: WorkflowStepResponse[];
+}
+
+export interface UpsertWorkflowRatingRequest {
+  stars: number;
+  reviewText?: string;
+}
+
+export interface WorkflowRatingResponse {
+  workflowId: number;
+  userId: number;
+  stars: number;
+  reviewText: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkflowRatingSummaryResponse {
+  workflowId: number;
+  averageStars: number | null;
+  totalRatings: number;
+}
+
+export interface WorkflowFavoriteToggleResponse {
+  workflowId: number;
+  favorited: boolean;
 }
 
 export interface UpdateWorkflowStepRequest {

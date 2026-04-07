@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Filter, Plus, RefreshCw, Search, Sparkles } from "lucide-react";
+import { Compass, Filter, Plus, RefreshCw, Search, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { WorkflowDraftResponse, WorkflowStatus } from "@/types/api";
 
@@ -22,14 +23,14 @@ function WorkflowCardSkeleton() {
   return (
     <div className="ghost-border rounded-xl bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
       <div className="mb-4 flex items-start justify-between">
-        <div className="h-10 w-10 animate-pulse rounded-lg bg-[#efeeec]" />
-        <div className="h-5 w-20 animate-pulse rounded-full bg-[#efeeec]" />
+        <Skeleton className="h-10 w-10 rounded-lg" />
+        <Skeleton className="h-5 w-20 rounded-full" />
       </div>
-      <div className="h-5 w-3/4 animate-pulse rounded bg-[#efeeec]" />
-      <div className="mt-2 h-4 w-full animate-pulse rounded bg-[#efeeec]" />
-      <div className="mt-1 h-4 w-10/12 animate-pulse rounded bg-[#efeeec]" />
-      <div className="mt-5 h-4 w-1/2 animate-pulse rounded bg-[#efeeec]" />
-      <div className="mt-4 h-9 w-full animate-pulse rounded-md bg-[#efeeec]" />
+      <Skeleton className="h-5 w-3/4 rounded" />
+      <Skeleton className="mt-2 h-4 w-full rounded" />
+      <Skeleton className="mt-1 h-4 w-10/12 rounded" />
+      <Skeleton className="mt-5 h-4 w-1/2 rounded" />
+      <Skeleton className="mt-4 h-9 w-full rounded-md" />
     </div>
   );
 }
@@ -110,6 +111,10 @@ export function MyWorkflowsPage() {
           >
             <Filter className="h-4 w-4" />
             AI refined
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/community?tab=workflows")}>
+            <Compass className="h-4 w-4" />
+            Explore public
           </Button>
         </div>
       </header>

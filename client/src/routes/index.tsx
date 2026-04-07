@@ -18,12 +18,18 @@ import {
   ResetPasswordPage,
 } from "@/features/auth/pages";
 import { DashboardPage } from "@/features/dashboard/pages";
+import { CommunityPage } from "@/features/community/pages";
 import { ProfilePage } from "@/features/user/pages";
 import { WorkspacesPage, WorkspaceDetailPage, WorkspaceInvitationPage, WorkspaceExplorePage } from "@/features/workspace/pages";
 import { TeamTemplatesPage, TeamTemplateDetailPage } from "@/features/team-template/pages";
 import { CreateProjectPage, ProjectDetailPage } from "@/features/project/pages";
 import { TaskBoardPage, TaskDetailPage } from "@/features/task/pages";
-import { MyWorkflowsPage, WorkflowEditorPage } from "@/features/workflow/pages";
+import {
+  ExplorePage,
+  MyWorkflowsPage,
+  PublicWorkflowDetailPage,
+  WorkflowEditorPage,
+} from "@/features/workflow/pages";
 
 const routes: RouteObject[] = [
   // Public landing page — standalone (no app shell)
@@ -78,12 +84,24 @@ const routes: RouteObject[] = [
         element: <ProfilePage />,
       },
       {
+        path: "community",
+        element: <CommunityPage />,
+      },
+      {
         path: "workspaces",
         element: <WorkspacesPage />,
       },
       {
         path: "workspaces/explore",
         element: <WorkspaceExplorePage />,
+      },
+      {
+        path: "explore",
+        element: <ExplorePage />,
+      },
+      {
+        path: "explore/:workflowId",
+        element: <PublicWorkflowDetailPage />,
       },
       {
         path: "workspaces/invitation",

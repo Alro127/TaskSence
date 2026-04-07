@@ -1,10 +1,26 @@
 import { useState } from "react";
-import { Search, Globe, Loader2 } from "lucide-react";
+import { Search, Globe } from "lucide-react";
 import { useDebounce } from "use-debounce";
 
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useGetMyWorkspacesQuery, useSearchWorkspacesQuery } from "../api/workspaceApi";
 import { WorkspaceExploreCard } from "../components/WorkspaceExploreCard";
+
+function WorkspaceCardSkeleton() {
+  return (
+    <div className="ghost-border rounded-xl bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <Skeleton className="h-5 w-3/5" />
+        <Skeleton className="h-8 w-8 rounded-md" />
+      </div>
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="mt-1 h-4 w-11/12" />
+      <Skeleton className="mt-4 h-4 w-2/5" />
+      <Skeleton className="mt-4 h-9 w-full rounded-md" />
+    </div>
+  );
+}
 
 export function WorkspaceExplorePage() {
   const [query, setQuery] = useState("");
@@ -47,7 +63,7 @@ export function WorkspaceExplorePage() {
 
       {/* ── Search Input ── */}
       <div className="relative max-w-lg">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#444651]" />
         <Input
           placeholder="Search workspaces by name..."
           value={query}
@@ -74,8 +90,10 @@ export function WorkspaceExplorePage() {
 
       {/* ── Loading ── */}
       {showLoading && (
-        <div className="flex min-h-[200px] items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <WorkspaceCardSkeleton key={index} />
+          ))}
         </div>
       )}
 
@@ -83,7 +101,7 @@ export function WorkspaceExplorePage() {
       {showResults && (
         <>
           <div className="flex items-center gap-2">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-[#444651]">
               {hasResults
                 ? `${results.length} workspace${results.length !== 1 ? "s" : ""} found`
                 : `No public workspaces found for "${debouncedQuery}"`}

@@ -163,6 +163,7 @@ function hasValidationErrors(validation: ValidationState): boolean {
 }
 
 interface EditorState {
+  status: WorkflowDraftResponse["status"];
   name: string;
   description: string;
   steps: UpdateWorkflowStepRequest[];
@@ -173,6 +174,7 @@ function createEditorState(workflow: WorkflowDraftResponse): EditorState {
   const steps = toEditableSteps(workflow);
   const payload = buildPayload(workflow.name, workflow.description ?? "", steps);
   return {
+    status: workflow.status,
     name: workflow.name,
     description: workflow.description ?? "",
     steps,
@@ -197,11 +199,16 @@ export function WorkflowEditorPage() {
   } = useGetMyWorkflowsQuery({ page: 0, size: 200 }, { skip: Number.isNaN(workflowId) });
 
   const workflow = useMemo(() => {
+    const fromList = workflowListData?.data?.data.find((item) => item.id === workflowId);
+    if (fromList) {
+      return fromList;
+    }
+
     if (workflowFromState && workflowFromState.id === workflowId) {
       return workflowFromState;
     }
 
-    return workflowListData?.data?.data.find((item) => item.id === workflowId) ?? null;
+    return null;
   }, [workflowFromState, workflowId, workflowListData?.data?.data]);
 
   const [editorStateById, setEditorStateById] = useState<Record<number, EditorState>>({});
@@ -234,7 +241,7 @@ export function WorkflowEditorPage() {
     );
   }, [effectiveEditorState, currentPayload]);
 
-  const isReadOnly = workflow?.status === "PUBLIC" || isPublishing;
+  const isReadOnly = effectiveEditorState?.status === "PUBLIC" || isPublishing;
 
   const updateEditorState = (
     updater: (prev: EditorState) => EditorState,
@@ -353,7 +360,7 @@ export function WorkflowEditorPage() {
     );
   }
 
-  const statusCfg = WORKFLOW_STATUS_CONFIG[workflow.status];
+  const statusCfg = WORKFLOW_STATUS_CONFIG[effectiveEditorState.status];
 
   return (
     <div className="space-y-6">
@@ -390,13 +397,13 @@ export function WorkflowEditorPage() {
               onClick={() => setIsPublishDialogOpen(true)}
             >
               <Sparkles className="h-4 w-4" />
-              {workflow.status === "PUBLIC" ? "Published" : "Publish"}
+              {effectiveEditorState.status === "PUBLIC" ? "Published" : "Publish"}
             </Button>
           </div>
         </div>
       </header>
 
-      {workflow.status === "PUBLIC" && (
+      {effectiveEditorState.status === "PUBLIC" && (
         <div className="rounded-xl border border-[rgba(0,106,97,0.2)] bg-[rgba(0,106,97,0.08)] px-4 py-3 text-sm text-[#006a61]">
           This workflow is published and now read-only.
         </div>

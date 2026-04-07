@@ -32,7 +32,7 @@ const topNavItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "My Workspace", to: "/workspaces", icon: FolderKanban },
   { label: "Workflows", to: "/workflows", icon: GitBranch },
-  { label: "Community", to: "/workspaces/explore", icon: Globe },
+  { label: "Community", to: "/community", icon: Globe },
   { label: "Profile", to: "/profile", icon: User },
 ];
 
