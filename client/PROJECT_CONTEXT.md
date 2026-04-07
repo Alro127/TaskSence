@@ -1,7 +1,7 @@
 # TaskSense - Frontend Project Context
 
 > File này dùng để giữ context cho AI và developers. Cập nhật sau mỗi sprint/thay đổi lớn.
-> **Cập nhật lần cuối**: Sprint 13 — Leave Project / Leave Workspace
+> **Cập nhật lần cuối**: Sprint 14 — Workflow Builder & Community Hub
 
 ## 📋 Thông tin dự án
 
@@ -105,6 +105,16 @@
 - **Workspace Explore Endpoints**:
   - `GET /workspaces/search?name=...&cursor=...&limit=...` → tìm kiếm public workspaces → `WorkspaceResponse[]`
   - `GET /workspaces/public/:userId?page=0&size=10&sort=createdAt,desc` → danh sách public workspaces của user khác (pageable) → `PageResponse<WorkspaceResponse>`
+- **Workflow Endpoints**:
+  - `GET /workflows/me?status=&page=&size=`
+  - `PUT /workflows/:workflowId`
+  - `POST /workflows/:workflowId/publish`
+  - `GET /workflows/explore?keyword=&page=&size=`
+  - `GET /workflows/:workflowId`
+  - `PUT /workflows/:workflowId/rating` → body: `{stars (1-5), reviewText?}`
+  - `GET /workflows/:workflowId/rating-summary`
+  - `POST /workflows/:workflowId/favorite/toggle`
+  - `POST /projects/:projectId/workflows/drafts/from-project` → body optional: `{includeSubtasks?, includeCompletedTasks?, useAiRefinement?}`
 - **Notification Endpoints**:
   - `GET /notifications/unread-count` → số thông báo chưa đọc → `number`
   - `POST /notifications/:id/read` → đánh dấu 1 thông báo là đã đọc
@@ -140,6 +150,10 @@ client/
 │   │   │   └── authSlice.ts
 │   │   ├── dashboard/
 │   │   │   └── pages/DashboardPage.tsx
+│   │   ├── community/
+│   │   │   └── pages/
+│   │   │       ├── CommunityPage.tsx        ← /community (Tabs: Workspaces + Workflows)
+│   │   │       └── index.ts
 │   │   ├── notification/                  ← Sprint 8 + Sprint 9 — HOÀN THÀNH
 │   │   │   ├── api/
 │   │   │   │   └── notificationApi.ts     ← RTK Query: 6 endpoints
@@ -232,6 +246,22 @@ client/
 │   │   │       ├── TaskBoardPage.tsx        ← Kanban board (drag-and-drop) + List view
 │   │   │       ├── TaskDetailPage.tsx       ← Chi tiết task + inline edit + subtasks + CommentSection
 │   │   │       └── index.ts
+│   │   ├── workflow/                        ← Sprint 14 — HOÀN THÀNH
+│   │   │   ├── api/
+│   │   │   │   └── workflowApi.ts           ← RTK Query: my workflows, explore, detail, publish, rating, favorite, clone draft
+│   │   │   ├── components/
+│   │   │   │   ├── WorkflowCard.tsx
+│   │   │   │   ├── WorkflowEditorStepCard.tsx
+│   │   │   │   ├── CreateWorkflowDraftCard.tsx
+│   │   │   │   ├── PublicWorkflowCard.tsx
+│   │   │   │   ├── RatingDialog.tsx
+│   │   │   │   └── index.ts
+│   │   │   └── pages/
+│   │   │       ├── MyWorkflowsPage.tsx      ← /workflows
+│   │   │       ├── WorkflowEditorPage.tsx   ← /workflows/:workflowId
+│   │   │       ├── ExplorePage.tsx          ← /explore (legacy direct route)
+│   │   │       ├── PublicWorkflowDetailPage.tsx ← /explore/:workflowId
+│   │   │       └── index.ts
 │   │   └── team-template/
 │   │       ├── api/
 │   │       │   ├── teamTemplateApi.ts     ← RTK Query CRUD
@@ -250,14 +280,15 @@ client/
 │   │           └── index.ts
 │   ├── layouts/
 │   │   ├── AuthLayout.tsx
-│   │   └── MainLayout.tsx    ← Sidebar với nav items (incl. "Explore" Compass icon); profile drawer từ header
-│   ├── routes/index.tsx      ← Đã thêm /workspaces/explore + /workspaces/:id/projects/* + tab-aware navigation
+│   │   └── MainLayout.tsx    ← Sidebar với nav items (Community, Workflows); profile drawer từ header
+│   ├── routes/index.tsx      ← Đã thêm /community + workflow routes + project/task routes
 │   ├── types/api.ts          ← Đầy đủ tất cả types: Auth, User, Workspace, WorkspaceMember/Invite,
    │                            WorkspaceJoinRequest, TeamTemplate, Project, ProjectMember, ProjectJoinRequest,
    │                            Task (incl. UpdateTaskStatusRequest), UserSkill,
    │                            Notification (incl. WORKSPACE_REVIEW_REQUEST, WORKSPACE_LEAVE, PROJECT_LEAVE),
    │                            Comment (CommentResponse, CommentCreateRequest, CommentUpdateRequest, CommentReactionRequest),
-   │                            Analytics (DayCount, SprintVelocity, MemberPerformance, ProjectAnalyticsResponse)
+   │                            Analytics (DayCount, SprintVelocity, MemberPerformance, ProjectAnalyticsResponse),
+   │                            Workflow (WorkflowDraftResponse, WorkflowStepResponse, rating/favorite DTOs)
 │   ├── App.tsx
 │   ├── main.tsx
 │   └── index.css
@@ -266,6 +297,16 @@ client/
 ```
 
 ## 🚀 Sprint Progress
+
+### Sprint 14 - Workflow Builder & Community Hub ✅ COMPLETED
+
+- ✅ **Workflow draft list page** (`/workflows`): đầy đủ states loading / empty / no-result / error.
+- ✅ **Workflow editor page** (`/workflows/:workflowId`): step curation, validation, publish flow.
+- ✅ **Project detail integration**: thêm create draft card + confirm dialog để tạo workflow draft từ project.
+- ✅ **Public workflow discovery**: Explore page (`/explore`) và public workflow detail (`/explore/:workflowId`).
+- ✅ **Community interactions**: rating + favorite cho public workflows.
+- ✅ **Community Hub route** (`/community`): tabs `workspaces | workflows`.
+- ✅ **API + store wiring**: đăng ký `workflowApi` reducer + middleware trong store.
 
 ### Sprint 1 - Authentication ✅ COMPLETED
 
@@ -840,6 +881,11 @@ client/
 | `/dashboard`                                        | `DashboardPage`           | trong `MainLayout`                                                                                |
 | `/dashboard/edit-profile`                           | → `/profile`              | redirect (backward compat)                                                                        |
 | `/profile`                                          | `ProfilePage`             | 2 tabs: Info + Skills                                                                             |
+| `/community`                                        | `CommunityPage`           | Hub discovery hợp nhất cho Workspaces + Workflows; ưu tiên dùng kèm `?tab=workspaces|workflows` |
+| `/workflows`                                        | `MyWorkflowsPage`         | Workflow draft list của current user                                                              |
+| `/workflows/:workflowId`                            | `WorkflowEditorPage`      | Workflow editor + publish flow                                                                    |
+| `/explore`                                          | `ExplorePage`             | Direct/deep-link route cho workflow explore (retained for compatibility)                          |
+| `/explore/:workflowId`                              | `PublicWorkflowDetailPage`| Direct/deep-link route cho public workflow detail (retained for compatibility)                    |
 | `/workspaces`                                       | `WorkspacesPage`          | Pinned / Recent / All                                                                             |
 | `/workspaces/explore`                               | `WorkspaceExplorePage`    | Search public workspaces; **phải đứng trước `/workspaces/invitation` và `/:id`**                  |
 | `/workspaces/invitation`                            | `WorkspaceInvitationPage` | **phải đứng trước `:id`**                                                                         |
@@ -901,9 +947,13 @@ client/
     - Workspace: source là search hệ thống + direct email + template import, send invite qua email.
 13. **Task permission model**:
     - `updateTask` (full edit) chỉ dành cho MANAGER hoặc người tạo task (MEMBER).
-    - `updateTaskStatus` là endpoint riêng (`PATCH /:taskId/status`) — cho phép assignee update status mà không cần quyền edit toàn bộ task.
-    - VIEWER không được thực hiện bất kỳ thao tác ghi nào trên task.
-    - Frontend cần gọi đúng endpoint tùy theo action: dùng `PUT /:taskId` cho edit đầy đủ, `PATCH /:taskId/status` khi chỉ đổi status.
+     - `updateTaskStatus` là endpoint riêng (`PATCH /:taskId/status`) — cho phép assignee update status mà không cần quyền edit toàn bộ task.
+     - VIEWER không được thực hiện bất kỳ thao tác ghi nào trên task.
+     - Frontend cần gọi đúng endpoint tùy theo action: dùng `PUT /:taskId` cho edit đầy đủ, `PATCH /:taskId/status` khi chỉ đổi status.
+14. **Community discovery model**:
+    - Community hiện chứa cả workspace discovery và workflow discovery.
+    - Preferred entry route: `/community` với query tab `?tab=workspaces|workflows`.
+    - `/explore` và `/workspaces/explore` vẫn giữ để đảm bảo direct-link/deep-link compatibility.
 
 ## 🔧 Environment Variables
 
@@ -1013,6 +1063,17 @@ npm run preview
 - **`use-debounce` dependency**: đã cài (`npm install use-debounce`). Dùng `useDebounce(value, 400)` pattern trong search inputs.
 - **Route ordering** trong `routes/index.tsx`: `/workspaces/explore` phải đứng TRƯỚC `/workspaces/invitation` và `/workspaces/:id`.
 - **`UserProfileDrawer` Workspaces tab**: filter bỏ workspaces user đã là member của profile đang xem bằng cách so sánh `myWorkspaceIds` (từ current user) với `publicWorkspaces` (của target user).
+
+### Workflow Architecture (Sprint 14)
+
+- **`workflowApi`** (RTK Query): endpoints cho my workflows, workflow detail/update/publish, explore, rating, rating summary, favorite toggle, create draft from project; tag strategy gồm `Workflow`, `LIST`, `EXPLORE`, và per-id tags.
+- **Main pages/components**:
+  - Pages: `MyWorkflowsPage` (`/workflows`), `WorkflowEditorPage` (`/workflows/:workflowId`), `ExplorePage` (`/explore`), `PublicWorkflowDetailPage` (`/explore/:workflowId`), `CommunityPage` (`/community`).
+  - Components: `WorkflowCard`, `WorkflowEditorStepCard`, `CreateWorkflowDraftCard`, `PublicWorkflowCard`, `RatingDialog`.
+- **Permission/auth behavior**:
+  - Public explore/detail hỗ trợ guest-view guard cho các action cần auth (rating/favorite/clone).
+  - Owner không thể tự rate workflow của chính mình.
+- **Clone-as-draft flow**: từ public workflow detail, user có thể clone thành draft workflow để chỉnh sửa/publish trong workspace cá nhân.
 
 ### Project Architecture
 
