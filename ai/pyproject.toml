@@ -1,0 +1,33 @@
+[project]
+name = "ai"
+version = "0.1.0"
+description = "RAG of Tasksense"
+authors = [
+    { name = "Tasksense Team" }
+]
+requires-python = ">=3.10"
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "python-dotenv",
+
+    # LangChain core + integrations
+    "langchain",
+    "langchain-core",
+    "langchain-openai",
+    "langchain-google-genai",
+    "langchain_openrouter",
+
+    "psycopg[binary]>=3.1",
+
+    "elasticsearch>=8.0.0",
+    "qdrant-client",
+    "langchain-qdrant",
+    "apscheduler>=3.10",
+    "openai"
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
