@@ -13,11 +13,11 @@ import json
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from app.common.llm import get_llm, parse_llm_json
+from app.client.llms import get_llm, parse_llm_json
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,8 @@ def classify(query: str) -> ClassifyResult:
         HumanMessage(content=query),
     ]
 
-    raw: str = get_llm().invoke(messages).content
+    content = get_llm().invoke(messages).content
+    raw = _coerce_content_to_text(content)
 
     try:
         result: dict = parse_llm_json(raw)
@@ -70,3 +71,11 @@ def classify(query: str) -> ClassifyResult:
         intent=str(result["intent"]),
         is_personal=bool(result.get("is_personal", False)),
     )
+
+
+def _coerce_content_to_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(str(item) for item in content)
+    return str(content)

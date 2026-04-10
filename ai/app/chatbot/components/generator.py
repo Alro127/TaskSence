@@ -18,7 +18,7 @@ from pathlib import Path
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.chatbot.components import Document
-from app.common.llm import get_llm
+from app.client.llms import get_llm
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +159,6 @@ def generate(query: str, docs: list[Document]) -> str:
         HumanMessage(content=query),
     ])
 
-    answer = response.content.strip()
+    answer = response.content.strip() # type: ignore
     logger.info("[generator] answer=%r", answer)
     return answer

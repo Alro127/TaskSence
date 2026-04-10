@@ -12,11 +12,12 @@ import json
 import logging
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.chatbot.components import Document
-from app.common.llm import get_llm, parse_llm_json
+from app.client.llms  import get_llm, parse_llm_json
 
 logger = logging.getLogger(__name__)
 
@@ -81,10 +82,11 @@ def validate(answer: str, docs: list[Document]) -> bool:
 
     context_text = _flatten_context(docs)
 
-    raw: str = get_llm().invoke([
+    content = get_llm().invoke([
         SystemMessage(content=_load_prompt()),
         HumanMessage(content=f"Answer:\n{answer}\n\nContext:\n{context_text}"),
     ]).content
+    raw = _coerce_content_to_text(content)
 
     try:
         result: dict = parse_llm_json(raw)
@@ -95,3 +97,11 @@ def validate(answer: str, docs: list[Document]) -> bool:
 
     logger.info("[validator] is_grounded=%s", is_grounded)
     return is_grounded
+
+
+def _coerce_content_to_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(str(item) for item in content)
+    return str(content)

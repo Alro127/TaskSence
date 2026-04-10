@@ -26,7 +26,7 @@ class OpenRouterEmbeddings(Embeddings):
         response = httpx.post(
             f"{self.base_url}/embeddings",
             headers={
-                "Authorization": f"Bearer {self.api_key}",
+                "Authorization": f"Bearer {self.api_key.get_secret_value()}",
                 "Content-Type": "application/json",
             },
             json={"model": self.model, "input": texts},

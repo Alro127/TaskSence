@@ -12,7 +12,7 @@ from pathlib import Path
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from app.common.llm import get_llm, parse_llm_json
+from app.client.llms  import get_llm, parse_llm_json
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ def rewrite(query: str) -> list[str]:
         HumanMessage(content=query),
     ]
 
-    raw: str = get_llm().invoke(messages).content
+    raw: str = get_llm().invoke(messages).content  # type: ignore
 
     try:
         queries = parse_llm_json(raw)

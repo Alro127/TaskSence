@@ -3,7 +3,7 @@ Retriever — queries Qdrant for relevant task/project documents.
 
 Search strategy
 -----------------------------------------------------------------
-Vector similarity search (k=5) using Google Gemini embeddings.
+Vector similarity search (k=5) using the configured embedding client.
 
 Task scope priority (_build_task_scope_filter)
 ----------------------------------------------
@@ -18,12 +18,14 @@ Projects: always filtered by workspaceId when workspace_id is provided.
 
 import logging
 from functools import lru_cache
+from typing import Any, cast
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.models import FieldCondition, Filter, MatchValue
 
 from app.chatbot.components import Document
+from app.client.embedding import get_embedding
 from app.config.config import get_settings
 
 settings = get_settings()
@@ -53,38 +55,30 @@ def _get_client() -> QdrantClient:
 
 def _embed_query(query: str, output_dimensionality: int | None = None) -> list[float] | None:
     """
-    Generate a query vector using Google Gemini embeddings.
+    Generate a query vector using the configured embedding client.
 
     Returns None for empty/whitespace queries.
-    Requires GEMINI_API_KEY to be set.
     """
-    from langchain_google_genai import GoogleGenerativeAIEmbeddings
-
     if not query.strip():
         return None
 
-    api_key = settings.gemini_api_key
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY is required for vector search")
-
-    embeddings = GoogleGenerativeAIEmbeddings(
-        model=settings.gemini_embedding_model,
-        google_api_key=api_key,
-    )
+    embeddings = get_embedding()
 
     if output_dimensionality is None:
-        return embeddings.embed_query(query)
+        return [float(v) for v in embeddings.embed_query(query)]
 
-    # Some LangChain/Google GenAI versions support output_dimensionality to
-    # match index schema; if unavailable, fall back to default behavior.
+    # Some embedding providers support output_dimensionality to match index schema.
+    # If unsupported, fall back to provider default dimensions.
     try:
-        return embeddings.embed_query(query, output_dimensionality=output_dimensionality)
+        embed_query_any = cast(Any, embeddings).embed_query
+        vector = embed_query_any(query, output_dimensionality=output_dimensionality)
+        return [float(v) for v in vector]
     except TypeError:
         logger.warning(
             "[retriever] embedding client does not support output_dimensionality=%s; using model default",
             output_dimensionality,
         )
-        return embeddings.embed_query(query)
+        return [float(v) for v in embeddings.embed_query(query)]
 
 
 @lru_cache(maxsize=8)
@@ -92,10 +86,10 @@ def _get_collection_vector_dim(collection_name: str) -> int | None:
     """Return expected vector size for a collection, if available."""
     try:
         collection_info = _get_client().get_collection(collection_name=collection_name)
-        vectors = collection_info.config.params.vectors
+        vectors = cast(Any, collection_info.config.params.vectors)
 
         if hasattr(vectors, "size"):
-            return int(vectors.size)
+            return int(cast(Any, vectors).size)
 
         if isinstance(vectors, dict) and vectors:
             first = next(iter(vectors.values()))
@@ -237,7 +231,15 @@ def _vector_search(
             return response.points
 
         # Backward compatibility for older qdrant-client versions.
-        return client.search(
+        legacy_search = getattr(client, "search", None)
+        if legacy_search is None:
+            logger.warning(
+                "[retriever] qdrant client has no query_points/search API for collection=%s",
+                collection_name,
+            )
+            return []
+
+        return legacy_search(
             collection_name=collection_name,
             query_vector=vector,
             query_filter=query_filter,
