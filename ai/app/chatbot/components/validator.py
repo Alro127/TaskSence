@@ -23,8 +23,15 @@ logger = logging.getLogger(__name__)
 
 _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "validate.txt"
 
-# Recognised fallback phrases that are always considered grounded.
-_FALLBACK_PREFIXES = ("Không đủ dữ liệu", "Không tìm thấy", "Chỉ hỗ trợ", "Hệ thống AI")
+# Recognized fallback/open-disclosure phrases that are always considered grounded.
+_FALLBACK_PREFIXES = (
+    "Không đủ dữ liệu",
+    "Tôi chưa thể trả lời chính xác ngay lúc này",
+    "Không tìm thấy",
+    "Khong tim thay",
+    "Chỉ hỗ trợ",
+    "Hệ thống AI",
+)
 
 
 @lru_cache(maxsize=1)

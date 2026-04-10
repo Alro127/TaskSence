@@ -1,255 +1,200 @@
-"""
-Tests for app.chatbot.components.retriever
+"""Tests for app.chatbot.components.retriever (Qdrant implementation)."""
 
-Strategy
---------
-- Elasticsearch client is fully mocked — no running ES instance required.
-- _has_dense_vector cache is cleared before each test to avoid cross-test pollution.
-- Tests cover: keyword search (tasks & projects), vector search path,
-  ownership filter structure, hit parsing, workspace_id gating,
-  empty-query early return, and result sorting by score.
-"""
+from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-import pytest
+from qdrant_client.http.exceptions import UnexpectedResponse
 
 import app.chatbot.components.retriever as retriever_module
 from app.chatbot.components.retriever import (
-    _has_dense_vector,
-    _parse_hits,
+    _build_task_scope_filter,
+    _parse_points,
     _task_user_filter,
+    _vector_search,
+    count_tasks,
     retrieve,
 )
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
-
-def _es_response(*hits: dict) -> dict:
-    """Build a minimal Elasticsearch search response from a list of hit dicts."""
-    return {"hits": {"hits": list(hits)}}
+def _point(point_id: str, score: float, payload: dict):
+    return SimpleNamespace(id=point_id, score=score, payload=payload)
 
 
-def _hit(doc_id: str, score: float, source: dict) -> dict:
-    return {"_id": doc_id, "_score": score, "_source": source}
-
-
-@pytest.fixture(autouse=True)
-def clear_lru_caches():
-    """Clear all lru_cache-decorated functions before each test."""
-    _has_dense_vector.cache_clear()
-    retriever_module._get_client.cache_clear()
-    yield
-
-
-@pytest.fixture
-def mock_es():
-    """Patch _get_client to return a MagicMock ES client."""
-    es = MagicMock()
-    with patch("app.chatbot.components.retriever._get_client", return_value=es):
-        yield es
-
-
-# ── _parse_hits ───────────────────────────────────────────────────────────────
-
-class TestParseHits:
-    def test_parses_id_index_score_source(self):
-        response = _es_response(_hit("42", 1.5, {"title": "Fix bug"}))
-        docs = _parse_hits(response, "tasks")
-        assert len(docs) == 1
-        assert docs[0]["id"] == "42"
-        assert docs[0]["index"] == "tasks"
-        assert docs[0]["score"] == 1.5
-        assert docs[0]["source"] == {"title": "Fix bug"}
-
-    def test_none_score_defaults_to_zero(self):
-        hit = {"_id": "1", "_score": None, "_source": {}}
-        docs = _parse_hits({"hits": {"hits": [hit]}}, "tasks")
-        assert docs[0]["score"] == 0.0
-
-    def test_empty_response_returns_empty_list(self):
-        assert _parse_hits({"hits": {"hits": []}}, "tasks") == []
-
-    def test_multiple_hits_preserved(self):
-        response = _es_response(
-            _hit("1", 2.0, {"title": "A"}),
-            _hit("2", 1.0, {"title": "B"}),
+class TestTaskScopeFilter:
+    def test_personal_has_highest_priority(self):
+        result = _build_task_scope_filter(
+            user_id=7,
+            workspace_id=11,
+            project_id=22,
+            is_personal=True,
         )
-        docs = _parse_hits(response, "projects")
-        assert len(docs) == 2
-        assert docs[0]["id"] == "1"
-        assert docs[1]["id"] == "2"
+        dumped = result.model_dump() if result else {}
+        should = dumped.get("should", [])
+        keys = {item["key"] for item in should}
+        assert "createdById" in keys
+        assert "assignees[].id" in keys
 
+    def test_project_priority_over_workspace(self):
+        result = _build_task_scope_filter(
+            user_id=7,
+            workspace_id=11,
+            project_id=22,
+            is_personal=False,
+        )
+        dumped = result.model_dump() if result else {}
+        assert dumped["must"][0]["key"] == "projectId"
+        assert dumped["must"][0]["match"]["value"] == 22
 
-# ── _task_user_filter ─────────────────────────────────────────────────────────
+    def test_workspace_used_when_no_project(self):
+        result = _build_task_scope_filter(
+            user_id=7,
+            workspace_id=11,
+            project_id=None,
+            is_personal=False,
+        )
+        dumped = result.model_dump() if result else {}
+        assert dumped["must"][0]["key"] == "workspaceId"
+        assert dumped["must"][0]["match"]["value"] == 11
+
+    def test_none_when_no_scope(self):
+        result = _build_task_scope_filter(
+            user_id=7,
+            workspace_id=None,
+            project_id=None,
+            is_personal=False,
+        )
+        assert result is None
+
 
 class TestTaskUserFilter:
-    def test_filter_structure(self):
-        f = _task_user_filter(7)
-        assert f["bool"]["minimum_should_match"] == 1
-        should = f["bool"]["should"]
-        assert {"term": {"createdById": 7}} in should
-
-    def test_nested_assignee_clause_present(self):
-        should = _task_user_filter(7)["bool"]["should"]
-        nested = next(c for c in should if "nested" in c)
-        assert nested["nested"]["path"] == "assignees"
-        assert nested["nested"]["query"] == {"term": {"assignees.id": 7}}
-
-    def test_different_user_ids(self):
-        f1 = _task_user_filter(1)
-        f2 = _task_user_filter(99)
-        assert f1 != f2
+    def test_contains_creator_and_assignee_conditions(self):
+        result = _task_user_filter(9)
+        dumped = result.model_dump()
+        should = dumped["should"]
+        keys = {item["key"] for item in should}
+        assert keys == {"createdById", "assignees[].id"}
 
 
-# ── _has_dense_vector ─────────────────────────────────────────────────────────
+class TestParsePoints:
+    def test_parse_points_maps_qdrant_points(self):
+        results = [_point("1", 0.9, {"title": "A"}), _point("2", 0.4, {})]
+        docs = _parse_points(results, "tasks")
 
-class TestHasDenseVector:
-    def test_returns_true_when_dense_vector_field_exists(self, mock_es):
-        mock_es.indices.get_mapping.return_value = {
-            "tasks": {"mappings": {"properties": {"embedding": {"type": "dense_vector"}}}}
-        }
-        assert _has_dense_vector("tasks") is True
-
-    def test_returns_false_when_no_dense_vector_field(self, mock_es):
-        mock_es.indices.get_mapping.return_value = {
-            "tasks": {"mappings": {"properties": {"title": {"type": "text"}}}}
-        }
-        assert _has_dense_vector("tasks") is False
-
-    def test_returns_false_on_es_exception(self, mock_es):
-        mock_es.indices.get_mapping.side_effect = Exception("connection refused")
-        assert _has_dense_vector("tasks") is False
-
-    def test_result_is_cached(self, mock_es):
-        mock_es.indices.get_mapping.return_value = {
-            "tasks": {"mappings": {"properties": {}}}
-        }
-        _has_dense_vector("tasks")
-        _has_dense_vector("tasks")
-        # Mapping should only be fetched once due to lru_cache
-        mock_es.indices.get_mapping.assert_called_once()
+        assert docs == [
+            {"id": "1", "index": "tasks", "score": 0.9, "source": {"title": "A"}},
+            {"id": "2", "index": "tasks", "score": 0.4, "source": {}},
+        ]
 
 
-# ── retrieve — keyword search ─────────────────────────────────────────────────
+class TestVectorSearch:
+    def test_query_points_path(self):
+        client = MagicMock()
+        client.query_points.return_value = SimpleNamespace(points=[_point("1", 0.7, {})])
 
-class TestRetrieveKeyword:
-    def test_tasks_searched_with_user_filter(self, mock_es):
-        mock_es.indices.get_mapping.return_value = {
-            "tasks": {"mappings": {"properties": {"title": {"type": "text"}}}}
-        }
-        mock_es.search.return_value = _es_response(_hit("1", 1.0, {"title": "Fix login"}))
+        with patch.object(retriever_module, "_get_client", return_value=client):
+            result = _vector_search(
+                collection_name="tasks",
+                vector=[0.1, 0.2],
+                query_filter=None,
+                limit=5,
+                with_payload=True,
+            )
 
-        docs = retrieve("login bug", user_id=5)
+        assert len(result) == 1
+        client.query_points.assert_called_once()
 
-        call_kwargs = mock_es.search.call_args.kwargs
-        assert call_kwargs["index"] == "tasks"
-        query_body = call_kwargs["query"]
-        assert query_body["bool"]["filter"][0]["bool"]["minimum_should_match"] == 1
+    def test_legacy_search_path(self):
+        class LegacyClient:
+            def search(self, **kwargs):
+                return [_point("2", 0.5, {})]
 
-    def test_returns_documents_from_tasks(self, mock_es):
-        mock_es.indices.get_mapping.return_value = {
-            "tasks": {"mappings": {"properties": {}}}
-        }
-        mock_es.search.return_value = _es_response(
-            _hit("10", 2.0, {"title": "Task A"}),
-            _hit("11", 1.0, {"title": "Task B"}),
+        with patch.object(retriever_module, "_get_client", return_value=LegacyClient()):
+            with patch("builtins.hasattr", side_effect=lambda obj, name: name != "query_points"):
+                result = _vector_search(
+                    collection_name="tasks",
+                    vector=[0.1],
+                    query_filter=None,
+                    limit=5,
+                    with_payload=True,
+                )
+
+        assert len(result) == 1
+        assert result[0].id == "2"
+
+    def test_unexpected_response_returns_empty(self):
+        client = MagicMock()
+        client.query_points.side_effect = UnexpectedResponse(
+            status_code=400,
+            reason_phrase="Bad Request",
+            content=b"{}",
+            headers={"content-type": "application/json"}, # type: ignore
         )
 
-        docs = retrieve("overdue tasks", user_id=1)
-        assert len(docs) == 2
-        assert all(d["index"] == "tasks" for d in docs)
+        with patch.object(retriever_module, "_get_client", return_value=client):
+            result = _vector_search(
+                collection_name="tasks",
+                vector=[0.1, 0.2],
+                query_filter=None,
+                limit=5,
+                with_payload=True,
+            )
 
-    def test_no_workspace_id_skips_project_search(self, mock_es):
-        mock_es.indices.get_mapping.return_value = {
-            "tasks": {"mappings": {"properties": {}}}
-        }
-        mock_es.search.return_value = _es_response()
-
-        retrieve("some query", user_id=1, workspace_id=None)
-
-        # ES search called only once (for tasks)
-        assert mock_es.search.call_count == 1
-
-    def test_with_workspace_id_searches_both_indices(self, mock_es):
-        mock_es.indices.get_mapping.return_value = {
-            "tasks":    {"mappings": {"properties": {}}},
-            "projects": {"mappings": {"properties": {}}},
-        }
-        mock_es.search.return_value = _es_response()
-
-        retrieve("overdue", user_id=1, workspace_id=42)
-
-        assert mock_es.search.call_count == 2
-        indices_searched = [c.kwargs["index"] for c in mock_es.search.call_args_list]
-        assert "tasks" in indices_searched
-        assert "projects" in indices_searched
-
-    def test_project_search_uses_workspace_filter(self, mock_es):
-        mock_es.indices.get_mapping.return_value = {
-            "tasks":    {"mappings": {"properties": {}}},
-            "projects": {"mappings": {"properties": {}}},
-        }
-        mock_es.search.return_value = _es_response()
-
-        retrieve("late project", user_id=1, workspace_id=99)
-
-        project_call = next(
-            c for c in mock_es.search.call_args_list if c.kwargs["index"] == "projects"
-        )
-        ws_filter = project_call.kwargs["query"]["bool"]["filter"][0]
-        assert ws_filter == {"term": {"workspaceId": 99}}
+        assert result == []
 
 
-# ── retrieve — vector search path ────────────────────────────────────────────
+class TestRetrieve:
+    def test_blank_query_returns_empty(self):
+        with patch.object(retriever_module, "_search_tasks") as mock_tasks:
+            docs = retrieve("   ", user_id=1)
 
-class TestRetrieveVector:
-    def test_uses_knn_when_dense_vector_exists(self, mock_es):
-        mock_es.indices.get_mapping.return_value = {
-            "tasks": {"mappings": {"properties": {"embedding": {"type": "dense_vector"}}}}
-        }
-        mock_es.search.return_value = _es_response()
+        assert docs == []
+        mock_tasks.assert_not_called()
 
-        fake_vector = [0.1] * 768
-        with patch("app.chatbot.components.retriever._embed_query", return_value=fake_vector):
-            retrieve("overdue tasks", user_id=1)
+    def test_without_workspace_skips_project_search(self):
+        with patch.object(retriever_module, "_search_tasks", return_value=[
+            {"id": "t1", "index": "tasks", "score": 0.4, "source": {}},
+        ]) as mock_tasks:
+            with patch.object(retriever_module, "_search_projects") as mock_projects:
+                docs = retrieve("query", user_id=1, workspace_id=None)
 
-        call_kwargs = mock_es.search.call_args.kwargs
-        assert "knn" in call_kwargs
-        assert call_kwargs["knn"]["field"] == "embedding"
-        assert call_kwargs["knn"]["query_vector"] == fake_vector
-        assert call_kwargs["knn"]["k"] == 5
+        assert len(docs) == 1
+        mock_tasks.assert_called_once()
+        mock_projects.assert_not_called()
 
+    def test_with_workspace_merges_and_sorts(self):
+        tasks = [{"id": "t1", "index": "tasks", "score": 0.2, "source": {}}]
+        projects = [{"id": "p1", "index": "projects", "score": 0.9, "source": {}}]
 
-# ── retrieve — result ordering ────────────────────────────────────────────────
+        with patch.object(retriever_module, "_search_tasks", return_value=tasks):
+            with patch.object(retriever_module, "_search_projects", return_value=projects):
+                docs = retrieve("query", user_id=1, workspace_id=10)
 
-class TestRetrieveSorting:
-    def test_results_sorted_by_score_descending(self, mock_es):
-        mock_es.indices.get_mapping.return_value = {
-            "tasks":    {"mappings": {"properties": {}}},
-            "projects": {"mappings": {"properties": {}}},
-        }
-        # tasks returns lower score, projects returns higher score
-        def _side_effect(**kwargs):
-            if kwargs["index"] == "tasks":
-                return _es_response(_hit("t1", 0.5, {}))
-            return _es_response(_hit("p1", 2.0, {}))
-
-        mock_es.search.side_effect = _side_effect
-
-        docs = retrieve("query", user_id=1, workspace_id=10)
-        assert docs[0]["score"] == 2.0
-        assert docs[1]["score"] == 0.5
+        assert [d["id"] for d in docs] == ["p1", "t1"]
 
 
-# ── retrieve — empty query early return ──────────────────────────────────────
+class TestCountTasks:
+    def test_count_with_query_uses_vector_result_len(self):
+        client = MagicMock()
+        with patch.object(retriever_module, "_get_client", return_value=client):
+            with patch.object(retriever_module, "_embed_query", return_value=[0.1]):
+                with patch.object(
+                    retriever_module,
+                    "_vector_search",
+                    return_value=[_point("1", 0.5, {}), _point("2", 0.4, {})],
+                ):
+                    total = count_tasks("overdue", workspace_id=1)
 
-class TestRetrieveEmptyQuery:
-    def test_blank_query_returns_none(self, mock_es):
-        result = retrieve("   ", user_id=1)
-        assert result is None
-        mock_es.search.assert_not_called()
+        assert total == 2
+        client.count.assert_not_called()
 
-    def test_empty_string_returns_none(self, mock_es):
-        result = retrieve("", user_id=1)
-        assert result is None
+    def test_count_without_query_uses_exact_count_api(self):
+        client = MagicMock()
+        client.count.return_value = SimpleNamespace(count=12)
+
+        with patch.object(retriever_module, "_get_client", return_value=client):
+            total = count_tasks("", workspace_id=1)
+
+        assert total == 12
+        client.count.assert_called_once()

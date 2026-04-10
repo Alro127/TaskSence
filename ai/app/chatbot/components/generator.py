@@ -3,8 +3,8 @@ Generator — produces a grounded answer by combining LLM reasoning with context
 
 The system prompt (answer.txt) enforces the RAG contract:
   - answer ONLY from provided context
-  - return the fallback phrase when context is insufficient
-    - answer with a warm, helpful, slightly more detailed style
+    - when context is insufficient, return a warm 3-6 sentence
+        fallback that suggests next-step questions
 
 Context is formatted into labelled blocks (one per document) and injected into
 the prompt via the {context} placeholder. A character budget (~1500 tokens) is
@@ -27,7 +27,12 @@ _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "answer.txt"
 # ~1500 tokens budget (using the conservative estimate of 4 chars per token)
 _MAX_CONTEXT_CHARS = 6_000
 
-FALLBACK = "Không đủ dữ liệu"
+FALLBACK = (
+    "Tôi chưa thể trả lời chính xác ngay lúc này vì dữ liệu hiện có chưa đủ để xác nhận thông tin bạn cần. "
+    "Có thể bạn đang hỏi về một task, project, sprint, hoặc workspace cụ thể nhưng ngữ cảnh hiện tại chưa chứa dữ liệu tương ứng. "
+    "Bạn có thể cho mình thêm chi tiết như tên workspace, tên project, task title, hoặc khoảng thời gian để mình kiểm tra chính xác hơn. "
+    "Gợi ý câu hỏi bạn có thể hỏi tiếp: \"Trong project X hiện có task nào đang quá hạn?\" hoặc \"Task nào đang IN_PROGRESS trong workspace Y tuần này?\""
+)
 
 
 @lru_cache(maxsize=1)
