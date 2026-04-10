@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
 from app.chatbot.components import Document
 from app.config.config import get_settings
+from app.client.llms import get_llm
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -43,6 +45,32 @@ def _serialize_documents(docs: list[Document]) -> list[dict[str, Any]]:
     ]
 
 
+def _generate_title_from_answer(query: str, answer: str) -> str:
+    """Generate a short title using AI from the first Q&A pair.
+
+    Fallback to query-based title if AI generation fails.
+    """
+    try:
+        llm = get_llm()
+        prompt = f"""Generate a very short chat session title (max 10 words) from this Q&A. Be concise.
+
+User: {query}
+Assistant: {answer}
+
+Reply with ONLY the title, no quotes or explanation."""
+
+        response = llm.invoke(prompt)
+        title = response.content.strip()
+
+        # Ensure it's not too long
+        if len(title) > 120:
+            return title[:117] + "..."
+        return title if title else _build_session_title(query)
+    except Exception as exc:
+        logger.debug("[chat-persistence] AI title generation failed: %s, falling back to query", exc)
+        return _build_session_title(query)
+
+
 def persist_chat_turn(
     user_id: int,
     query: str,
@@ -50,8 +78,12 @@ def persist_chat_turn(
     context_docs: list[Document],
     sources: list[dict[str, Any]],
     session_id: int | None = None,
+    is_first_turn: bool = False,
 ) -> int | None:
-    """Store a user question and assistant answer in the shared PostgreSQL tables."""
+    """Store a user question and assistant answer in the shared PostgreSQL tables.
+
+    If is_first_turn is True, generates a title from the answer using AI (with fallback to query).
+    """
     session_title = _build_session_title(query)
     context_payload = _serialize_documents(context_docs)
 
@@ -96,21 +128,28 @@ def persist_chat_turn(
                     INSERT INTO chat_messages (session_id, role, content, context, sources)
                     VALUES (%s, %s, %s, %s, %s)
                     """,
-                    (resolved_session_id, "ASSISTANT", answer, context_payload, sources),
+                    (resolved_session_id, "ASSISTANT", answer, json.dumps(context_payload), json.dumps(sources)),
                 )
+
+                # If this is the first turn, generate an AI title
+                final_title = session_title
+                if is_first_turn:
+                    final_title = _generate_title_from_answer(query, answer)
+
                 cur.execute(
                     """
                     UPDATE chat_sessions
-                    SET title = COALESCE(title, %s), updated_at = CURRENT_TIMESTAMP
+                    SET title = %s, updated_at = CURRENT_TIMESTAMP
                     WHERE id = %s
                     """,
-                    (session_title, resolved_session_id),
+                    (final_title, resolved_session_id),
                 )
             conn.commit()
         logger.info(
-            "[chat-persistence] stored chat session=%s user_id=%s messages=2",
+            "[chat-persistence] stored chat session=%s user_id=%s messages=2 title=%r",
             resolved_session_id,
             user_id,
+            final_title,
         )
         return resolved_session_id
     except Exception as exc:

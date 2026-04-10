@@ -139,13 +139,14 @@ def _build_context(docs: list[Document]) -> str:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def generate(query: str, docs: list[Document]) -> str:
+def generate(query: str, docs: list[Document], conversation_history: str = "") -> str:
     """
     Generate a grounded answer for the user query using the provided context.
 
     Args:
         query: Original user question.
         docs:  Filtered context documents (output of filter_docs).
+        conversation_history: Previous messages in the session for context.
 
     Returns:
         LLM-generated answer string, or FALLBACK when docs is empty.
@@ -157,7 +158,7 @@ def generate(query: str, docs: list[Document]) -> str:
     context = _build_context(docs)
     logger.info("[generator] context_chars=%d doc_count=%d\n%s", len(context), len(docs), context)
 
-    system_prompt = _load_prompt_template().replace("{context}", context)
+    system_prompt = _load_prompt_template().replace("{context}", context).replace("{conversation_history}", conversation_history or "(no previous messages)")
 
     response = get_llm().invoke([
         SystemMessage(content=system_prompt),

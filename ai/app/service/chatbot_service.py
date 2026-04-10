@@ -21,6 +21,46 @@ _MSG_NO_DATA = "Khong tim thay du lieu phu hop."
 _MSG_ERROR = "He thong AI dang gap loi."
 
 
+def _get_conversation_history(session_id: int | None) -> str:
+    """Fetch recent conversation history from the session for context."""
+    if session_id is None:
+        return ""
+
+    try:
+        import psycopg
+        from app.config.config import get_settings
+
+        settings = get_settings()
+        with psycopg.connect(settings.effective_postgres_dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT role, content
+                    FROM chat_messages
+                    WHERE session_id = %s
+                    ORDER BY created_at ASC
+                    LIMIT 20
+                    """,
+                    (session_id,),
+                )
+                rows = cur.fetchall()
+
+        if not rows:
+            return ""
+
+        history_lines = []
+        for role, content in rows:
+            label = "User" if role == "USER" else "Assistant"
+            # Truncate long messages
+            truncated = content[:200] + "..." if len(content) > 200 else content
+            history_lines.append(f"{label}: {truncated}")
+
+        return "\n".join(history_lines)
+    except Exception as exc:
+        logger.debug("[chatbot-service] Failed to fetch conversation history: %s", exc)
+        return ""
+
+
 def run_chatbot_pipeline(
     query: str,
     user_id: int,
@@ -28,10 +68,17 @@ def run_chatbot_pipeline(
 ) -> dict[str, Any]:
     """Execute full chatbot pipeline from classification to grounded answer."""
     logger.info(
-        "[chatbot-service] start user_id=%s query=%r",
+        "[chatbot-service] start user_id=%s session_id=%s query=%r",
         user_id,
+        session_id,
         query,
     )
+
+    # Track if this is the first turn (new session)
+    is_new_session = session_id is None
+
+    # Fetch conversation history for context
+    conversation_history = _get_conversation_history(session_id)
 
     try:
         classification = classify(query)
@@ -43,6 +90,7 @@ def run_chatbot_pipeline(
                 context_docs=[],
                 sources=[],
                 session_id=session_id,
+                is_first_turn=is_new_session,
             )
             return _response(_MSG_UNRELATED, [], session_id)
 
@@ -66,7 +114,7 @@ def run_chatbot_pipeline(
                 score=1.0,
                 source={"count": total, "context": primary_query},
             )
-            answer = generate(query, [count_doc])
+            answer = generate(query, [count_doc], conversation_history=conversation_history)
             session_id = persist_chat_turn(
                 user_id=user_id,
                 query=query,
@@ -74,6 +122,7 @@ def run_chatbot_pipeline(
                 context_docs=[count_doc],
                 sources=[],
                 session_id=session_id,
+                is_first_turn=is_new_session,
             )
             return _response(answer, [], session_id)
 
@@ -97,11 +146,12 @@ def run_chatbot_pipeline(
                 context_docs=[],
                 sources=[],
                 session_id=session_id,
+                is_first_turn=is_new_session,
             )
             return _response(_MSG_NO_DATA, [], session_id)
 
         hydrated_context = hydrate_documents_with_postgres(context)
-        answer = generate(query, hydrated_context)
+        answer = generate(query, hydrated_context, conversation_history=conversation_history)
         sources = [
             {"id": d["id"], "index": d["index"], "relation": d["source"].get("relation")}
             for d in hydrated_context
@@ -113,6 +163,7 @@ def run_chatbot_pipeline(
             context_docs=hydrated_context,
             sources=sources,
             session_id=session_id,
+            is_first_turn=is_new_session,
         )
         return _response(answer, sources, session_id)
 
