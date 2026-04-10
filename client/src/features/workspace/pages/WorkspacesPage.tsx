@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Plus, FolderKanban, Loader2 } from "lucide-react";
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -26,8 +27,16 @@ export function WorkspacesPage() {
   const { data, isLoading, isError } = useGetMyWorkspacesQuery();
   const workspaces = data?.data?.data ?? [];
 
+  const location = useLocation();
+
   // Modal state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  useEffect(() => {
+    if ((location.state as { openCreate?: boolean } | null)?.openCreate) {
+      setIsCreateOpen(true);
+    }
+  }, [location.state]);
   const [editTarget, setEditTarget] = useState<Workspace | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Workspace | null>(null);
 
