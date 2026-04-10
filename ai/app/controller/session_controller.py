@@ -5,15 +5,14 @@ Business logic is delegated to the service layer.
 """
 
 from __future__ import annotations
-from typing import Annotated
 
-from app.core.response import ResponseObject
 import logging
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 
 from app.auth.dependencies import get_current_user_id
+from app.core.response import ResponseObject
 from app.service.chatbot_service import run_chatbot_pipeline
 
 logger = logging.getLogger(__name__)
@@ -46,8 +45,8 @@ class ChatResponse(BaseModel):
     sources: list[SourceItem]
     sessionId: int | None = None
 
-@router.post(
-    "/chat/{session_id}",
+@router.get(
+    "/sessions",
     response_model=ResponseObject[ChatResponse],
     summary="Run AI RAG chatbot",
     description=(
@@ -57,19 +56,19 @@ class ChatResponse(BaseModel):
 )
 async def chat(
     request: ChatRequest,
-    session_id: Annotated[int, Path(title="The ID of the item to get")],
     user_id: int = Depends(get_current_user_id),
 ) -> ResponseObject[ChatResponse]:
     logger.info(
-        "[chatbot-controller] POST /ai/chat userId=%s",
+        "[chatbot-controller] GET /ai/sessions userId=%s",
         user_id,
     )
+
     try:
         result = run_chatbot_pipeline(
             query=request.query,
             user_id=user_id,
         )
-    except Exception as exc:
+    except Exception as exc:  # pragma: no cover - defensive branch
         logger.exception("[chatbot-controller] service execution failed: %s", exc)
         return ResponseObject[ChatResponse](
             code="ERROR",

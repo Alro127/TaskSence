@@ -609,3 +609,21 @@ export interface ProjectAnalyticsResponse {
   sprintVelocity: SprintVelocity[];
   memberPerformance: MemberPerformance[];
 }
+
+export interface AIAgentSourceRelation {
+  workspace?: { id: number; name: string };
+  project?: { id: number; name: string; status: string };
+  sprint?: { id: number; name: string };
+}
+
+export interface AIAgentSource {
+  id: string;
+  index: "tasks" | "projects" | "sprints" | string;
+  relation: AIAgentSourceRelation | null;
+}
+
+export interface AIAgentResponse {
+  answer: string;
+  sources: AIAgentSource[];
+  sessionId: number | null;
+}

@@ -20,6 +20,7 @@ import logging
 from functools import lru_cache
 
 from qdrant_client import QdrantClient
+from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.models import FieldCondition, Filter, MatchValue
 
 from app.chatbot.components import Document
@@ -50,7 +51,7 @@ def _get_client() -> QdrantClient:
 
 # ── Embedding ─────────────────────────────────────────────────────────────────
 
-def _embed_query(query: str) -> list[float] | None:
+def _embed_query(query: str, output_dimensionality: int | None = None) -> list[float] | None:
     """
     Generate a query vector using Google Gemini embeddings.
 
@@ -66,10 +67,52 @@ def _embed_query(query: str) -> list[float] | None:
     if not api_key:
         raise ValueError("GEMINI_API_KEY is required for vector search")
 
-    return GoogleGenerativeAIEmbeddings(
+    embeddings = GoogleGenerativeAIEmbeddings(
         model=settings.gemini_embedding_model,
         google_api_key=api_key,
-    ).embed_query(query)
+    )
+
+    if output_dimensionality is None:
+        return embeddings.embed_query(query)
+
+    # Some LangChain/Google GenAI versions support output_dimensionality to
+    # match index schema; if unavailable, fall back to default behavior.
+    try:
+        return embeddings.embed_query(query, output_dimensionality=output_dimensionality)
+    except TypeError:
+        logger.warning(
+            "[retriever] embedding client does not support output_dimensionality=%s; using model default",
+            output_dimensionality,
+        )
+        return embeddings.embed_query(query)
+
+
+@lru_cache(maxsize=8)
+def _get_collection_vector_dim(collection_name: str) -> int | None:
+    """Return expected vector size for a collection, if available."""
+    try:
+        collection_info = _get_client().get_collection(collection_name=collection_name)
+        vectors = collection_info.config.params.vectors
+
+        if hasattr(vectors, "size"):
+            return int(vectors.size)
+
+        if isinstance(vectors, dict) and vectors:
+            first = next(iter(vectors.values()))
+            if hasattr(first, "size"):
+                return int(first.size)
+
+        logger.warning(
+            "[retriever] could not infer vector size for collection=%s", collection_name
+        )
+        return None
+    except Exception as exc:
+        logger.warning(
+            "[retriever] failed to read collection vector size for %s: %s",
+            collection_name,
+            exc,
+        )
+        return None
 
 
 # ── Ownership filters ─────────────────────────────────────────────────────────
@@ -127,16 +170,17 @@ def _search_tasks(
     if not query.strip():
         return []
 
-    vector = _embed_query(query)
+    expected_dim = _get_collection_vector_dim(_COLLECTION_TASKS)
+    vector = _embed_query(query, output_dimensionality=expected_dim)
     if vector is None:
         return []
 
     scope_filter = _build_task_scope_filter(user_id, workspace_id, project_id, is_personal)
 
     logger.info("[retriever] tasks — vector search")
-    results = _get_client().search(
+    results = _vector_search(
         collection_name=_COLLECTION_TASKS,
-        query_vector=vector,
+        vector=vector,
         query_filter=scope_filter,
         limit=_TOP_K,
         with_payload=True,
@@ -148,7 +192,8 @@ def _search_projects(query: str, workspace_id: int) -> list[Document]:
     if not query.strip():
         return []
 
-    vector = _embed_query(query)
+    expected_dim = _get_collection_vector_dim(_COLLECTION_PROJECTS)
+    vector = _embed_query(query, output_dimensionality=expected_dim)
     if vector is None:
         return []
 
@@ -156,14 +201,57 @@ def _search_projects(query: str, workspace_id: int) -> list[Document]:
     workspace_filter = Filter(
         must=[FieldCondition(key="workspaceId", match=MatchValue(value=workspace_id))]
     )
-    results = _get_client().search(
+    results = _vector_search(
         collection_name=_COLLECTION_PROJECTS,
-        query_vector=vector,
+        vector=vector,
         query_filter=workspace_filter,
         limit=_TOP_K,
         with_payload=True,
     )
     return _parse_points(results, _COLLECTION_PROJECTS)
+
+
+def _vector_search(
+    collection_name: str,
+    vector: list[float],
+    query_filter: Filter | None,
+    limit: int,
+    with_payload: bool,
+):
+    """
+    Run vector similarity search across qdrant-client versions.
+
+    qdrant-client>=1.11 uses `query_points`; older versions use `search`.
+    """
+    client = _get_client()
+
+    try:
+        if hasattr(client, "query_points"):
+            response = client.query_points(
+                collection_name=collection_name,
+                query=vector,
+                query_filter=query_filter,
+                limit=limit,
+                with_payload=with_payload,
+            )
+            return response.points
+
+        # Backward compatibility for older qdrant-client versions.
+        return client.search(
+            collection_name=collection_name,
+            query_vector=vector,
+            query_filter=query_filter,
+            limit=limit,
+            with_payload=with_payload,
+        )
+    except UnexpectedResponse as exc:
+        # Prevent pipeline crashes when model/index dimensions drift.
+        logger.warning(
+            "[retriever] vector search failed for collection=%s: %s",
+            collection_name,
+            exc,
+        )
+        return []
 
 
 # ── Point parsing ─────────────────────────────────────────────────────────────
@@ -213,11 +301,12 @@ def count_tasks(
 
     try:
         if query.strip():
-            vector = _embed_query(query)
+            expected_dim = _get_collection_vector_dim(_COLLECTION_TASKS)
+            vector = _embed_query(query, output_dimensionality=expected_dim)
             if vector is not None:
-                results = client.search(
+                results = _vector_search(
                     collection_name=_COLLECTION_TASKS,
-                    query_vector=vector,
+                    vector=vector,
                     query_filter=scope_filter,
                     limit=_COUNT_LIMIT,
                     with_payload=False,

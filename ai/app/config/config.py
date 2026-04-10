@@ -56,6 +56,7 @@ class Settings:
 	openrouter_model: str
 	openrouter_embedding_model: str
 	openrouter_base_url: str
+	jwt_secret: str
 
 	qdrant_host: str
 	qdrant_collection_tasks: str
@@ -118,6 +119,10 @@ def get_settings() -> Settings:
 		),
 		openrouter_base_url=_env_str(
 			"OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
+		),
+		jwt_secret=_env_str(
+			"SECURITY_JWT_SECRET",
+			_env_str("JWT_SECRET", "my-super-secret-key-which-is-very-long-123456"),
 		),
 		qdrant_host=_env_str("QDRANT_HOST", "http://localhost:6333"),
 		qdrant_collection_tasks=_env_str("QDRANT_COLLECTION_TASKS", "tasks"),
