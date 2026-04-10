@@ -22,6 +22,7 @@ import { WorkspacesPage, WorkspaceDetailPage, WorkspaceInvitationPage, Workspace
 import { TeamTemplatesPage, TeamTemplateDetailPage } from "@/features/team-template/pages";
 import { CreateProjectPage, ProjectDetailPage } from "@/features/project/pages";
 import { TaskBoardPage, TaskDetailPage } from "@/features/task/pages";
+import { AgentChatPage } from "@/features/agent/pages";
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -141,6 +142,10 @@ const routes: RouteObject[] = [
       {
         path: "settings",
         element: <PlaceholderPage title="Settings" />,
+      },
+      {
+        path: "agent",
+        element: <AgentChatPage />,
       },
     ],
   },
