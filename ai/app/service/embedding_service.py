@@ -7,7 +7,6 @@ import uuid
 from typing import Any, Callable
 
 from langchain_core.embeddings import Embeddings
-import httpx
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
@@ -16,79 +15,11 @@ from app.service.source_truth_service import (
     fetch_projects_for_embedding,
     fetch_tasks_for_embedding,
 )
+from app.client.embedding import get_embedding
+from app.client.qdrant_client import get_qdrant_client
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-
-class OpenRouterEmbeddings(Embeddings):
-    def __init__(
-        self,
-        api_key: str,
-        model: str,
-        base_url: str,
-        batch_size: int = 32,
-        timeout: float = 60.0,
-    ) -> None:
-        self.api_key = api_key
-        self.model = model
-        self.base_url = base_url.rstrip("/")
-        self.batch_size = batch_size
-        self.timeout = timeout
-
-    def _embed_batch(self, texts: list[str]) -> list[list[float]]:
-        response = httpx.post(
-            f"{self.base_url}/embeddings",
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            json={"model": self.model, "input": texts},
-            timeout=self.timeout,
-        )
-        response.raise_for_status()
-
-        payload = response.json()
-        data = payload.get("data")
-        if not isinstance(data, list) or not data:
-            raise ValueError("OpenRouter embeddings response has no data")
-
-        vectors: list[list[float]] = []
-        for item in data:
-            vector = item.get("embedding") if isinstance(item, dict) else None
-            if not isinstance(vector, list) or not vector:
-                raise ValueError("OpenRouter embeddings response item missing vector")
-            vectors.append([float(v) for v in vector])
-        return vectors
-
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        vectors: list[list[float]] = []
-        for i in range(0, len(texts), self.batch_size):
-            batch = texts[i : i + self.batch_size]
-            if not batch:
-                continue
-            vectors.extend(self._embed_batch(batch))
-        return vectors
-
-    def embed_query(self, text: str) -> list[float]:
-        vectors = self._embed_batch([text])
-        return vectors[0]
-
-
-def _qdrant_client() -> QdrantClient:
-    return QdrantClient(url=settings.qdrant_host)
-
-
-def _embedding_model() -> Embeddings:
-    if not settings.openrouter_api_key:
-        raise ValueError("OPENROUTER_API_KEY is required for embedding sync")
-
-    return OpenRouterEmbeddings(
-        model=settings.openrouter_embedding_model,
-        api_key=settings.openrouter_api_key,
-        base_url=settings.openrouter_base_url,
-    )
-
 
 def _to_point_id(collection: str, entity_id: int) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_URL, f"tasksense/{collection}/{entity_id}"))
@@ -263,8 +194,8 @@ def sync_embeddings_from_postgres() -> None:
     """Public service API for full embedding sync."""
     logger.info("[embedding-service] starting sync from PostgreSQL to Qdrant")
 
-    qdrant = _qdrant_client()
-    embed = _embedding_model()
+    qdrant = get_qdrant_client()
+    embed = get_embedding()
 
     task_count = _sync_collection(
         qdrant=qdrant,

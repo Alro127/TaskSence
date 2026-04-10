@@ -627,3 +627,30 @@ export interface AIAgentResponse {
   sources: AIAgentSource[];
   sessionId: number | null;
 }
+
+export interface AISession {
+  id: number;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  last_message_at: string | null;
+}
+
+export interface AISessionDetail extends AISession {
+  user_id: number;
+}
+
+export interface AISessionMessage {
+  id: number;
+  session_id: number;
+  role: "USER" | "ASSISTANT";
+  content: string;
+  context: unknown | null;
+  sources: unknown | null;
+  created_at: string;
+}
+
+export interface InitAISessionRequest {
+  title?: string;
+}

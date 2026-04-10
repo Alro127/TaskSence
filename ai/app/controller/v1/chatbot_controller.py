@@ -5,15 +5,18 @@ Business logic is delegated to the service layer.
 """
 
 from __future__ import annotations
+from datetime import datetime
+from typing import Annotated
 
+from app.core.response import ResponseObject
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Path, Query
 from pydantic import BaseModel, Field, field_validator
 
 from app.auth.dependencies import get_current_user_id
-from app.core.response import ResponseObject
 from app.service.chatbot_service import run_chatbot_pipeline
+from app.service.session_service import create_chat_session
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +48,40 @@ class ChatResponse(BaseModel):
     sources: list[SourceItem]
     sessionId: int | None = None
 
-@router.get(
+
+class InitSessionRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=255)
+
+
+class InitSessionResponse(BaseModel):
+    id: int
+    user_id: int
+    title: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    message_count: int
+    last_message_at: datetime | None = None
+
+
+@router.post(
     "/sessions",
+    response_model=ResponseObject[InitSessionResponse],
+    summary="Initialize new chat session",
+)
+async def init_session(
+    request: InitSessionRequest,
+    user_id: int = Depends(get_current_user_id),
+) -> ResponseObject[InitSessionResponse]:
+    created = create_chat_session(user_id=user_id, title=request.title)
+    return ResponseObject[InitSessionResponse](
+        code="SUCCESS",
+        message="Chat session initialized successfully",
+        data=InitSessionResponse(**created),
+        errors=None,
+    )
+
+@router.post(
+    "/chat/{session_id}",
     response_model=ResponseObject[ChatResponse],
     summary="Run AI RAG chatbot",
     description=(
@@ -56,19 +91,20 @@ class ChatResponse(BaseModel):
 )
 async def chat(
     request: ChatRequest,
+    session_id: Annotated[int, Path(title="The ID of the item to get")],
     user_id: int = Depends(get_current_user_id),
 ) -> ResponseObject[ChatResponse]:
     logger.info(
-        "[chatbot-controller] GET /ai/sessions userId=%s",
+        "[chatbot-controller] POST /ai/chat userId=%s",
         user_id,
     )
-
     try:
         result = run_chatbot_pipeline(
             query=request.query,
             user_id=user_id,
+            session_id=session_id,
         )
-    except Exception as exc:  # pragma: no cover - defensive branch
+    except Exception as exc:
         logger.exception("[chatbot-controller] service execution failed: %s", exc)
         return ResponseObject[ChatResponse](
             code="ERROR",

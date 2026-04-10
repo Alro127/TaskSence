@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
 from app.auth.middleware import JwtAuthMiddleware  # noqa: E402
 from app.config.config import get_settings  # noqa: E402
-from app.controller.chatbot_controller import router as chatbot_router  # noqa: E402
+from app.controller.v1 import router
 from app.indexer.scheduler import shutdown as scheduler_shutdown  # noqa: E402
 from app.indexer.scheduler import start as scheduler_start  # noqa: E402
 
@@ -64,8 +64,7 @@ app.add_middleware(
 )
 
 app.add_middleware(JwtAuthMiddleware, secret=settings.jwt_secret)
-
-app.include_router(chatbot_router)
+app.include_router(router)
 
 
 # ── Health check ──────────────────────────────────────────────────────────────

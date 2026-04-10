@@ -24,6 +24,7 @@ _MSG_ERROR = "He thong AI dang gap loi."
 def run_chatbot_pipeline(
     query: str,
     user_id: int,
+    session_id: int | None = None,
 ) -> dict[str, Any]:
     """Execute full chatbot pipeline from classification to grounded answer."""
     logger.info(
@@ -41,6 +42,7 @@ def run_chatbot_pipeline(
                 answer=_MSG_UNRELATED,
                 context_docs=[],
                 sources=[],
+                session_id=session_id,
             )
             return _response(_MSG_UNRELATED, [], session_id)
 
@@ -71,6 +73,7 @@ def run_chatbot_pipeline(
                 answer=answer,
                 context_docs=[count_doc],
                 sources=[],
+                session_id=session_id,
             )
             return _response(answer, [], session_id)
 
@@ -93,6 +96,7 @@ def run_chatbot_pipeline(
                 answer=_MSG_NO_DATA,
                 context_docs=[],
                 sources=[],
+                session_id=session_id,
             )
             return _response(_MSG_NO_DATA, [], session_id)
 
@@ -108,6 +112,7 @@ def run_chatbot_pipeline(
             answer=answer,
             context_docs=hydrated_context,
             sources=sources,
+            session_id=session_id,
         )
         return _response(answer, sources, session_id)
 

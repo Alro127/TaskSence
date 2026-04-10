@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from functools import lru_cache
+from pydantic import SecretStr
 import os
 
 from dotenv import load_dotenv
@@ -13,6 +14,9 @@ def _env_str(name: str, default: str) -> str:
 	value = os.getenv(name)
 	return value if value is not None else default
 
+def _env_secret_str(name: str, default: str) -> SecretStr:
+	value = os.getenv(name)
+	return SecretStr(value) if value is not None else SecretStr(default)
 
 def _env_int(name: str, default: int) -> int:
 	raw = os.getenv(name)
@@ -47,12 +51,13 @@ class Settings:
 	cors_origins: list[str]
 
 	llm_provider: str
-	openai_api_key: str
+	openai_api_key: SecretStr
 	openai_model: str
-	gemini_api_key: str
+	openai_embedding_model: str
+	gemini_api_key: SecretStr
 	gemini_model: str
 	gemini_embedding_model: str
-	openrouter_api_key: str
+	openrouter_api_key: SecretStr
 	openrouter_model: str
 	openrouter_embedding_model: str
 	openrouter_base_url: str
@@ -105,14 +110,15 @@ def get_settings() -> Settings:
 		reload=_env_bool("RELOAD", True),
 		cors_origins=_env_csv("CORS_ORIGINS", "*"),
 		llm_provider=_env_str("LLM_PROVIDER", "gemini").lower(),
-		openai_api_key=_env_str("OPENAI_API_KEY", ""),
+		openai_api_key=_env_secret_str("OPENAI_API_KEY", ""),
 		openai_model=_env_str("OPENAI_MODEL", "gpt-4o-mini"),
-		gemini_api_key=_env_str("GEMINI_API_KEY", ""),
+		openai_embedding_model=_env_str("GEMINI_EMBEDDING_MODEL", "models/text-embedding-004"),
+		gemini_api_key=_env_secret_str("GEMINI_API_KEY", ""),
 		gemini_model=_env_str("GEMINI_MODEL", "gemini-2.5-flash"),
 		gemini_embedding_model=_env_str(
 			"GEMINI_EMBEDDING_MODEL", "models/text-embedding-004"
 		),
-		openrouter_api_key=_env_str("OPENROUTER_API_KEY", ""),
+		openrouter_api_key=_env_secret_str("OPENROUTER_API_KEY", ""),
 		openrouter_model=_env_str("OPENROUTER_MODEL", "gpt-4o-mini"),
 		openrouter_embedding_model=_env_str(
 			"OPENROUTER_EMBEDDING_MODEL", "openai/text-embedding-3-large"
