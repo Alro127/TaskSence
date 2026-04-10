@@ -5,11 +5,12 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -21,13 +22,15 @@ public class JwtTokenProvider {
         return Keys.hmacShaKeyFor(config.getSecret().getBytes());
     }
 
-    public String generateAccessToken(String username) {
+    public String generateAccessToken(String username, Long userId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + config.getShortExpiration());
-
+        Map<String, String> claims = new HashMap<>();
+        claims.put("type", "ACCESS");
+        claims.put("userId", userId.toString());
         return Jwts.builder()
+                .setClaims(claims)
                 .setSubject(username)
-                .claim("type", "ACCESS")
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
