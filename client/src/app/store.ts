@@ -23,6 +23,7 @@ import { sprintApi } from "@/features/sprint/api/sprintApi";
 import { tagApi } from "@/features/tag/api/tagApi";
 import { analyticsApi } from "@/features/analytics/api/analyticsApi";
 import { workflowApi } from "@/features/workflow/api/workflowApi";
+import { workflowCommentApi } from "@/features/workflow/api/workflowCommentApi";
 import { dashboardApi } from "@/features/dashboard/api/dashboardApi";
 import { agentApi } from "@/features/agent/api/agentApi";
 
@@ -51,6 +52,7 @@ const combinedReducer = combineReducers({
   [tagApi.reducerPath]: tagApi.reducer,
   [analyticsApi.reducerPath]: analyticsApi.reducer,
   [workflowApi.reducerPath]: workflowApi.reducer,
+  [workflowCommentApi.reducerPath]: workflowCommentApi.reducer,
   [dashboardApi.reducerPath]: dashboardApi.reducer,
   [agentApi.reducerPath]: agentApi.reducer,
 });
@@ -94,6 +96,7 @@ export const store = configureStore({
       .concat(tagApi.middleware)
       .concat(analyticsApi.middleware)
       .concat(workflowApi.middleware)
+      .concat(workflowCommentApi.middleware)
       .concat(dashboardApi.middleware)
       .concat(agentApi.middleware),
 });

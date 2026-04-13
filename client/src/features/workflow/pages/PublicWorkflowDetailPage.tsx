@@ -227,7 +227,7 @@ export function PublicWorkflowDetailPage() {
               activeStepIndex={currentStepIndex}
             />
           ) : (
-            <PublicWorkflowReviewsTab steps={workflow.steps} />
+            <PublicWorkflowReviewsTab workflowId={workflow.id} />
           )}
         </section>
 

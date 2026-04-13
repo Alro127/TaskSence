@@ -15,7 +15,7 @@
 ## Last Updated
 
 - Date: 2026-04-13
-- Source: Run context sync (RUN-2026-04-13-001)
+- Source: Run context sync (RUN-2026-04-13-002)
 
 ## Durable Decisions
 

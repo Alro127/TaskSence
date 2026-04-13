@@ -17,6 +17,7 @@ Agents must read in this order:
 
 | Run ID             | Date       | Summary                                                                                                                              | Linked Files                                                    |
 | ------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| RUN-2026-04-13-002 | 2026-04-13 | Integrated real workflow comment APIs (CRUD/reply/reaction) into PublicWorkflowDetailPage reviews tab and replaced mock comments.    | client/src/features/workflow/pages/PublicWorkflowDetailPage.tsx |
 | RUN-2026-04-13-001 | 2026-04-13 | Rebuilt public workflow detail page UI (steps + reviews tab) from provided design references while preserving clone/rating behavior. | client/src/features/workflow/pages/PublicWorkflowDetailPage.tsx |
 
 ## Open Decisions

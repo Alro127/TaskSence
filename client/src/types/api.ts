@@ -640,6 +640,32 @@ export interface CommentReactionRequest {
   icon: string;
 }
 
+// ─── Workflow Comment ────────────────────────────────────────────────────────
+export interface WorkflowCommentResponse {
+  id: number;
+  workflowId: number;
+  parentCommentId: number | null;
+  content: string;
+  isEdited: boolean;
+  createdAt: string;
+  updatedAt: string;
+  user: UserSummaryResponse;
+  mentions: UserSummaryResponse[];
+  reactions: Record<string, number>;
+}
+
+export interface WorkflowCommentCreateRequest {
+  workflowId: number;
+  parentCommentId?: number;
+  content: string;
+  mentionUserIds?: number[];
+}
+
+export interface WorkflowCommentUpdateRequest {
+  content: string;
+  mentionUserIds?: number[];
+}
+
 // ─── Attachment ───────────────────────────────────────────────────────────────
 export interface AttachmentResponse {
   id: number;
