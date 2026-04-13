@@ -37,6 +37,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/workflows/explore").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/workflow-comments/workflow/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/workflow-comments/*/reactions/*").permitAll()
                         .requestMatchers(new RegexRequestMatcher("^/workflows/\\d+/rating-summary$", "GET")).permitAll()
                         .requestMatchers(new RegexRequestMatcher("^/workflows/\\d+$", "GET")).permitAll()
                         .requestMatchers("/auth/**", "/api-docs/**", "/swagger-ui/**","/actuator/health",
