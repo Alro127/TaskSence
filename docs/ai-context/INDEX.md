@@ -15,8 +15,9 @@ Agents must read in this order:
 
 ## Recent Runs
 
-| Run ID | Date | Summary | Linked Files |
-| ------ | ---- | ------- | ------------ |
+| Run ID             | Date       | Summary                                                                                                                              | Linked Files                                                    |
+| ------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| RUN-2026-04-13-001 | 2026-04-13 | Rebuilt public workflow detail page UI (steps + reviews tab) from provided design references while preserving clone/rating behavior. | client/src/features/workflow/pages/PublicWorkflowDetailPage.tsx |
 
 ## Open Decisions
 

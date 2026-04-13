@@ -1,6 +1,7 @@
+import { formatDistanceToNow } from "date-fns";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Clock3, CopyPlus, Loader2, RefreshCw, Star } from "lucide-react";
+import { ArrowLeft, CopyPlus, Loader2, RefreshCw, Star } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAppSelector } from "@/app/hooks";
@@ -13,12 +14,14 @@ import {
   useGetWorkflowRatingSummaryQuery,
   useUpsertWorkflowRatingMutation,
 } from "../api/workflowApi";
-import { RatingDialog } from "../components";
+import { PublicWorkflowReviewsTab, PublicWorkflowStepsTab, RatingDialog } from "../components";
 
 function deriveEstimatedMinutes(stepCount: number): number {
   const safeCount = Math.max(1, stepCount);
   return safeCount * 12;
 }
+
+type DetailTab = "steps" | "reviews";
 
 export function PublicWorkflowDetailPage() {
   const navigate = useNavigate();
@@ -29,6 +32,7 @@ export function PublicWorkflowDetailPage() {
   const currentUserId = useAppSelector((state) => state.user.currentUser?.id ?? null);
 
   const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<DetailTab>("steps");
 
   const {
     data: workflowData,
@@ -141,71 +145,114 @@ export function PublicWorkflowDetailPage() {
   }
 
   const estimatedMinutes = deriveEstimatedMinutes(workflow.steps.length);
+  const ratingValue = ratingSummary?.averageStars?.toFixed(1) ?? "N/A";
+  const ratingCount = ratingSummary?.totalRatings ?? 0;
+  const ratingCountText = `${ratingCount} rating${ratingCount !== 1 ? "s" : ""}`;
+  const lastUpdatedText = formatDistanceToNow(new Date(workflow.updatedAt), { addSuffix: true });
+
+  const activeStepIndex = workflow.steps.findIndex((step) =>
+    step.tasks.some((task) => task.status === "IN_PROGRESS" || task.status === "REVIEW"),
+  );
+
+  const fallbackStepIndex = workflow.steps.findIndex((step) =>
+    step.tasks.some((task) => task.status === "TODO"),
+  );
+
+  const currentStepIndex =
+    activeStepIndex >= 0 ? activeStepIndex : fallbackStepIndex >= 0 ? fallbackStepIndex : workflow.steps.length > 0 ? 0 : -1;
+
+  const progressPercent =
+    workflow.steps.length > 0 && currentStepIndex >= 0
+      ? Math.max(Math.round(((currentStepIndex + 1) / workflow.steps.length) * 100), 1)
+      : 0;
 
   return (
-    <div className="space-y-6">
-      <Link to="/explore" className="inline-flex items-center gap-2 text-sm text-[#233a87] hover:underline">
+    <div className="space-y-8">
+      <Link to="/explore" className="inline-flex items-center gap-2 text-sm font-medium text-[#444651] hover:text-[#233a87]">
         <ArrowLeft className="h-4 w-4" />
         Back to explore
       </Link>
 
-      <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#444651]">Workflow</p>
-        <h1 className="text-3xl font-bold text-[#1a1c1b]" style={{ fontFamily: "'Epilogue', 'Inter', sans-serif", letterSpacing: "-0.02em" }}>
-          {workflow.name}
-        </h1>
-        <p className="max-w-3xl text-sm text-[#444651]">{workflow.description?.trim() || "No description provided."}</p>
-      </header>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <section className="space-y-5 lg:col-span-8">
-          <div className="ghost-border rounded-xl bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-            <h2 className="text-sm font-semibold text-[#1a1c1b]">Workflow overview</h2>
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[#444651]">
-              <span>{workflow.steps.length} step{workflow.steps.length !== 1 ? "s" : ""}</span>
-              <span>•</span>
-              <span className="inline-flex items-center gap-1">
-                <Clock3 className="h-4 w-4" />
-                ~{estimatedMinutes} min
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-12">
+        <section className="space-y-6 xl:col-span-8">
+          <header className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h1
+                className="text-3xl font-bold text-[#1a1c1b] md:text-5xl"
+                style={{ fontFamily: "'Epilogue', 'Inter', sans-serif", letterSpacing: "-0.02em" }}
+              >
+                {workflow.name}
+              </h1>
+              <span className="inline-flex items-center rounded-full border border-[rgba(0,106,97,0.2)] bg-[rgba(0,106,97,0.08)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-[#006a61]">
+                {workflow.status === "PUBLIC" ? "Peer reviewed" : "Draft"}
               </span>
+            </div>
+            <p className="max-w-3xl text-sm text-[#444651] md:text-base">
+              {workflow.description?.trim() || "No description provided."}
+            </p>
+          </header>
+
+          <div className="border-b border-[#efeeec]">
+            <div className="flex gap-6 overflow-x-auto">
+              <button
+                type="button"
+                className={`pb-4 text-sm font-semibold transition-all ${
+                  activeTab === "steps"
+                    ? "border-b-2 border-[#233a87] text-[#233a87]"
+                    : "border-b-2 border-transparent text-[#444651] hover:text-[#1a1c1b]"
+                }`}
+                onClick={() => setActiveTab("steps")}
+              >
+                Steps
+              </button>
+              <button
+                type="button"
+                className={`pb-4 text-sm font-semibold transition-all ${
+                  activeTab === "reviews"
+                    ? "border-b-2 border-[#233a87] text-[#233a87]"
+                    : "border-b-2 border-transparent text-[#444651] hover:text-[#1a1c1b]"
+                }`}
+                onClick={() => setActiveTab("reviews")}
+              >
+                Reviews &amp; Comments
+              </button>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold text-[#1a1c1b]">Execution sequence</h2>
-            {workflow.steps.map((step, index) => (
-              <article key={step.id} className="ghost-border rounded-xl bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444651]">
-                  Step {String(index + 1).padStart(2, "0")}
-                </p>
-                <h3 className="mt-1 text-base font-semibold text-[#1a1c1b]" style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}>
-                  {step.title}
-                </h3>
-                <p className="mt-1 text-sm text-[#444651]">{step.description?.trim() || "No details for this step."}</p>
-                <p className="mt-3 text-xs text-[#444651]">
-                  {step.tasks.length} task{step.tasks.length !== 1 ? "s" : ""}
-                </p>
-              </article>
-            ))}
-          </div>
+          {activeTab === "steps" ? (
+            <PublicWorkflowStepsTab
+              steps={workflow.steps}
+              estimatedMinutes={estimatedMinutes}
+              progressPercent={progressPercent}
+              activeStepIndex={currentStepIndex}
+            />
+          ) : (
+            <PublicWorkflowReviewsTab steps={workflow.steps} />
+          )}
         </section>
 
-        <aside className="space-y-4 lg:col-span-4">
+        <aside className="space-y-4 xl:col-span-4">
           <div className="ghost-border rounded-xl bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-            <h2 className="text-sm font-semibold text-[#1a1c1b]">Community rating</h2>
-            <div className="mt-3 flex items-end gap-2">
-              <p className="text-2xl font-bold text-[#1a1c1b]">{ratingSummary?.averageStars?.toFixed(1) ?? "N/A"}</p>
-              <p className="mb-1 text-xs text-[#444651]">/ 5</p>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-[#444651]">Your progress</h2>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="relative h-14 w-14 rounded-full bg-[conic-gradient(#233a87_var(--progress),#e9e8e6_0)] [--progress:25%]">
+                <div className="absolute inset-[6px] flex items-center justify-center rounded-full bg-white text-xs font-bold text-[#233a87]">
+                  {progressPercent}%
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#1a1c1b]">Step {Math.max(currentStepIndex + 1, 1)} in progress</p>
+                <p className="text-xs text-[#444651]">Estimated {estimatedMinutes}m total</p>
+              </div>
             </div>
-            <div className="mt-1 flex items-center gap-2 text-xs text-[#444651]">
-              <Star className="h-3.5 w-3.5 fill-[#643300] text-[#643300]" />
-              <span>
-                {isSummaryLoading
-                  ? "Loading summary..."
-                  : `${ratingSummary?.totalRatings ?? 0} rating${(ratingSummary?.totalRatings ?? 0) !== 1 ? "s" : ""}`}
-              </span>
+
+            <div className="mt-4 flex items-center gap-2 text-sm text-[#1a1c1b]">
+              <Star className="h-4 w-4 fill-[#643300] text-[#643300]" />
+              <span className="font-bold">{isSummaryLoading ? "..." : ratingValue}</span>
+              <span className="text-xs text-[#444651]">({ratingCountText})</span>
             </div>
-            <div className="mt-4 grid gap-2">
+
+            <div className="mt-5 space-y-2">
               <Button
                 className="w-full bg-[#233a87] text-white hover:opacity-90"
                 disabled={isCloning}
@@ -228,9 +275,53 @@ export function PublicWorkflowDetailPage() {
               >
                 Rate this Workflow
               </Button>
-              {isOwner && (
-                <p className="text-xs text-[#ba1a1a]">You cannot rate your own workflow.</p>
-              )}
+              {isOwner && <p className="text-xs text-[#ba1a1a]">You cannot rate your own workflow.</p>}
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-[#f4f3f1] p-5">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[#444651]">Workflow metadata</h3>
+            <div className="mt-4 space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[#444651]">Status</span>
+                <span className="font-semibold text-[#1a1c1b]">{workflow.status}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#444651]">Source</span>
+                <span className="font-semibold text-[#1a1c1b]">
+                  {workflow.generationSource === "AI_REFINED" ? "AI refined" : "Rule based"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#444651]">Updated</span>
+                <span className="font-semibold text-[#1a1c1b]">{lastUpdatedText}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#444651]">Published</span>
+                <span className="font-semibold text-[#1a1c1b]">
+                  {workflow.publishedAt ? formatDistanceToNow(new Date(workflow.publishedAt), { addSuffix: true }) : "Not yet"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-[rgba(35,58,135,0.04)] p-5">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[#444651]">Quick stats</h3>
+            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-md bg-white p-3">
+                <p className="text-[10px] uppercase tracking-widest text-[#444651]">Steps</p>
+                <p className="text-lg font-bold text-[#1a1c1b]">{workflow.steps.length}</p>
+              </div>
+              <div className="rounded-md bg-white p-3">
+                <p className="text-[10px] uppercase tracking-widest text-[#444651]">Tasks</p>
+                <p className="text-lg font-bold text-[#1a1c1b]">
+                  {workflow.steps.reduce((total, step) => total + step.tasks.length, 0)}
+                </p>
+              </div>
+              <div className="rounded-md bg-white p-3">
+                <p className="text-[10px] uppercase tracking-widest text-[#444651]">Rating</p>
+                <p className="text-lg font-bold text-[#1a1c1b]">{ratingValue}</p>
+              </div>
             </div>
           </div>
         </aside>
