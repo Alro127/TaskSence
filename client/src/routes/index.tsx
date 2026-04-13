@@ -30,6 +30,7 @@ import {
   PublicWorkflowDetailPage,
   WorkflowEditorPage,
 } from "@/features/workflow/pages";
+import { AgentChatPage } from "@/features/agent/pages";
 
 const routes: RouteObject[] = [
   // Public landing page — standalone (no app shell)
@@ -158,6 +159,10 @@ const routes: RouteObject[] = [
       {
         path: "settings",
         element: <PlaceholderPage title="Settings" />,
+      },
+      {
+        path: "agent",
+        element: <AgentChatPage />,
       },
     ],
   },

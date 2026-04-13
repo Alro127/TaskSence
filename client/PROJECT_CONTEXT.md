@@ -1,6 +1,7 @@
 # TaskSense - Frontend Project Context
 
 > File này dùng để giữ context cho AI và developers. Cập nhật sau mỗi sprint/thay đổi lớn.
+> **Cập nhật lần cuối**: Sprint 14 — Dashboard (Real API)
 > **Cập nhật lần cuối**: Sprint 14 — Workflow Builder & Community Hub
 
 ## 📋 Thông tin dự án
@@ -123,6 +124,11 @@
   - `DELETE /notifications` → body: `{ids: number[]}` → xóa nhiều thông báo
 - **Analytics Endpoints**:
   - `GET /projects/:projectId/analytics` → `ProjectAnalyticsResponse` _(VIEW_TASKS permission)_
+- **Dashboard Endpoints**:
+  - `GET /dashboard/summary` → `DashboardSummaryResponse` — tổng hợp: totalTasks, completedTasks, overdueTasks, activeProjects (cross-workspace, theo current user)
+  - `GET /dashboard/active-projects` → `DashboardProjectItem[]` — các projects không ARCHIVED của user, kèm progress, taskCount, overdueCount, memberCount, endDate
+  - `GET /dashboard/my-tasks?filter=all|today|overdue&page=0&size=20` → `PageResponse<DashboardTaskItem>` — tasks được assign cho user; filter today dùng UTC start/end of day
+  - `GET /dashboard/upcoming-deadlines?days=7` → `DeadlineItem[]` — gộp task deadlines + sprint end dates + project end dates trong window, sort theo date
 - **WebSocket**: `ws://localhost:8080/api/v1/ws` (STOMP)
   - Connect header: `Authorization: Bearer <accessToken>`
   - Subscribe: `/user/queue/notifications` → nhận `NotificationSocketMessage` real-time
@@ -138,7 +144,7 @@
 client/
 ├── src/
 │   ├── app/
-│   │   ├── store.ts          ← Đã thêm notificationApi + notificationReducer + taskApi + commentApi + analyticsApi
+│   │   ├── store.ts          ← Đã thêm notificationApi + notificationReducer + taskApi + commentApi + analyticsApi + dashboardApi
 │   │   └── hooks.ts
 │   ├── components/
 │   │   ├── ui/               ← Đã thêm: dialog, dropdown-menu, tabs, badge, sheet
@@ -148,8 +154,10 @@ client/
 │   │   │   ├── api/authApi.ts
 │   │   │   ├── pages/
 │   │   │   └── authSlice.ts
-│   │   ├── dashboard/
-│   │   │   └── pages/DashboardPage.tsx
+│   │   ├── dashboard/                     ← Sprint 14 — HOÀN THÀNH
+│   │   │   ├── api/
+│   │   │   │   └── dashboardApi.ts        ← RTK Query: 4 endpoints (summary, active-projects, my-tasks, upcoming-deadlines)
+│   │   │   └── pages/DashboardPage.tsx    ← Full dashboard với real API: 4 stat cards + workspaces + projects + tasks + quick actions + deadlines + activity
 │   │   ├── community/
 │   │   │   └── pages/
 │   │   │       ├── CommunityPage.tsx        ← /community (Tabs: Workspaces + Workflows)
@@ -750,6 +758,55 @@ client/
 - Non-member calls leave → 404 ResourceNotFoundException
 - Workspace leave cascades: soft-deletes all project memberships in that workspace
 
+### Sprint 14 - Dashboard (Real API) ✅ COMPLETED
+
+> Dashboard cá nhân hoàn chỉnh — cross-workspace, dữ liệu thật từ backend. Thay thế toàn bộ mock data cũ.
+
+**Backend**:
+- ✅ `DashboardSummaryResponse` DTO — `totalTasks`, `completedTasks`, `overdueTasks`, `activeProjects` (all `long`)
+- ✅ `DashboardProjectItem` DTO — `id, workspaceId, name, workspaceName, status, progress, taskCount, overdueCount, memberCount (long), endDate (LocalDate)`
+- ✅ `DashboardTaskItem` DTO — `id, title, projectName, projectId, workspaceId, status (TaskStatus), priority (TaskPriority), dueDate (OffsetDateTime)`
+- ✅ `DeadlineItem` DTO — `id, label, type (String: "TASK"|"SPRINT"|"PROJECT"), date (LocalDate), workspaceId, projectId (nullable)`
+- ✅ `TaskRepository` — 8 queries mới: `findAssignedToUser`, `findAssignedToUserDueToday`, `findAssignedToUserOverdue`, `countAssignedToUser`, `countCompletedAssignedToUser`, `countOverdueAssignedToUser`, `countOverdueByProjectIds` (batch), `findUpcomingAssignedToUser`
+- ✅ `ProjectMemberRepository` — 2 queries mới: `findProjectsByUserId` (JOIN FETCH workspace), `countMembersByProjectIds` (batch)
+- ✅ `SprintRepository` — 1 query mới: `findUpcomingByProjectIds` (sprints ACTIVE/PLANNING ending trong window)
+- ✅ `DashboardService` + `DashboardServiceImpl` — 4 methods:
+  - `getSummary()`: aggregate counts cross-workspace cho current user
+  - `getActiveProjects()`: batch fetch total/done/overdue/member counts qua Maps (tránh N+1)
+  - `getMyTasks(filter, pageable)`: switch filter → today (UTC start/end of day), overdue, all
+  - `getUpcomingDeadlines(days)`: gộp task deadlines + sprint end dates + project end dates, sort theo date
+- ✅ `DashboardController` — `@RestController @RequestMapping("/dashboard")`:
+  - `GET /dashboard/summary`
+  - `GET /dashboard/active-projects`
+  - `GET /dashboard/my-tasks?filter=all|today|overdue&page=0&size=20`
+  - `GET /dashboard/upcoming-deadlines?days=7`
+
+**Frontend API**:
+- ✅ `dashboardApi.ts` (`features/dashboard/api/dashboardApi.ts`) — RTK Query với 4 endpoints:
+  - `getDashboardSummary()` → tag `DashboardSummary`
+  - `getActiveProjects()` → tag `DashboardProjects`
+  - `getMyTasks({filter, page, size})` → tag `DashboardTasks`; `TaskFilter` type: `"all"|"today"|"overdue"`
+  - `getUpcomingDeadlines({days})` — `DeadlineType` type: `"TASK"|"SPRINT"|"PROJECT"`
+- ✅ `store.ts` — đăng ký `dashboardApi` reducer + middleware
+
+**Frontend UI** — `DashboardPage.tsx` rewrite hoàn toàn:
+- ✅ **Greeting header**: "Good morning/afternoon/evening, [firstName]"
+- ✅ **4 Stat Cards**: Total Tasks, Completed, Overdue, Active Projects — dùng `useGetDashboardSummaryQuery`; skeleton pulse khi loading
+- ✅ **My Workspaces section**: `useGetMyWorkspacesQuery()`, 3 workspace gần nhất + "View All"
+- ✅ **Active Projects section**: `useGetActiveProjectsQuery()`, grid cards với progress bar + status badge + overdue indicator
+- ✅ **My Tasks section** (`id="my-tasks-section"`): `useGetMyTasksQuery({filter})`, tab bar (All/Today/Overdue), task list với status dot + priority badge + due date; click task → navigate TaskDetailPage
+- ✅ **Quick Actions card**: 4 actions:
+  - **New Workspace** → navigate `/workspaces` với `state: { openCreate: true }` (auto-open modal)
+  - **My Profile** → navigate `/profile`
+  - **My Tasks** → `scrollIntoView("my-tasks-section")` (smooth scroll)
+  - **Settings** → navigate `/settings`
+- ✅ **Upcoming Deadlines card**: `useGetUpcomingDeadlinesQuery({days: 7})`, phân loại TASK/SPRINT/PROJECT với icon riêng, format relative date (Today/Tomorrow/N days), click → navigate project
+- ✅ **Recent Activity card**: `useGetNotificationsQuery({limit: 5})` (tái dùng notification API), dùng `getNotificationText()` + `getNotificationTarget()`
+- ✅ Layout: greeting + stat grid | `lg:grid-cols-[1fr_288px]` (main content + sidebar); Framer Motion stagger animation
+
+**WorkspacesPage**:
+- ✅ `useEffect` đọc `location.state?.openCreate` → tự động mở `CreateWorkspaceModal` khi navigate từ Dashboard Quick Actions
+
 ### Sprint 7 - Project CRUD & Member Management ✅ COMPLETED
 
 - ✅ **Types** — thêm vào `types/api.ts`:
@@ -878,7 +935,7 @@ client/
 | `/auth/verify-otp`                                  | `VerifyOtpPage`           |                                                                                                   |
 | `/auth/forgot-password`                             | `ForgotPasswordPage`      |                                                                                                   |
 | `/auth/reset-password`                              | `ResetPasswordPage`       |                                                                                                   |
-| `/dashboard`                                        | `DashboardPage`           | trong `MainLayout`                                                                                |
+| `/dashboard`                                        | `DashboardPage`           | trong `MainLayout`; real API: summary + projects + tasks + deadlines + activity                   |
 | `/dashboard/edit-profile`                           | → `/profile`              | redirect (backward compat)                                                                        |
 | `/profile`                                          | `ProfilePage`             | 2 tabs: Info + Skills                                                                             |
 | `/community`                                        | `CommunityPage`           | Hub discovery hợp nhất cho Workspaces + Workflows; ưu tiên dùng kèm `?tab=workspaces|workflows` |
@@ -1158,6 +1215,17 @@ npm run preview
   - `CommentItem` nhận `highlightedCommentId` prop: nếu match → `ring-2 ring-primary shadow-sm` + `scrollIntoView({ behavior: "smooth", block: "center" })`
   - Replies tự expand (`showReplies = true` khi bất kỳ reply nào là target); prop truyền xuống nested `CommentItem` replies
   - Highlight tự xóa khi user click bất kỳ đâu (`document` click listener, `once: true`, defer 400ms)
+
+### Dashboard Architecture
+
+- **`dashboardApi`** (RTK Query): tags `DashboardSummary`, `DashboardProjects`, `DashboardTasks`. 4 endpoints: `getDashboardSummary`, `getActiveProjects`, `getMyTasks`, `getUpcomingDeadlines`. Recent Activity tái dùng `notificationApi.getNotifications({limit: 5})` — không tạo endpoint mới.
+- **Cross-workspace queries**: `TaskRepository` và `ProjectMemberRepository` có các query join qua `task_assignees` / `project_member` để fetch dữ liệu của user across all workspaces — đây là pattern mới không có ở các module trước (vốn luôn scoped theo workspace/project).
+- **Batch queries (N+1 avoidance)**: `getActiveProjects()` dùng 4 batch queries (`countByProjectIds`, `countDoneByProjectIds`, `countOverdueByProjectIds`, `countMembersByProjectIds`) rồi aggregate bằng `Map<Long, Long>` trong Java, thay vì gọi per-project.
+- **`TaskFilter` type**: `"all" | "today" | "overdue"`. Today filter dùng `LocalDate.now().atStartOfDay().atOffset(ZoneOffset.UTC)` làm boundary — timezone UTC trên server.
+- **`DeadlineType` type**: `"TASK" | "SPRINT" | "PROJECT"`. `getUpcomingDeadlines` gộp 3 nguồn: tasks (dùng `findUpcomingAssignedToUser`), sprints (`findUpcomingByProjectIds` — ACTIVE/PLANNING), projects (filter từ `userProjects` list). Sort cuối cùng theo `date`.
+- **Quick Actions — New Workspace flow**: Dashboard navigate `/workspaces` với `state: { openCreate: true }`. `WorkspacesPage` đọc `location.state` trong `useEffect` → `setIsCreateOpen(true)`. Không cần URL param (tránh hiển thị `?create=true` trong address bar sau khi modal đóng).
+- **Quick Actions — My Tasks scroll**: Dùng `document.getElementById("my-tasks-section")?.scrollIntoView({ behavior: "smooth", block: "start" })`. `<section id="my-tasks-section">` được đặt trực tiếp trong `MyTasksSection` component.
+- **Skeleton loading**: Không dùng `<Skeleton>` component (chưa install). Dùng `<div className="h-X w-X rounded-X bg-[#e9e8e6] animate-pulse" />` inline thay thế.
 
 ### Việc cần làm tiếp theo
 

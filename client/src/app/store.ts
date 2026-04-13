@@ -23,6 +23,8 @@ import { sprintApi } from "@/features/sprint/api/sprintApi";
 import { tagApi } from "@/features/tag/api/tagApi";
 import { analyticsApi } from "@/features/analytics/api/analyticsApi";
 import { workflowApi } from "@/features/workflow/api/workflowApi";
+import { dashboardApi } from "@/features/dashboard/api/dashboardApi";
+import { agentApi } from "@/features/agent/api/agentApi";
 
 const combinedReducer = combineReducers({
   auth: authReducer,
@@ -49,6 +51,8 @@ const combinedReducer = combineReducers({
   [tagApi.reducerPath]: tagApi.reducer,
   [analyticsApi.reducerPath]: analyticsApi.reducer,
   [workflowApi.reducerPath]: workflowApi.reducer,
+  [dashboardApi.reducerPath]: dashboardApi.reducer,
+  [agentApi.reducerPath]: agentApi.reducer,
 });
 
 type RootReducerState = ReturnType<typeof combinedReducer>;
@@ -89,7 +93,9 @@ export const store = configureStore({
       .concat(sprintApi.middleware)
       .concat(tagApi.middleware)
       .concat(analyticsApi.middleware)
-      .concat(workflowApi.middleware),
+      .concat(workflowApi.middleware)
+      .concat(dashboardApi.middleware)
+      .concat(agentApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

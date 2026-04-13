@@ -13,6 +13,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
+  Bot,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,6 +34,7 @@ const topNavItems = [
   { label: "My Workspace", to: "/workspaces", icon: FolderKanban },
   { label: "Workflows", to: "/workflows", icon: GitBranch },
   { label: "Community", to: "/community", icon: Globe },
+  { label: "AI Assistant", to: "/agent", icon: Bot },
   { label: "Profile", to: "/profile", icon: User },
 ];
 

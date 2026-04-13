@@ -7,10 +7,10 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import dev.alro127.tasksense.config.provider.GoogleConfig;
+import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.dto.request.AuthRequest;
 import dev.alro127.tasksense.dto.request.TokenRequest;
 import dev.alro127.tasksense.dto.response.AuthResponse;
-import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.exception.BadRequestException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.exception.UnauthorizedException;
@@ -20,7 +20,6 @@ import dev.alro127.tasksense.security.jwt.JwtTokenProvider;
 import dev.alro127.tasksense.security.token.TokenProvider;
 import dev.alro127.tasksense.service.AuthService;
 import dev.alro127.tasksense.service.EmailService;
-
 import dev.alro127.tasksense.util.redis.RedisKeys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -93,11 +92,11 @@ public class AuthServiceImpl implements AuthService {
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            String accessToken = jwtTokenProvider.generateAccessToken(authentication.getName());
+
 
             UserEntity user = userRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
+            String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail(), user.getId());
             String refreshToken = generateAndStoreRefreshToken(user);
 
             return new AuthResponse(accessToken, refreshToken);
@@ -121,7 +120,7 @@ public class AuthServiceImpl implements AuthService {
         UserEntity user = userRepository.findById(Long.parseLong(userId))
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        String newAccessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
+        String newAccessToken = jwtTokenProvider.generateAccessToken(user.getEmail(), user.getId());
 
         return AuthResponse.builder()
                 .accessToken(newAccessToken)
@@ -167,7 +166,7 @@ public class AuthServiceImpl implements AuthService {
 
         redisTemplate.delete("OTP:" + email);
 
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail(), user.getId());
         String refreshToken = generateAndStoreRefreshToken(user);
 
         return new AuthResponse(accessToken, refreshToken);
@@ -229,7 +228,7 @@ public class AuthServiceImpl implements AuthService {
 
         GoogleIdToken.Payload finalPayload = payload;
         userRepository.findByEmail(email).ifPresentOrElse(account -> {
-            String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail());
+            String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail(), account.getId());
             String refreshToken = generateAndStoreRefreshToken(account);
 
             authResponse.set(new AuthResponse(accessToken, refreshToken));
@@ -243,7 +242,7 @@ public class AuthServiceImpl implements AuthService {
                     .avatarUrl(picture)
                     .build();
             var account = userRepository.save(accountEntity);
-            String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail());
+            String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail(), account.getId());
             String refreshToken = generateAndStoreRefreshToken(account);
 
             authResponse.set(new AuthResponse(accessToken, refreshToken));

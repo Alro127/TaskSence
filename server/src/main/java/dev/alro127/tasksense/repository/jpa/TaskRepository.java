@@ -183,4 +183,103 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
         GROUP BY t.project.id
     """)
     List<Object[]> countDoneByProjectIds(List<Long> projectIds, TaskStatus status);
+
+    // ===== Dashboard queries =====
+
+    @Query("""
+                SELECT DISTINCT t
+                FROM TaskEntity t
+                JOIN t.assignees a
+                JOIN FETCH t.project p
+                JOIN FETCH p.workspace
+                WHERE a.id = :userId
+                ORDER BY t.dueDate ASC NULLS LAST, t.createdAt DESC
+            """)
+    Page<TaskEntity> findAssignedToUser(@Param("userId") Long userId, Pageable pageable);
+
+    @Query("""
+                SELECT DISTINCT t
+                FROM TaskEntity t
+                JOIN t.assignees a
+                JOIN FETCH t.project p
+                JOIN FETCH p.workspace
+                WHERE a.id = :userId
+                  AND t.dueDate >= :startOfDay
+                  AND t.dueDate < :endOfDay
+                  AND t.status <> 'DONE'
+                ORDER BY t.dueDate ASC
+            """)
+    Page<TaskEntity> findAssignedToUserDueToday(@Param("userId") Long userId,
+            @Param("startOfDay") OffsetDateTime startOfDay,
+            @Param("endOfDay") OffsetDateTime endOfDay,
+            Pageable pageable);
+
+    @Query("""
+                SELECT DISTINCT t
+                FROM TaskEntity t
+                JOIN t.assignees a
+                JOIN FETCH t.project p
+                JOIN FETCH p.workspace
+                WHERE a.id = :userId
+                  AND t.dueDate < :now
+                  AND t.status <> 'DONE'
+                ORDER BY t.dueDate ASC
+            """)
+    Page<TaskEntity> findAssignedToUserOverdue(@Param("userId") Long userId,
+            @Param("now") OffsetDateTime now,
+            Pageable pageable);
+
+    @Query("""
+                SELECT COUNT(DISTINCT t)
+                FROM TaskEntity t
+                JOIN t.assignees a
+                WHERE a.id = :userId
+            """)
+    long countAssignedToUser(@Param("userId") Long userId);
+
+    @Query("""
+                SELECT COUNT(DISTINCT t)
+                FROM TaskEntity t
+                JOIN t.assignees a
+                WHERE a.id = :userId
+                  AND t.status = 'DONE'
+            """)
+    long countCompletedAssignedToUser(@Param("userId") Long userId);
+
+    @Query("""
+                SELECT COUNT(DISTINCT t)
+                FROM TaskEntity t
+                JOIN t.assignees a
+                WHERE a.id = :userId
+                  AND t.dueDate < :now
+                  AND t.status <> 'DONE'
+            """)
+    long countOverdueAssignedToUser(@Param("userId") Long userId, @Param("now") OffsetDateTime now);
+
+    @Query("""
+                SELECT t.project.id, COUNT(t.id)
+                FROM TaskEntity t
+                WHERE t.project.id IN :projectIds
+                  AND t.dueDate < :now
+                  AND t.status <> 'DONE'
+                GROUP BY t.project.id
+            """)
+    List<Object[]> countOverdueByProjectIds(@Param("projectIds") List<Long> projectIds,
+            @Param("now") OffsetDateTime now);
+
+    @Query("""
+                SELECT DISTINCT t
+                FROM TaskEntity t
+                JOIN t.assignees a
+                JOIN FETCH t.project p
+                JOIN FETCH p.workspace
+                WHERE a.id = :userId
+                  AND t.dueDate >= :startDate
+                  AND t.dueDate <= :endDate
+                  AND t.status <> 'DONE'
+                ORDER BY t.dueDate ASC
+            """)
+    List<TaskEntity> findUpcomingAssignedToUser(@Param("userId") Long userId,
+            @Param("startDate") OffsetDateTime startDate,
+            @Param("endDate") OffsetDateTime endDate);
 }

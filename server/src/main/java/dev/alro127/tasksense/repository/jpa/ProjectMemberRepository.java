@@ -1,5 +1,6 @@
 package dev.alro127.tasksense.repository.jpa;
 
+import dev.alro127.tasksense.domain.entity.ProjectEntity;
 import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
 
@@ -82,5 +83,25 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMemberEnti
                   AND pm.deletedAt IS NULL
             """)
     void softDeleteByWorkspaceIdAndUserId(Long workspaceId, Long userId, OffsetDateTime now);
+
+    // ===== Dashboard queries =====
+
+    @Query("""
+    SELECT p
+    FROM ProjectMemberEntity pm
+    JOIN pm.project p
+    JOIN FETCH p.workspace
+    WHERE pm.user.id = :userId
+    ORDER BY p.updatedAt DESC
+""")
+    List<ProjectEntity> findProjectsByUserId(@Param("userId") Long userId);
+
+    @Query("""
+                SELECT pm.project.id, COUNT(pm.id)
+                FROM ProjectMemberEntity pm
+                WHERE pm.project.id IN :projectIds
+                GROUP BY pm.project.id
+            """)
+    List<Object[]> countMembersByProjectIds(@Param("projectIds") List<Long> projectIds);
 
 }
