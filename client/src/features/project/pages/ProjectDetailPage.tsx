@@ -51,6 +51,8 @@ import { useGetMembersQuery, useUpdateMemberRoleMutation, useLeaveProjectMutatio
 import { useGetJoinRequestsQuery, useReviewJoinRequestMutation, useCancelJoinRequestMutation } from "../api/projectJoinRequestApi";
 import { useGetTasksByProjectQuery } from "@/features/task/api/taskApi";
 import { ProjectAnalyticsTab } from "@/features/analytics/components/ProjectAnalyticsTab";
+import { useCreateWorkflowDraftFromProjectMutation } from "@/features/workflow/api/workflowApi";
+import { CreateWorkflowDraftCard } from "@/features/workflow/components";
 import {
   DeleteProjectDialog,
   EditProjectModal,
@@ -372,6 +374,7 @@ export function ProjectDetailPage() {
     hasProjectPermission("MANAGE_SPRINT", "CREATE_SPRINT", "UPDATE_SPRINT", "DELETE_SPRINT");
   const canManageTags =
     hasProjectPermission("MANAGE_TAG", "CREATE_TAG", "UPDATE_TAG", "DELETE_TAG");
+  const canCreateWorkflowDraft = hasProjectPermission("VIEW_TASKS");
 
   const { data: joinRequestsData, isLoading: isJoinRequestsLoading } =
     useGetJoinRequestsQuery(
@@ -398,8 +401,14 @@ export function ProjectDetailPage() {
   const [localJoinRequest, setLocalJoinRequest] = useState<ProjectJoinRequest | null>(null);
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
   const [isLeaveProjectOpen, setIsLeaveProjectOpen] = useState(false);
+  const [isCreateWorkflowDialogOpen, setIsCreateWorkflowDialogOpen] = useState(false);
+  const [includeSubtasks, setIncludeSubtasks] = useState(true);
+  const [includeCompletedTasks, setIncludeCompletedTasks] = useState(false);
+  const [useAiRefinement, setUseAiRefinement] = useState(false);
   const [cancelJoinRequest, { isLoading: isCancellingJoin }] = useCancelJoinRequestMutation();
   const [leaveProject, { isLoading: isLeavingProject }] = useLeaveProjectMutation();
+  const [createWorkflowDraftFromProject, { isLoading: isCreatingWorkflowDraft }] =
+    useCreateWorkflowDraftFromProjectMutation();
 
   const handleLeaveProject = async () => {
     try {
@@ -408,6 +417,27 @@ export function ProjectDetailPage() {
       navigate(`/workspaces/${workspaceId}`);
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to leave project."));
+    }
+  };
+
+  const handleCreateWorkflowDraft = async () => {
+    try {
+      const response = await createWorkflowDraftFromProject({
+        projectId,
+        body: {
+          includeSubtasks,
+          includeCompletedTasks,
+          useAiRefinement,
+        },
+      }).unwrap();
+
+      toast.success("Workflow draft created successfully.");
+      setIsCreateWorkflowDialogOpen(false);
+      navigate(`/workflows/${response.data.id}`, {
+        state: { workflow: response.data },
+      });
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to create workflow draft."));
     }
   };
 
@@ -747,95 +777,109 @@ export function ProjectDetailPage() {
         </div>
 
         {/* ── Overview Tab ── */}
-        <TabsContent value="overview" className="mt-6 max-w-2xl space-y-6">
-          <div className="ghost-border rounded-xl bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.05)] space-y-4">
-            <h3 className="text-base font-semibold text-[#1a1c1b]" style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}>Project Information</h3>
-            <div className="h-px bg-[#efeeec]" />
-
-            <dl className="grid grid-cols-1 gap-y-4 sm:grid-cols-2">
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Status
-                </dt>
-                <dd className="mt-1">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
-                      cfg.badgeClass,
-                    )}
-                  >
-                    <StatusIcon className="h-3 w-3" />
-                    {cfg.label}
-                  </span>
-                </dd>
-              </div>
-
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Members
-                </dt>
-                <dd className="mt-1 flex items-center gap-1 text-sm">
-                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                  {totalMembers} member{totalMembers !== 1 ? "s" : ""}
-                </dd>
-              </div>
-
-              {project.startDate && (
-                <div>
-                  <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Start Date
-                  </dt>
-                  <dd className="mt-1 text-sm">
-                    {format(new Date(project.startDate), "MMM d, yyyy")}
-                  </dd>
-                </div>
-              )}
-
-              {project.endDate && (
-                <div>
-                  <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Due Date
-                  </dt>
-                  <dd className="mt-1 flex items-center gap-1 text-sm">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    {format(new Date(project.endDate), "MMM d, yyyy")}
-                  </dd>
-                </div>
-              )}
-
-              <div className="sm:col-span-2">
-                <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Created
-                </dt>
-                <dd className="mt-1 text-sm">
-                  {format(new Date(project.createdAt), "MMM d, yyyy · HH:mm")}
-                </dd>
-              </div>
-
-              {project.description && (
-                <div className="sm:col-span-2">
-                  <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Description
-                  </dt>
-                  <dd className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
-                    {project.description}
-                  </dd>
-                </div>
-              )}
-            </dl>
-
-            {canManageProject && (
-              <>
+        <TabsContent value="overview" className="mt-6 space-y-6">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+            <div className="xl:col-span-8">
+              <div className="ghost-border rounded-xl bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.05)] space-y-4">
+                <h3 className="text-base font-semibold text-[#1a1c1b]" style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}>Project Information</h3>
                 <div className="h-px bg-[#efeeec]" />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditOpen(true)}
-                >
-                  <Pencil className="mr-2 h-3.5 w-3.5" />
-                  Edit Project
-                </Button>
-              </>
+
+                <dl className="grid grid-cols-1 gap-y-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Status
+                    </dt>
+                    <dd className="mt-1">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                          cfg.badgeClass,
+                        )}
+                      >
+                        <StatusIcon className="h-3 w-3" />
+                        {cfg.label}
+                      </span>
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Members
+                    </dt>
+                    <dd className="mt-1 flex items-center gap-1 text-sm">
+                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                      {totalMembers} member{totalMembers !== 1 ? "s" : ""}
+                    </dd>
+                  </div>
+
+                  {project.startDate && (
+                    <div>
+                      <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Start Date
+                      </dt>
+                      <dd className="mt-1 text-sm">
+                        {format(new Date(project.startDate), "MMM d, yyyy")}
+                      </dd>
+                    </div>
+                  )}
+
+                  {project.endDate && (
+                    <div>
+                      <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Due Date
+                      </dt>
+                      <dd className="mt-1 flex items-center gap-1 text-sm">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        {format(new Date(project.endDate), "MMM d, yyyy")}
+                      </dd>
+                    </div>
+                  )}
+
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Created
+                    </dt>
+                    <dd className="mt-1 text-sm">
+                      {format(new Date(project.createdAt), "MMM d, yyyy · HH:mm")}
+                    </dd>
+                  </div>
+
+                  {project.description && (
+                    <div className="sm:col-span-2">
+                      <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Description
+                      </dt>
+                      <dd className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
+                        {project.description}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+
+                {canManageProject && (
+                  <>
+                    <div className="h-px bg-[#efeeec]" />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditOpen(true)}
+                    >
+                      <Pencil className="mr-2 h-3.5 w-3.5" />
+                      Edit Project
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {canCreateWorkflowDraft && (
+              <div className="xl:col-span-4 xl:sticky xl:top-24 h-fit">
+                <CreateWorkflowDraftCard
+                  onCreateDraft={() => setIsCreateWorkflowDialogOpen(true)}
+                  onViewWorkflows={() => navigate("/workflows")}
+                  disabled={isCreatingWorkflowDraft}
+                />
+              </div>
             )}
           </div>
         </TabsContent>
@@ -1217,6 +1261,73 @@ export function ProjectDetailPage() {
             >
               {isLeavingProject && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Leave Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isCreateWorkflowDialogOpen}
+        onOpenChange={(open) => !isCreatingWorkflowDraft && setIsCreateWorkflowDialogOpen(open)}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create draft from this project?</DialogTitle>
+            <DialogDescription>
+              This creates a new editable workflow draft based on <span className="font-semibold text-[#233a87]">{project.name}</span>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 rounded-lg border border-[rgba(197,197,211,0.35)] bg-[#faf9f7] p-4">
+            <label className="flex items-start gap-2 text-sm text-[#1a1c1b]">
+              <input
+                type="checkbox"
+                checked={includeSubtasks}
+                onChange={(event) => setIncludeSubtasks(event.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-[rgba(197,197,211,0.35)]"
+                disabled={isCreatingWorkflowDraft}
+              />
+              Include subtasks
+            </label>
+
+            <label className="flex items-start gap-2 text-sm text-[#1a1c1b]">
+              <input
+                type="checkbox"
+                checked={includeCompletedTasks}
+                onChange={(event) => setIncludeCompletedTasks(event.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-[rgba(197,197,211,0.35)]"
+                disabled={isCreatingWorkflowDraft}
+              />
+              Include completed tasks
+            </label>
+
+            <label className="flex items-start gap-2 text-sm text-[#1a1c1b]">
+              <input
+                type="checkbox"
+                checked={useAiRefinement}
+                onChange={(event) => setUseAiRefinement(event.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-[rgba(197,197,211,0.35)]"
+                disabled={isCreatingWorkflowDraft}
+              />
+              Request AI refinement
+            </label>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateWorkflowDialogOpen(false)}
+              disabled={isCreatingWorkflowDraft}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#233a87] text-white hover:opacity-90"
+              onClick={handleCreateWorkflowDraft}
+              disabled={isCreatingWorkflowDraft}
+            >
+              {isCreatingWorkflowDraft && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm create
             </Button>
           </DialogFooter>
         </DialogContent>

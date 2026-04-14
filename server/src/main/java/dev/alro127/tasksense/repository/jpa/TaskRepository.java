@@ -20,11 +20,15 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
 
     Page<TaskEntity> findByProjectId(Long projectId, Pageable pageable);
 
+    List<TaskEntity> findAllByProjectIdOrderByPositionAscIdAsc(Long projectId);
+
     List<TaskEntity> findByProjectIdAndStatus(Long projectId, TaskStatus status);
 
     Page<TaskEntity> findByParentTaskId(Long parentTaskId, Pageable pageable);
 
     Optional<TaskEntity> findByIdAndProjectId(Long id, Long projectId);
+
+    List<TaskEntity> findAllByIdInAndProjectId(List<Long> ids, Long projectId);
 
     // Câu query bên dưới cần được optimize lại
     @Query(value = """

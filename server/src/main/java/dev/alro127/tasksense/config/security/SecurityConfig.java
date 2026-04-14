@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -35,6 +36,11 @@ public class SecurityConfig {
                         s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/workflows/explore").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/workflow-comments/workflow/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/workflow-comments/*/reactions/*").permitAll()
+                        .requestMatchers(new RegexRequestMatcher("^/workflows/\\d+/rating-summary$", "GET")).permitAll()
+                        .requestMatchers(new RegexRequestMatcher("^/workflows/\\d+$", "GET")).permitAll()
                         .requestMatchers("/auth/**", "/api-docs/**", "/swagger-ui/**","/actuator/health",
                                         "/pings/**", "/ws/**", "/ws"
                                 ).permitAll()

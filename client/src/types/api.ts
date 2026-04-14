@@ -314,6 +314,92 @@ export interface SendProjectJoinRequestBody {
   message?: string;
 }
 
+// ─── Workflow ───────────────────────────────────────────────────────────────
+export type WorkflowStatus = "DRAFT" | "PUBLIC";
+export type WorkflowGenerationSource = "RULE_BASED" | "AI_REFINED";
+
+export interface WorkflowStepTaskSummaryResponse {
+  id: number;
+  title: string;
+  status: TaskStatus;
+  sprintId: number | null;
+  parentTaskId: number | null;
+}
+
+export interface WorkflowStepResponse {
+  id: number;
+  title: string;
+  description: string | null;
+  position: number;
+  sourceType: string;
+  sourceSprintId: number | null;
+  tasks: WorkflowStepTaskSummaryResponse[];
+}
+
+export interface WorkflowDraftResponse {
+  id: number;
+  projectId: number;
+  createdBy: number;
+  name: string;
+  description: string | null;
+  status: WorkflowStatus;
+  generationSource: WorkflowGenerationSource;
+  aiRefinementRequested: boolean;
+  publishedAt?: string | null;
+  publicationVersion?: number | null;
+  createdAt: string;
+  updatedAt: string;
+  favorited: boolean;
+  steps: WorkflowStepResponse[];
+}
+
+export interface UpsertWorkflowRatingRequest {
+  stars: number;
+  reviewText?: string;
+}
+
+export interface WorkflowRatingResponse {
+  workflowId: number;
+  userId: number;
+  stars: number;
+  reviewText: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkflowRatingSummaryResponse {
+  workflowId: number;
+  averageStars: number | null;
+  totalRatings: number;
+}
+
+export interface WorkflowFavoriteToggleResponse {
+  workflowId: number;
+  favorited: boolean;
+}
+
+export interface UpdateWorkflowStepRequest {
+  id?: number;
+  title: string;
+  description?: string;
+  position: number;
+  sourceType?: string;
+  sourceSprintId?: number | null;
+  taskIds: number[];
+}
+
+export interface UpdateWorkflowDraftRequest {
+  name: string;
+  description?: string;
+  steps: UpdateWorkflowStepRequest[];
+}
+
+export interface CreateWorkflowFromProjectRequest {
+  includeSubtasks?: boolean;
+  includeCompletedTasks?: boolean;
+  useAiRefinement?: boolean;
+}
+
 // ─── Workspace Join Request ───────────────────────────────────────────────────
 export type WorkspaceJoinRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 
@@ -553,6 +639,32 @@ export interface CommentUpdateRequest {
 
 export interface CommentReactionRequest {
   icon: string;
+}
+
+// ─── Workflow Comment ────────────────────────────────────────────────────────
+export interface WorkflowCommentResponse {
+  id: number;
+  workflowId: number;
+  parentCommentId: number | null;
+  content: string;
+  isEdited: boolean;
+  createdAt: string;
+  updatedAt: string;
+  user: UserSummaryResponse;
+  mentions: UserSummaryResponse[];
+  reactions: Record<string, number>;
+}
+
+export interface WorkflowCommentCreateRequest {
+  workflowId: number;
+  parentCommentId?: number;
+  content: string;
+  mentionUserIds?: number[];
+}
+
+export interface WorkflowCommentUpdateRequest {
+  content: string;
+  mentionUserIds?: number[];
 }
 
 // ─── Attachment ───────────────────────────────────────────────────────────────

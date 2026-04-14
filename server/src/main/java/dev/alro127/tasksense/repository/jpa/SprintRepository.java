@@ -28,4 +28,7 @@ public interface SprintRepository extends JpaRepository<SprintEntity, Long> {
             @Param("projectIds") List<Long> projectIds,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    List<SprintEntity> findAllByProjectIdOrderByStartDateAscIdAsc(Long projectId);
+
 }

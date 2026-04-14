@@ -9,6 +9,7 @@ import {
   User,
   X,
   BookOpen,
+  GitBranch,
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
@@ -31,7 +32,8 @@ import { clearNotifications } from "@/features/notification/notificationSlice";
 const topNavItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "My Workspace", to: "/workspaces", icon: FolderKanban },
-  { label: "Community", to: "/workspaces/explore", icon: Globe },
+  { label: "Workflows", to: "/workflows", icon: GitBranch },
+  { label: "Community", to: "/community", icon: Globe },
   { label: "AI Assistant", to: "/agent", icon: Bot },
   { label: "Profile", to: "/profile", icon: User },
 ];
