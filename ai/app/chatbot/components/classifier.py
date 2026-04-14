@@ -6,7 +6,7 @@ Uses a zero-shot LLM call with a strict JSON output contract.
 Returns
 -------
 {"is_relevant": bool, "intent": "task_query" | "project_query" | "count_query" | "unrelated",
- "is_personal": bool}
+ "is_personal": bool, "requested_limit": int | None}
 """
 
 import json
@@ -28,6 +28,7 @@ class ClassifyResult(TypedDict):
     is_relevant: bool
     intent: str
     is_personal: bool
+    requested_limit: int | None
 
 
 # Cache the prompt file so disk I/O happens only once per process.
@@ -44,8 +45,8 @@ def classify(query: str) -> ClassifyResult:
         query: Raw user input.
 
     Returns:
-        ClassifyResult with is_relevant and intent fields.
-        Falls back to {"is_relevant": False, "intent": "unrelated"} on parse failure.
+        ClassifyResult with is_relevant, intent, is_personal, and requested_limit fields.
+        Falls back to safe defaults on parse failure.
     """
     logger.info("[classifier] query=%r", query)
 
@@ -63,13 +64,25 @@ def classify(query: str) -> ClassifyResult:
             raise ValueError("missing required keys")
     except (json.JSONDecodeError, ValueError):
         logger.warning("[classifier] unparseable LLM output=%r — defaulting to unrelated", raw)
-        result = {"is_relevant": False, "intent": "unrelated", "is_personal": False}
+        result = {"is_relevant": False, "intent": "unrelated", "is_personal": False, "requested_limit": None}
 
     logger.info("[classifier] result=%s", result)
+
+    # Validate requested_limit
+    requested_limit = result.get("requested_limit")
+    if requested_limit is not None:
+        try:
+            requested_limit = int(requested_limit)
+            # Cap at 100
+            requested_limit = min(requested_limit, 100)
+        except (ValueError, TypeError):
+            requested_limit = None
+
     return ClassifyResult(
         is_relevant=bool(result["is_relevant"]),
         intent=str(result["intent"]),
         is_personal=bool(result.get("is_personal", False)),
+        requested_limit=requested_limit,
     )
 
 

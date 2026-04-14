@@ -23,12 +23,18 @@ _scheduler = BackgroundScheduler(timezone="UTC")
 
 def start() -> None:
     """
-    Start the background scheduler.
+    Start the background scheduler if enabled.
 
     Always triggers an immediate first sync (next_run_time=now) so that
     Qdrant is populated before the first user query arrives.
     If SYNC_INTERVAL_MINUTES > 0 the job also repeats on that cadence.
+
+    Set ENABLE_SYNC=false to disable embedding sync entirely.
     """
+    if not settings.enable_sync:
+        logger.info("[scheduler] embedding sync is disabled (ENABLE_SYNC=false)")
+        return
+
     interval = settings.sync_interval_minutes
 
     _scheduler.add_job(

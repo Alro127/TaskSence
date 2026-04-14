@@ -91,7 +91,7 @@ export const store = configureStore({
       .concat(sprintApi.middleware)
       .concat(tagApi.middleware)
       .concat(analyticsApi.middleware)
-      .concat(dashboardApi.middleware),
+      .concat(dashboardApi.middleware)
       .concat(agentApi.middleware),
 });
 

@@ -384,6 +384,62 @@ def hydrate_documents_with_postgres(docs: list[Document]) -> list[Document]:
     return hydrated
 
 
+def resolve_project_by_name(project_name: str, user_id: int) -> int | None:
+    """
+    Find a project ID by name. First checks if user has access, then checks if project exists.
+
+    Returns the project ID if found and accessible, None otherwise.
+    """
+    if not project_name or not project_name.strip():
+        return None
+
+    try:
+        with _connect() as conn:
+            with conn.cursor() as cur:
+                # First try: find accessible projects for user
+                cur.execute(
+                    """
+                    SELECT p.id
+                    FROM projects p
+                    WHERE LOWER(p.name) ILIKE LOWER(%s)
+                    AND (
+                        p.id IN (
+                            SELECT projectId FROM project_members WHERE userId = %s
+                        )
+                        OR p.ownerId = %s
+                    )
+                    LIMIT 1
+                    """,
+                    (f"%{project_name}%", user_id, user_id),
+                )
+                row = cur.fetchone()
+                if row:
+                    logger.info("[source-truth] found accessible project: %r id=%s", project_name, row["id"])
+                    return int(row["id"])
+
+                # Fallback: check if project exists but user has no access
+                cur.execute(
+                    """
+                    SELECT p.id
+                    FROM projects p
+                    WHERE LOWER(p.name) ILIKE LOWER(%s)
+                    LIMIT 1
+                    """,
+                    (f"%{project_name}%",),
+                )
+                row = cur.fetchone()
+                if row:
+                    logger.warning("[source-truth] project exists but user has no access: %r (user_id=%s)", project_name, user_id)
+                    return None
+
+                logger.debug("[source-truth] project not found: %r", project_name)
+                return None
+
+    except Exception as exc:
+        logger.warning("[source-truth] resolve_project_by_name failed for %r: %s", project_name, exc)
+        return None
+
+
 def count_tasks_exact(
     query: str,
     user_id: int,
@@ -433,9 +489,6 @@ def count_tasks_exact(
                 cur.execute("\n".join(sql), params)
                 row = cur.fetchone()
         total = int(row["total"]) if row else 0
-
-        # Rewritten query text may miss exact DB terms. If scoped count with text
-        # is zero, fall back to exact scope-only count.
         if total == 0 and query.strip() and (project_id is not None or workspace_id is not None):
             logger.info(
                 "[source-truth] count fallback to scope-only query project_id=%s workspace_id=%s",

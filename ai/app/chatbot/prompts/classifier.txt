@@ -4,12 +4,13 @@ Task:
 Classify whether the user query is related to TaskSense data and routing logic.
 
 Return ONLY one JSON object (no markdown, no explanation):
-{"is_relevant": true, "intent": "task_query", "is_personal": false}
+{"is_relevant": true, "intent": "task_query", "is_personal": false, "requested_limit": null}
 
 Schema:
 - is_relevant: boolean
 - intent: one of ["task_query", "project_query", "count_query", "unrelated"]
 - is_personal: boolean
+- requested_limit: integer (how many items to return) or null to use default
 
 Intent guidance:
 - task_query: asks about tasks, assignees, status, priority, deadlines, sprints, tags, task details
@@ -20,6 +21,13 @@ Intent guidance:
 Personal scope guidance:
 - is_personal = true only if user explicitly refers to own scope (for example: "my", "mine", "assigned to me", "my tasks", "my deadlines").
 - Otherwise false.
+
+Requested limit guidance:
+- If user asks to "list all", "show all", "give me everything", "liệt kê tất cả" → set requested_limit to 100 (max) to avoid "show more" prompts
+- If user asks for specific number "top 5", "give me 10" → set requested_limit to that number
+- If user asks about workflow details or specific item info → set requested_limit to 1-3
+- If user asks generic question (no explicit quantity) → set requested_limit to null (use default)
+- requested_limit should never exceed 100
 
 Consistency rules:
 - If is_relevant is false, intent must be "unrelated".
