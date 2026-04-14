@@ -1,16 +1,8 @@
 package dev.alro127.tasksense.controller;
 
-import dev.alro127.tasksense.dto.common.ApiResponse;
-import dev.alro127.tasksense.dto.request.CommentReactionRequest;
-import dev.alro127.tasksense.dto.request.UpdateWorkflowCommentRequest;
-import dev.alro127.tasksense.dto.request.WorkflowCommentCreateRequest;
-import dev.alro127.tasksense.dto.response.UserSummaryResponse;
-import dev.alro127.tasksense.dto.response.WorkflowCommentResponse;
-import dev.alro127.tasksense.service.WorkflowCommentService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -22,143 +14,141 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import dev.alro127.tasksense.dto.common.ApiResponse;
+import dev.alro127.tasksense.dto.request.CommentReactionRequest;
+import dev.alro127.tasksense.dto.request.UpdateWorkflowCommentRequest;
+import dev.alro127.tasksense.dto.request.WorkflowCommentCreateRequest;
+import dev.alro127.tasksense.dto.response.UserSummaryResponse;
+import dev.alro127.tasksense.dto.response.WorkflowCommentResponse;
+import dev.alro127.tasksense.service.WorkflowCommentService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/workflow-comments")
 @RequiredArgsConstructor
 public class WorkflowCommentController {
 
-    private final WorkflowCommentService workflowCommentService;
+        private final WorkflowCommentService workflowCommentService;
 
-    @PostMapping
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<WorkflowCommentResponse>> createComment(
-            @Valid @RequestBody WorkflowCommentCreateRequest request) {
+        @PostMapping
+        public ResponseEntity<ApiResponse<WorkflowCommentResponse>> createComment(
+                        @Valid @RequestBody WorkflowCommentCreateRequest request) {
 
-        ApiResponse<WorkflowCommentResponse> response = new ApiResponse<>(
-                "200",
-                "Create workflow comment successfully",
-                workflowCommentService.createComment(request),
-                null
-        );
+                ApiResponse<WorkflowCommentResponse> response = new ApiResponse<>(
+                                "200",
+                                "Create workflow comment successfully",
+                                workflowCommentService.createComment(request),
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @PutMapping("/{commentId}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<WorkflowCommentResponse>> updateComment(
-            @PathVariable Long commentId,
-            @Valid @RequestBody UpdateWorkflowCommentRequest request) {
+        @PutMapping("/{commentId}")
+        public ResponseEntity<ApiResponse<WorkflowCommentResponse>> updateComment(
+                        @PathVariable Long commentId,
+                        @Valid @RequestBody UpdateWorkflowCommentRequest request) {
 
-        ApiResponse<WorkflowCommentResponse> response = new ApiResponse<>(
-                "200",
-                "Update workflow comment successfully",
-                workflowCommentService.updateComment(commentId, request),
-                null
-        );
+                ApiResponse<WorkflowCommentResponse> response = new ApiResponse<>(
+                                "200",
+                                "Update workflow comment successfully",
+                                workflowCommentService.updateComment(commentId, request),
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @DeleteMapping("/{commentId}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<Void>> deleteComment(@PathVariable Long commentId) {
-        workflowCommentService.deleteComment(commentId);
+        @DeleteMapping("/{commentId}")
 
-        ApiResponse<Void> response = new ApiResponse<>(
-                "200",
-                "Delete workflow comment successfully",
-                null,
-                null
-        );
+        public ResponseEntity<ApiResponse<Void>> deleteComment(@PathVariable Long commentId) {
+                workflowCommentService.deleteComment(commentId);
 
-        return ResponseEntity.ok(response);
-    }
+                ApiResponse<Void> response = new ApiResponse<>(
+                                "200",
+                                "Delete workflow comment successfully",
+                                null,
+                                null);
 
-    @GetMapping("/workflow/{workflowId}")
-    public ResponseEntity<ApiResponse<List<WorkflowCommentResponse>>> getCommentsByWorkflow(
-            @PathVariable Long workflowId,
-            @RequestParam(required = false) Long cursor,
-            @RequestParam(defaultValue = "10") int limit) {
+                return ResponseEntity.ok(response);
+        }
 
-        ApiResponse<List<WorkflowCommentResponse>> response = new ApiResponse<>(
-                "200",
-                "Get workflow comments successfully",
-                workflowCommentService.getComments(workflowId, cursor, limit),
-                null
-        );
+        @GetMapping("/workflow/{workflowId}")
+        public ResponseEntity<ApiResponse<List<WorkflowCommentResponse>>> getCommentsByWorkflow(
+                        @PathVariable Long workflowId,
+                        @RequestParam(required = false) Long cursor,
+                        @RequestParam(defaultValue = "10") int limit) {
 
-        return ResponseEntity.ok(response);
-    }
+                ApiResponse<List<WorkflowCommentResponse>> response = new ApiResponse<>(
+                                "200",
+                                "Get workflow comments successfully",
+                                workflowCommentService.getComments(workflowId, cursor, limit),
+                                null);
 
-    @PostMapping("/{commentId}/reactions")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<Void>> addReaction(
-            @PathVariable Long commentId,
-            @Valid @RequestBody CommentReactionRequest request) {
+                return ResponseEntity.ok(response);
+        }
 
-        workflowCommentService.addReaction(commentId, request);
+        @PostMapping("/{commentId}/reactions")
 
-        ApiResponse<Void> response = new ApiResponse<>(
-                "200",
-                "Add reaction successfully",
-                null,
-                null
-        );
+        public ResponseEntity<ApiResponse<Void>> addReaction(
+                        @PathVariable Long commentId,
+                        @Valid @RequestBody CommentReactionRequest request) {
 
-        return ResponseEntity.ok(response);
-    }
+                workflowCommentService.addReaction(commentId, request);
 
-    @PatchMapping("/{commentId}/reactions")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<Void>> updateReaction(
-            @PathVariable Long commentId,
-            @Valid @RequestBody CommentReactionRequest request) {
+                ApiResponse<Void> response = new ApiResponse<>(
+                                "200",
+                                "Add reaction successfully",
+                                null,
+                                null);
 
-        workflowCommentService.updateReaction(commentId, request);
+                return ResponseEntity.ok(response);
+        }
 
-        ApiResponse<Void> response = new ApiResponse<>(
-                "200",
-                "Update reaction successfully",
-                null,
-                null
-        );
+        @PatchMapping("/{commentId}/reactions")
 
-        return ResponseEntity.ok(response);
-    }
+        public ResponseEntity<ApiResponse<Void>> updateReaction(
+                        @PathVariable Long commentId,
+                        @Valid @RequestBody CommentReactionRequest request) {
 
-    @DeleteMapping("/{commentId}/reactions")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<Void>> removeReaction(
-            @PathVariable Long commentId,
-            @RequestBody CommentReactionRequest request) {
+                workflowCommentService.updateReaction(commentId, request);
 
-        workflowCommentService.removeReaction(commentId, request);
+                ApiResponse<Void> response = new ApiResponse<>(
+                                "200",
+                                "Update reaction successfully",
+                                null,
+                                null);
 
-        ApiResponse<Void> response = new ApiResponse<>(
-                "200",
-                "Remove reaction successfully",
-                null,
-                null
-        );
+                return ResponseEntity.ok(response);
+        }
 
-        return ResponseEntity.ok(response);
-    }
+        @DeleteMapping("/{commentId}/reactions")
 
-    @GetMapping("/{commentId}/reactions/{icon}")
-    public ResponseEntity<ApiResponse<List<UserSummaryResponse>>> getReactions(
-            @PathVariable Long commentId,
-            @PathVariable String icon) {
+        public ResponseEntity<ApiResponse<Void>> removeReaction(
+                        @PathVariable Long commentId,
+                        @RequestBody CommentReactionRequest request) {
 
-        ApiResponse<List<UserSummaryResponse>> response = new ApiResponse<>(
-                "200",
-                "Get reactions successfully",
-                workflowCommentService.getReactions(commentId, icon),
-                null
-        );
+                workflowCommentService.removeReaction(commentId, request);
 
-        return ResponseEntity.ok(response);
-    }
+                ApiResponse<Void> response = new ApiResponse<>(
+                                "200",
+                                "Remove reaction successfully",
+                                null,
+                                null);
+
+                return ResponseEntity.ok(response);
+        }
+
+        @GetMapping("/{commentId}/reactions/{icon}")
+        public ResponseEntity<ApiResponse<List<UserSummaryResponse>>> getReactions(
+                        @PathVariable Long commentId,
+                        @PathVariable String icon) {
+
+                ApiResponse<List<UserSummaryResponse>> response = new ApiResponse<>(
+                                "200",
+                                "Get reactions successfully",
+                                workflowCommentService.getReactions(commentId, icon),
+                                null);
+
+                return ResponseEntity.ok(response);
+        }
 }

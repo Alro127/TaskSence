@@ -65,18 +65,6 @@ public class PermissionChecker {
     }
 
     /**
-     * Check current request is authenticated.
-     * Dùng: @PreAuthorize("@perm.authenticated()")
-     */
-    public boolean authenticated() {
-        try {
-            return securityService.getCurrentUserId() != null;
-        } catch (RuntimeException ex) {
-            return false;
-        }
-    }
-
-    /**
      * Check ownership of a workflow.
      * Dùng: @PreAuthorize("@perm.workflowOwner(#workflowId)")
      */

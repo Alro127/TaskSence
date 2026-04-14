@@ -60,7 +60,6 @@ public class WorkflowController {
         }
 
         @GetMapping("/me")
-        @PreAuthorize("@perm.authenticated()")
         public ResponseEntity<ApiResponse<PageResponse<WorkflowDraftResponse>>> getMyWorkflows(
                         @RequestParam(required = false) WorkflowStatus status,
                         Pageable pageable) {
@@ -74,7 +73,6 @@ public class WorkflowController {
         }
 
         @GetMapping("/me/favorites")
-        @PreAuthorize("@perm.authenticated()")
         public ResponseEntity<ApiResponse<PageResponse<WorkflowDraftResponse>>> getMyFavoriteWorkflows(
                         Pageable pageable) {
                 ApiResponse<PageResponse<WorkflowDraftResponse>> response = new ApiResponse<>(
@@ -111,7 +109,6 @@ public class WorkflowController {
         }
 
         @PutMapping("/{workflowId}/rating")
-        @PreAuthorize("@perm.authenticated()")
         public ResponseEntity<ApiResponse<WorkflowRatingResponse>> upsertWorkflowRating(
                         @PathVariable Long workflowId,
                         @Valid @RequestBody UpsertWorkflowRatingRequest request) {
@@ -138,7 +135,6 @@ public class WorkflowController {
         }
 
         @PostMapping("/{workflowId}/favorite/toggle")
-        @PreAuthorize("@perm.authenticated()")
         public ResponseEntity<ApiResponse<WorkflowFavoriteToggleResponse>> toggleWorkflowFavorite(
                         @PathVariable Long workflowId) {
                 ApiResponse<WorkflowFavoriteToggleResponse> response = new ApiResponse<>(
