@@ -51,13 +51,35 @@ export function AgentChatPage() {
   const persistedMessages = useMemo<ChatMessage[]>(() => {
     const rows = messagesRes?.data?.data ?? [];
     const ordered = [...rows].reverse();
-    return ordered.map((m) => ({
-      role: m.role === "USER" ? "user" : "assistant",
-      content: m.content,
-      sources: m.role === "ASSISTANT" && Array.isArray(m.sources)
-        ? (m.sources as AIAgentSource[])
-        : undefined,
-    }));
+    return ordered.map((m) => {
+      const message: ChatMessage = {
+        role: m.role === "USER" ? "user" : "assistant",
+        content: m.content,
+      };
+
+      if (m.role === "ASSISTANT") {
+        // Extract sources from context if available
+        if (Array.isArray(m.sources)) {
+          message.sources = m.sources as AIAgentSource[];
+        } else if (m.context && typeof m.context === "object" && "documents" in m.context) {
+          // Extract from pagination context structure
+          const ctx = m.context as Record<string, unknown>;
+          if (Array.isArray(ctx.documents)) {
+            message.sources = ctx.documents as AIAgentSource[];
+          }
+        }
+
+        // Extract pagination metadata if available
+        if (m.context && typeof m.context === "object" && "pagination" in m.context) {
+          const ctx = m.context as Record<string, unknown>;
+          if (ctx.pagination && typeof ctx.pagination === "object") {
+            message.pagination = ctx.pagination as ChatMessage["pagination"];
+          }
+        }
+      }
+
+      return message;
+    });
   }, [messagesRes]);
 
   const messages = useMemo(() => {
@@ -117,6 +139,25 @@ export function AgentChatPage() {
     }
   };
 
+  const handleShowMore = async (messageIndex: number) => {
+    const message = messages[messageIndex];
+    if (!message || message.role !== "assistant" || !message.pagination?.has_more) return;
+    if (isSendLoading || activeSessionId === null) return;
+
+    // Use the message content as the continuation query (e.g., "show more")
+    const continuationQuery = "show more";
+    setPendingUserMessage(continuationQuery);
+
+    try {
+      await callAgent({ sessionId: activeSessionId, query: continuationQuery }).unwrap();
+      setPendingUserMessage(null);
+      await Promise.all([refetchMessages(), refetchSessions()]);
+    } catch (err) {
+      setPendingUserMessage(null);
+      toast.error(getApiErrorMessage(err, "Failed to load more results."));
+    }
+  };
+
   const handleTextareaChange = (value: string, textarea: HTMLTextAreaElement) => {
     setInput(value);
     textarea.style.height = "auto";
@@ -163,6 +204,7 @@ export function AgentChatPage() {
           isSendLoading={isSendLoading}
           onCreateSession={handleCreateSession}
           onSendSuggestion={handleSend}
+          onShowMore={handleShowMore}
           bottomRef={bottomRef}
         />
 

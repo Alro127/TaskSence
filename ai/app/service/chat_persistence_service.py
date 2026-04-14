@@ -82,6 +82,15 @@ def persist_chat_turn(
 ) -> int | None:
     """Store a user question and assistant answer in the shared PostgreSQL tables.
 
+    Args:
+        user_id: User making the query
+        query: Original user query
+        answer: AI-generated answer
+        context_docs: Documents used for context from RAG retrieval
+        sources: Source metadata
+        session_id: Existing session ID (creates new if None)
+        is_first_turn: Whether to generate AI title
+
     If is_first_turn is True, generates a title from the answer using AI (with fallback to query).
     """
     session_title = _build_session_title(query)

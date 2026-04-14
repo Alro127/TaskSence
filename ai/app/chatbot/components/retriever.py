@@ -3,7 +3,8 @@ Retriever — queries Qdrant for relevant task/project documents.
 
 Search strategy
 -----------------------------------------------------------------
-Vector similarity search (k=5) using the configured embedding client.
+Vector similarity search respecting LLM's requested_limit from classifier.
+If no limit requested, uses default _TOP_K_DEFAULT (50).
 
 Task scope priority (_build_task_scope_filter)
 ----------------------------------------------
@@ -36,8 +37,8 @@ _QDRANT_HOST = settings.qdrant_host
 _COLLECTION_TASKS = settings.qdrant_collection_tasks
 _COLLECTION_PROJECTS = settings.qdrant_collection_projects
 
-# Number of documents returned per query
-_TOP_K = 5
+# Default number of documents returned per query (LLM can override via requested_limit)
+_TOP_K_DEFAULT = 50
 # Upper bound for count queries that include a text/vector component
 _COUNT_LIMIT = 1000
 
@@ -159,11 +160,13 @@ def _search_tasks(
     workspace_id: int | None = None,
     project_id: int | None = None,
     is_personal: bool = False,
+    limit: int | None = None,
 ) -> list[Document]:
 
     if not query.strip():
         return []
 
+    top_k = limit if limit is not None else _TOP_K_DEFAULT
     expected_dim = _get_collection_vector_dim(_COLLECTION_TASKS)
     vector = _embed_query(query, output_dimensionality=expected_dim)
     if vector is None:
@@ -171,27 +174,28 @@ def _search_tasks(
 
     scope_filter = _build_task_scope_filter(user_id, workspace_id, project_id, is_personal)
 
-    logger.info("[retriever] tasks — vector search")
+    logger.info("[retriever] tasks — vector search limit=%d", top_k)
     results = _vector_search(
         collection_name=_COLLECTION_TASKS,
         vector=vector,
         query_filter=scope_filter,
-        limit=_TOP_K,
+        limit=top_k,
         with_payload=True,
     )
     return _parse_points(results, _COLLECTION_TASKS)
 
 
-def _search_projects(query: str, workspace_id: int) -> list[Document]:
+def _search_projects(query: str, workspace_id: int, limit: int | None = None) -> list[Document]:
     if not query.strip():
         return []
 
+    top_k = limit if limit is not None else _TOP_K_DEFAULT
     expected_dim = _get_collection_vector_dim(_COLLECTION_PROJECTS)
     vector = _embed_query(query, output_dimensionality=expected_dim)
     if vector is None:
         return []
 
-    logger.info("[retriever] projects — vector search")
+    logger.info("[retriever] projects — vector search limit=%d", top_k)
     workspace_filter = Filter(
         must=[FieldCondition(key="workspaceId", match=MatchValue(value=workspace_id))]
     )
@@ -199,7 +203,7 @@ def _search_projects(query: str, workspace_id: int) -> list[Document]:
         collection_name=_COLLECTION_PROJECTS,
         vector=vector,
         query_filter=workspace_filter,
-        limit=_TOP_K,
+        limit=top_k,
         with_payload=True,
     )
     return _parse_points(results, _COLLECTION_PROJECTS)
@@ -347,18 +351,20 @@ def retrieve(
     workspace_id: int | None = None,
     project_id: int | None = None,
     is_personal: bool = False,
+    requested_limit: int | None = None,
 ) -> list[Document]:
     """
-    Retrieve up to _TOP_K relevant documents from Qdrant.
+    Retrieve relevant documents from Qdrant, respecting LLM's requested_limit.
 
     Args:
-        query:        Search string (rewritten by the rewriter component).
-        user_id:      Requesting user ID — used when is_personal=True.
-        workspace_id: When provided, scopes task search to the workspace and
-                      enables project document search.
-        project_id:   When provided, scopes task search to this project
-                      (takes priority over workspace_id).
-        is_personal:  When True, applies user_id ownership filter on tasks.
+        query:            Search string (rewritten by the rewriter component).
+        user_id:          Requesting user ID — used when is_personal=True.
+        workspace_id:     When provided, scopes task search to the workspace and
+                          enables project document search.
+        project_id:       When provided, scopes task search to this project
+                          (takes priority over workspace_id).
+        is_personal:      When True, applies user_id ownership filter on tasks.
+        requested_limit:  LLM's requested item count. If None, uses _TOP_K_DEFAULT.
 
     Returns:
         Documents sorted by descending relevance score.
@@ -368,15 +374,15 @@ def retrieve(
         return []
 
     logger.info(
-        "[retriever] query=%r user_id=%s workspace_id=%s project_id=%s is_personal=%s",
-        query, user_id, workspace_id, project_id, is_personal,
+        "[retriever] query=%r user_id=%s workspace_id=%s project_id=%s is_personal=%s requested_limit=%s",
+        query, user_id, workspace_id, project_id, is_personal, requested_limit,
     )
 
-    task_docs = _search_tasks(query, user_id, workspace_id, project_id, is_personal)
+    task_docs = _search_tasks(query, user_id, workspace_id, project_id, is_personal, limit=requested_limit)
 
     project_docs: list[Document] = []
     if workspace_id is not None:
-        project_docs = _search_projects(query, workspace_id)
+        project_docs = _search_projects(query, workspace_id, limit=requested_limit)
     else:
         logger.debug("[retriever] no workspace_id — project search skipped")
 

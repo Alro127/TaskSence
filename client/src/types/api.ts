@@ -734,10 +734,16 @@ export interface AIAgentSource {
   relation: AIAgentSourceRelation | null;
 }
 
+export interface PaginationMetadata {
+  has_more: boolean;
+  remaining_count?: number;
+}
+
 export interface AIAgentResponse {
   answer: string;
   sources: AIAgentSource[];
   sessionId: number | null;
+  pagination?: PaginationMetadata;
 }
 
 export interface AISession {
