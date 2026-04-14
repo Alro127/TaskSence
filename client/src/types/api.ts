@@ -349,6 +349,7 @@ export interface WorkflowDraftResponse {
   publicationVersion?: number | null;
   createdAt: string;
   updatedAt: string;
+  favorited: boolean;
   steps: WorkflowStepResponse[];
 }
 

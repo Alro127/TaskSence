@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Compass, Filter, Plus, RefreshCw, Search, Sparkles } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Compass, Filter, Heart, Plus, RefreshCw, Search, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,16 +8,33 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { WorkflowDraftResponse, WorkflowStatus } from "@/types/api";
 
-import { useGetMyWorkflowsQuery } from "../api/workflowApi";
+import { useGetMyFavoriteWorkflowsQuery, useGetMyWorkflowsQuery } from "../api/workflowApi";
 import { WorkflowCard } from "../components";
 
-type WorkflowTab = "ALL" | "PUBLIC" | "DRAFT";
+type WorkflowTab = "ALL" | "PUBLIC" | "DRAFT" | "FAVORITE";
 
-const TAB_CONFIG: Array<{ value: WorkflowTab; label: string; apiStatus?: WorkflowStatus }> = [
+const TAB_CONFIG: Array<{ value: WorkflowTab; label: string; apiStatus?: WorkflowStatus; queryValue?: string }> = [
   { value: "ALL", label: "All Workflows" },
+  { value: "FAVORITE", label: "Favorites", queryValue: "favorites" },
   { value: "PUBLIC", label: "Published", apiStatus: "PUBLIC" },
   { value: "DRAFT", label: "Drafts", apiStatus: "DRAFT" },
 ];
+
+function parseWorkflowTab(value: string | null): WorkflowTab {
+  if (value === "favorites") {
+    return "FAVORITE";
+  }
+
+  if (value === "public") {
+    return "PUBLIC";
+  }
+
+  if (value === "draft") {
+    return "DRAFT";
+  }
+
+  return "ALL";
+}
 
 function WorkflowCardSkeleton() {
   return (
@@ -37,19 +54,29 @@ function WorkflowCardSkeleton() {
 
 export function MyWorkflowsPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<WorkflowTab>("ALL");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [aiOnly, setAiOnly] = useState(false);
 
+  const activeTab = parseWorkflowTab(searchParams.get("tab"));
+  const isFavoriteTab = activeTab === "FAVORITE";
+
   const apiStatus = TAB_CONFIG.find((tab) => tab.value === activeTab)?.apiStatus;
 
-  const {
-    data,
-    isLoading,
-    isFetching,
-    isError,
-    refetch,
-  } = useGetMyWorkflowsQuery({ status: apiStatus, page: 0, size: 120 });
+  const myWorkflowsQuery = useGetMyWorkflowsQuery(
+    { status: apiStatus, page: 0, size: 120 },
+    { skip: isFavoriteTab },
+  );
+  const favoriteWorkflowsQuery = useGetMyFavoriteWorkflowsQuery(
+    { page: 0, size: 120 },
+    { skip: !isFavoriteTab },
+  );
+
+  const data = isFavoriteTab ? favoriteWorkflowsQuery.data : myWorkflowsQuery.data;
+  const isLoading = isFavoriteTab ? favoriteWorkflowsQuery.isLoading : myWorkflowsQuery.isLoading;
+  const isFetching = isFavoriteTab ? favoriteWorkflowsQuery.isFetching : myWorkflowsQuery.isFetching;
+  const isError = isFavoriteTab ? favoriteWorkflowsQuery.isError : myWorkflowsQuery.isError;
+  const refetch = isFavoriteTab ? favoriteWorkflowsQuery.refetch : myWorkflowsQuery.refetch;
 
   const workflowItems = data?.data?.data;
 
@@ -76,6 +103,19 @@ export function MyWorkflowsPage() {
   const clearFilters = () => {
     setSearch("");
     setAiOnly(false);
+  };
+
+  const handleTabChange = (tab: WorkflowTab) => {
+    const next = new URLSearchParams(searchParams);
+    const queryValue = TAB_CONFIG.find((item) => item.value === tab)?.queryValue;
+
+    if (!queryValue) {
+      next.delete("tab");
+    } else {
+      next.set("tab", queryValue);
+    }
+
+    setSearchParams(next);
   };
 
   return (
@@ -126,7 +166,7 @@ export function MyWorkflowsPage() {
               <button
                 key={tab.value}
                 type="button"
-                onClick={() => setActiveTab(tab.value)}
+                onClick={() => handleTabChange(tab.value)}
                 className={cn(
                   "rounded-full px-4 py-2 text-sm font-medium transition-colors",
                   activeTab === tab.value
@@ -178,15 +218,23 @@ export function MyWorkflowsPage() {
       ) : (workflowItems?.length ?? 0) === 0 ? (
         <section className="flex min-h-[360px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-[rgba(197,197,211,0.5)] bg-[#faf9f7] px-4 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[rgba(35,58,135,0.08)]">
-            <Sparkles className="h-6 w-6 text-[#233a87]" />
+            {isFavoriteTab ? <Heart className="h-6 w-6 text-[#233a87]" /> : <Sparkles className="h-6 w-6 text-[#233a87]" />}
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-[#1a1c1b]">No workflows yet</p>
+            <p className="text-sm font-semibold text-[#1a1c1b]">
+              {isFavoriteTab ? "No favorite workflows yet" : "No workflows yet"}
+            </p>
             <p className="max-w-sm text-xs text-[#444651]">
-              Create your first workflow draft from a project detail page.
+              {isFavoriteTab
+                ? "Explore community workflows and tap the heart icon to save your favorites here."
+                : "Create your first workflow draft from a project detail page."}
             </p>
           </div>
-          <Button className="bg-[#233a87] text-white hover:opacity-90" onClick={() => navigate("/workspaces")}>Go to projects</Button>
+          {isFavoriteTab ? (
+            <Button className="bg-[#233a87] text-white hover:opacity-90" onClick={() => navigate("/community?tab=workflows")}>Explore workflows</Button>
+          ) : (
+            <Button className="bg-[#233a87] text-white hover:opacity-90" onClick={() => navigate("/workspaces")}>Go to projects</Button>
+          )}
         </section>
       ) : filteredWorkflows.length === 0 ? (
         <section className="flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-[rgba(197,197,211,0.5)] bg-[#faf9f7] px-4 text-center">

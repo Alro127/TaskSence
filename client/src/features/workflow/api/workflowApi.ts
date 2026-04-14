@@ -57,6 +57,31 @@ export const workflowApi = createApi({
       },
     }),
 
+    getMyFavoriteWorkflows: builder.query<
+      ApiResponse<PageResponse<WorkflowDraftResponse>>,
+      { page?: number; size?: number }
+    >({
+      query: ({ page = 0, size = 20 }) => ({
+        url: "/workflows/me/favorites",
+        params: {
+          page,
+          size,
+        },
+      }),
+      providesTags: (result) => {
+        const tags: Array<{ type: "Workflow"; id: string | number }> = [
+          { type: "Workflow", id: "FAVORITES" },
+        ];
+
+        const workflows = result?.data?.data ?? [];
+        for (const workflow of workflows) {
+          tags.push({ type: "Workflow", id: workflow.id });
+        }
+
+        return tags;
+      },
+    }),
+
     exploreWorkflows: builder.query<
       ApiResponse<PageResponse<WorkflowDraftResponse>>,
       { keyword?: string; page?: number; size?: number }
@@ -163,16 +188,224 @@ export const workflowApi = createApi({
         url: `/workflows/${workflowId}/favorite/toggle`,
         method: "POST",
       }),
-      invalidatesTags: (_result, _error, { workflowId }) => [
-        { type: "Workflow", id: workflowId },
-        { type: "Workflow", id: "EXPLORE" },
-      ],
+      async onQueryStarted({ workflowId }, { dispatch, getState, queryFulfilled }) {
+        const state = getState() as RootState;
+        const affectedQueries = workflowApi.util.selectInvalidatedBy(state, [
+          { type: "Workflow", id: workflowId },
+          { type: "Workflow", id: "EXPLORE" },
+          { type: "Workflow", id: "FAVORITES" },
+          { type: "Workflow", id: "LIST" },
+        ]);
+
+        let workflowSnapshot: WorkflowDraftResponse | null = null;
+        for (const query of affectedQueries) {
+          if (workflowSnapshot) {
+            break;
+          }
+
+          switch (query.endpointName) {
+            case "getMyWorkflows": {
+              const cache = workflowApi.endpoints.getMyWorkflows.select(
+                query.originalArgs as { status?: WorkflowStatus; page?: number; size?: number },
+              )(state);
+              workflowSnapshot = cache.data?.data.data.find((item: WorkflowDraftResponse) => item.id === workflowId) ?? null;
+              break;
+            }
+            case "getMyFavoriteWorkflows": {
+              const cache = workflowApi.endpoints.getMyFavoriteWorkflows.select(
+                query.originalArgs as { page?: number; size?: number },
+              )(state);
+              workflowSnapshot = cache.data?.data.data.find((item: WorkflowDraftResponse) => item.id === workflowId) ?? null;
+              break;
+            }
+            case "exploreWorkflows": {
+              const cache = workflowApi.endpoints.exploreWorkflows.select(
+                query.originalArgs as { keyword?: string; page?: number; size?: number },
+              )(state);
+              workflowSnapshot = cache.data?.data.data.find((item: WorkflowDraftResponse) => item.id === workflowId) ?? null;
+              break;
+            }
+            case "getWorkflowDetail": {
+              const cache = workflowApi.endpoints.getWorkflowDetail.select(
+                query.originalArgs as { workflowId: number },
+              )(state);
+              workflowSnapshot = cache.data?.data?.id === workflowId ? cache.data.data : null;
+              break;
+            }
+            default:
+              break;
+          }
+        }
+
+        const patchResults: Array<{ undo: () => void }> = [];
+
+        for (const query of affectedQueries) {
+          switch (query.endpointName) {
+            case "getMyWorkflows":
+              patchResults.push(
+                dispatch(
+                  workflowApi.util.updateQueryData(
+                    "getMyWorkflows",
+                    query.originalArgs as { status?: WorkflowStatus; page?: number; size?: number },
+                    (draft) => {
+                      const workflow = draft.data.data.find((item) => item.id === workflowId);
+                      if (workflow) {
+                        workflow.favorited = true;
+                      }
+                    },
+                  ),
+                ),
+              );
+              break;
+            case "exploreWorkflows":
+              patchResults.push(
+                dispatch(
+                  workflowApi.util.updateQueryData(
+                    "exploreWorkflows",
+                    query.originalArgs as { keyword?: string; page?: number; size?: number },
+                    (draft) => {
+                      const workflow = draft.data.data.find((item) => item.id === workflowId);
+                      if (workflow) {
+                        workflow.favorited = true;
+                      }
+                    },
+                  ),
+                ),
+              );
+              break;
+            case "getWorkflowDetail":
+              patchResults.push(
+                dispatch(
+                  workflowApi.util.updateQueryData(
+                    "getWorkflowDetail",
+                    query.originalArgs as { workflowId: number },
+                    (draft) => {
+                      const response = draft as ApiResponse<WorkflowDraftResponse>;
+                      if (response.data.id === workflowId) {
+                        response.data.favorited = true;
+                      }
+                    },
+                  ),
+                ),
+              );
+              break;
+            case "getMyFavoriteWorkflows":
+              patchResults.push(
+                dispatch(
+                  workflowApi.util.updateQueryData(
+                    "getMyFavoriteWorkflows",
+                    query.originalArgs as { page?: number; size?: number },
+                    (draft) => {
+                      const response = draft as ApiResponse<PageResponse<WorkflowDraftResponse>>;
+                      const items = response.data.data;
+                      const index = items.findIndex((item) => item.id === workflowId);
+
+                      if (index >= 0) {
+                        items[index].favorited = true;
+                        return;
+                      }
+
+                      if (workflowSnapshot) {
+                        items.unshift({ ...workflowSnapshot, favorited: true });
+                      }
+                    },
+                  ),
+                ),
+              );
+              break;
+            default:
+              break;
+          }
+        }
+
+        try {
+          const { data } = await queryFulfilled;
+          const favorited = data.data.favorited;
+
+          for (const query of affectedQueries) {
+            switch (query.endpointName) {
+              case "getMyWorkflows":
+                dispatch(
+                  workflowApi.util.updateQueryData(
+                    "getMyWorkflows",
+                    query.originalArgs as { status?: WorkflowStatus; page?: number; size?: number },
+                    (draft) => {
+                      const workflow = draft.data.data.find((item) => item.id === workflowId);
+                      if (workflow) {
+                        workflow.favorited = favorited;
+                      }
+                    },
+                  ),
+                );
+                break;
+              case "exploreWorkflows":
+                dispatch(
+                  workflowApi.util.updateQueryData(
+                    "exploreWorkflows",
+                    query.originalArgs as { keyword?: string; page?: number; size?: number },
+                    (draft) => {
+                      const workflow = draft.data.data.find((item) => item.id === workflowId);
+                      if (workflow) {
+                        workflow.favorited = favorited;
+                      }
+                    },
+                  ),
+                );
+                break;
+              case "getWorkflowDetail":
+                dispatch(
+                  workflowApi.util.updateQueryData(
+                    "getWorkflowDetail",
+                    query.originalArgs as { workflowId: number },
+                    (draft) => {
+                      const response = draft as ApiResponse<WorkflowDraftResponse>;
+                      if (response.data.id === workflowId) {
+                        response.data.favorited = favorited;
+                      }
+                    },
+                  ),
+                );
+                break;
+              case "getMyFavoriteWorkflows":
+                dispatch(
+                  workflowApi.util.updateQueryData(
+                    "getMyFavoriteWorkflows",
+                    query.originalArgs as { page?: number; size?: number },
+                    (draft) => {
+                      const response = draft as ApiResponse<PageResponse<WorkflowDraftResponse>>;
+                      const items = response.data.data;
+                      const index = items.findIndex((item) => item.id === workflowId);
+
+                      if (favorited) {
+                        if (index >= 0) {
+                          items[index].favorited = true;
+                        } else if (workflowSnapshot) {
+                          items.unshift({ ...workflowSnapshot, favorited: true });
+                        }
+                      } else if (index >= 0) {
+                        items.splice(index, 1);
+                      }
+                    },
+                  ),
+                );
+                break;
+              default:
+                break;
+            }
+          }
+        } catch {
+          for (const patchResult of patchResults.reverse()) {
+            patchResult.undo();
+          }
+        }
+      },
     }),
   }),
 });
 
 export const {
   useGetMyWorkflowsQuery,
+  useGetMyFavoriteWorkflowsQuery,
   useExploreWorkflowsQuery,
   useGetWorkflowDetailQuery,
   useUpdateWorkflowDraftMutation,

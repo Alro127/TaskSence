@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, RefreshCw, Search, Sparkles } from "lucide-react";
+import { Heart, Loader2, RefreshCw, Search, Sparkles } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useNavigate } from "react-router-dom";
 
@@ -51,15 +51,21 @@ export function ExplorePage() {
         </p>
       </header>
 
-      <div className="relative max-w-xl">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#444651]" />
-        <Input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search by workflow title or keyword..."
-          className="pl-9"
-          aria-label="Search public workflows"
-        />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative w-full max-w-xl flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#444651]" />
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search by workflow title or keyword..."
+            className="pl-9"
+            aria-label="Search public workflows"
+          />
+        </div>
+        <Button variant="outline" onClick={() => navigate("/workflows?tab=favorites")}>
+          <Heart className="h-4 w-4" />
+          My favorites
+        </Button>
       </div>
 
       {isLoading || isFetching ? (

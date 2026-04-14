@@ -30,108 +30,123 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/workflows")
 public class WorkflowController {
 
-    private final WorkflowService workflowService;
+        private final WorkflowService workflowService;
 
-    @PutMapping("/{workflowId}")
-    @PreAuthorize("@perm.workflowOwner(#workflowId)")
-    public ResponseEntity<ApiResponse<WorkflowDraftResponse>> updateWorkflowDraft(
-            @PathVariable Long workflowId,
-            @Valid @RequestBody UpdateWorkflowDraftRequest request) {
+        @PutMapping("/{workflowId}")
+        @PreAuthorize("@perm.workflowOwner(#workflowId)")
+        public ResponseEntity<ApiResponse<WorkflowDraftResponse>> updateWorkflowDraft(
+                        @PathVariable Long workflowId,
+                        @Valid @RequestBody UpdateWorkflowDraftRequest request) {
 
-        ApiResponse<WorkflowDraftResponse> response = new ApiResponse<>(
-                "200",
-                "Update workflow draft successfully",
-                workflowService.updateWorkflowDraft(workflowId, request),
-                null);
+                ApiResponse<WorkflowDraftResponse> response = new ApiResponse<>(
+                                "200",
+                                "Update workflow draft successfully",
+                                workflowService.updateWorkflowDraft(workflowId, request),
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @PostMapping("/{workflowId}/publish")
-    @PreAuthorize("@perm.workflowOwner(#workflowId)")
-    public ResponseEntity<ApiResponse<WorkflowDraftResponse>> publishWorkflow(@PathVariable Long workflowId) {
-        ApiResponse<WorkflowDraftResponse> response = new ApiResponse<>(
-                "200",
-                "Publish workflow successfully",
-                workflowService.publishWorkflow(workflowId),
-                null);
+        @PostMapping("/{workflowId}/publish")
+        @PreAuthorize("@perm.workflowOwner(#workflowId)")
+        public ResponseEntity<ApiResponse<WorkflowDraftResponse>> publishWorkflow(@PathVariable Long workflowId) {
+                ApiResponse<WorkflowDraftResponse> response = new ApiResponse<>(
+                                "200",
+                                "Publish workflow successfully",
+                                workflowService.publishWorkflow(workflowId),
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @GetMapping("/me")
-    @PreAuthorize("@perm.authenticated()")
-    public ResponseEntity<ApiResponse<PageResponse<WorkflowDraftResponse>>> getMyWorkflows(
-            @RequestParam(required = false) WorkflowStatus status,
-            Pageable pageable) {
-        ApiResponse<PageResponse<WorkflowDraftResponse>> response = new ApiResponse<>(
-                "200",
-                "Get my workflows successfully",
-                workflowService.getMyWorkflows(status, pageable),
-                null);
+        @GetMapping("/me")
+        @PreAuthorize("@perm.authenticated()")
+        public ResponseEntity<ApiResponse<PageResponse<WorkflowDraftResponse>>> getMyWorkflows(
+                        @RequestParam(required = false) WorkflowStatus status,
+                        Pageable pageable) {
+                ApiResponse<PageResponse<WorkflowDraftResponse>> response = new ApiResponse<>(
+                                "200",
+                                "Get my workflows successfully",
+                                workflowService.getMyWorkflows(status, pageable),
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @GetMapping("/explore")
-    public ResponseEntity<ApiResponse<PageResponse<WorkflowDraftResponse>>> explorePublicWorkflows(
-            @RequestParam(required = false) String keyword,
-            Pageable pageable) {
-        ApiResponse<PageResponse<WorkflowDraftResponse>> response = new ApiResponse<>(
-                "200",
-                "Explore public workflows successfully",
-                workflowService.explorePublicWorkflows(keyword, pageable),
-                null);
+        @GetMapping("/me/favorites")
+        @PreAuthorize("@perm.authenticated()")
+        public ResponseEntity<ApiResponse<PageResponse<WorkflowDraftResponse>>> getMyFavoriteWorkflows(
+                        Pageable pageable) {
+                ApiResponse<PageResponse<WorkflowDraftResponse>> response = new ApiResponse<>(
+                                "200",
+                                "Get my favorite workflows successfully",
+                                workflowService.getMyFavoriteWorkflows(pageable),
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @GetMapping("/{workflowId}")
-    public ResponseEntity<ApiResponse<WorkflowDraftResponse>> getWorkflowDetail(@PathVariable Long workflowId) {
-        ApiResponse<WorkflowDraftResponse> response = new ApiResponse<>(
-                "200",
-                "Get workflow detail successfully",
-                workflowService.getWorkflowDetail(workflowId),
-                null);
+        @GetMapping("/explore")
+        public ResponseEntity<ApiResponse<PageResponse<WorkflowDraftResponse>>> explorePublicWorkflows(
+                        @RequestParam(required = false) String keyword,
+                        Pageable pageable) {
+                ApiResponse<PageResponse<WorkflowDraftResponse>> response = new ApiResponse<>(
+                                "200",
+                                "Explore public workflows successfully",
+                                workflowService.explorePublicWorkflows(keyword, pageable),
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @PutMapping("/{workflowId}/rating")
-    @PreAuthorize("@perm.authenticated()")
-    public ResponseEntity<ApiResponse<WorkflowRatingResponse>> upsertWorkflowRating(
-            @PathVariable Long workflowId,
-            @Valid @RequestBody UpsertWorkflowRatingRequest request) {
+        @GetMapping("/{workflowId}")
+        public ResponseEntity<ApiResponse<WorkflowDraftResponse>> getWorkflowDetail(@PathVariable Long workflowId) {
+                ApiResponse<WorkflowDraftResponse> response = new ApiResponse<>(
+                                "200",
+                                "Get workflow detail successfully",
+                                workflowService.getWorkflowDetail(workflowId),
+                                null);
 
-        ApiResponse<WorkflowRatingResponse> response = new ApiResponse<>(
-                "200",
-                "Upsert workflow rating successfully",
-                workflowService.upsertWorkflowRating(workflowId, request),
-                null);
+                return ResponseEntity.ok(response);
+        }
 
-        return ResponseEntity.ok(response);
-    }
+        @PutMapping("/{workflowId}/rating")
+        @PreAuthorize("@perm.authenticated()")
+        public ResponseEntity<ApiResponse<WorkflowRatingResponse>> upsertWorkflowRating(
+                        @PathVariable Long workflowId,
+                        @Valid @RequestBody UpsertWorkflowRatingRequest request) {
 
-    @GetMapping("/{workflowId}/rating-summary")
-    public ResponseEntity<ApiResponse<WorkflowRatingSummaryResponse>> getWorkflowRatingSummary(@PathVariable Long workflowId) {
-        ApiResponse<WorkflowRatingSummaryResponse> response = new ApiResponse<>(
-                "200",
-                "Get workflow rating summary successfully",
-                workflowService.getWorkflowRatingSummary(workflowId),
-                null);
+                ApiResponse<WorkflowRatingResponse> response = new ApiResponse<>(
+                                "200",
+                                "Upsert workflow rating successfully",
+                                workflowService.upsertWorkflowRating(workflowId, request),
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @PostMapping("/{workflowId}/favorite/toggle")
-    @PreAuthorize("@perm.authenticated()")
-    public ResponseEntity<ApiResponse<WorkflowFavoriteToggleResponse>> toggleWorkflowFavorite(@PathVariable Long workflowId) {
-        ApiResponse<WorkflowFavoriteToggleResponse> response = new ApiResponse<>(
-                "200",
-                "Toggle workflow favorite successfully",
-                workflowService.toggleWorkflowFavorite(workflowId),
-                null);
+        @GetMapping("/{workflowId}/rating-summary")
+        public ResponseEntity<ApiResponse<WorkflowRatingSummaryResponse>> getWorkflowRatingSummary(
+                        @PathVariable Long workflowId) {
+                ApiResponse<WorkflowRatingSummaryResponse> response = new ApiResponse<>(
+                                "200",
+                                "Get workflow rating summary successfully",
+                                workflowService.getWorkflowRatingSummary(workflowId),
+                                null);
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
+
+        @PostMapping("/{workflowId}/favorite/toggle")
+        @PreAuthorize("@perm.authenticated()")
+        public ResponseEntity<ApiResponse<WorkflowFavoriteToggleResponse>> toggleWorkflowFavorite(
+                        @PathVariable Long workflowId) {
+                ApiResponse<WorkflowFavoriteToggleResponse> response = new ApiResponse<>(
+                                "200",
+                                "Toggle workflow favorite successfully",
+                                workflowService.toggleWorkflowFavorite(workflowId),
+                                null);
+
+                return ResponseEntity.ok(response);
+        }
 }

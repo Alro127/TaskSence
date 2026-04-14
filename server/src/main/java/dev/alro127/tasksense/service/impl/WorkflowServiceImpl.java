@@ -317,39 +317,40 @@ public class WorkflowServiceImpl implements WorkflowService {
                 ? workflowRepository.findByCreatedById(currentUserId, pageable)
                 : workflowRepository.findByCreatedByIdAndStatus(currentUserId, status, pageable);
 
-        List<WorkflowDraftResponse> data = workflows.getContent().stream()
-                .map(this::toWorkflowDraftResponse)
-                .toList();
+        List<WorkflowDraftResponse> data = mapWorkflowsToResponses(workflows.getContent(), currentUserId);
 
-        return new PageResponse<>(
-                data,
-                workflows.getNumber(),
-                workflows.getSize(),
-                workflows.getTotalElements(),
-                workflows.getTotalPages());
+        return toPageResponse(workflows, data);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<WorkflowDraftResponse> getMyFavoriteWorkflows(Pageable pageable) {
+        Long currentUserId = securityService.getCurrentUserId();
+        Page<WorkflowEntity> workflows = workflowFavoriteRepository.findFavoritedWorkflowsByUserId(currentUserId,
+                pageable);
+
+        List<WorkflowDraftResponse> data = mapWorkflowsToResponses(workflows.getContent(), currentUserId);
+
+        return toPageResponse(workflows, data);
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<WorkflowDraftResponse> explorePublicWorkflows(String keyword, Pageable pageable) {
         Pageable effectivePageable = pageable.getSort().isUnsorted()
-                ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "publishedAt"))
+                ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                        Sort.by(Sort.Direction.DESC, "publishedAt"))
                 : pageable;
 
         String normalizedKeyword = keyword != null ? keyword.trim() : null;
         Page<WorkflowEntity> workflows = (normalizedKeyword == null || normalizedKeyword.isEmpty())
                 ? workflowRepository.findByStatus(WorkflowStatus.PUBLIC, effectivePageable)
-                : workflowRepository.searchByStatusAndKeyword(WorkflowStatus.PUBLIC, normalizedKeyword, effectivePageable);
-        List<WorkflowDraftResponse> data = workflows.getContent().stream()
-                .map(this::toWorkflowDraftResponse)
-                .toList();
+                : workflowRepository.searchByStatusAndKeyword(WorkflowStatus.PUBLIC, normalizedKeyword,
+                        effectivePageable);
+        Long currentUserId = getCurrentUserIdOrNull();
+        List<WorkflowDraftResponse> data = mapWorkflowsToResponses(workflows.getContent(), currentUserId);
 
-        return new PageResponse<>(
-                data,
-                workflows.getNumber(),
-                workflows.getSize(),
-                workflows.getTotalElements(),
-                workflows.getTotalPages());
+        return toPageResponse(workflows, data);
     }
 
     @Override
@@ -359,7 +360,8 @@ public class WorkflowServiceImpl implements WorkflowService {
                 .orElseThrow(() -> new ResourceNotFoundException("Workflow not found"));
 
         if (workflow.getStatus() == WorkflowStatus.PUBLIC) {
-            return toWorkflowDraftResponse(workflow);
+            Long currentUserId = getCurrentUserIdOrNull();
+            return toWorkflowDraftResponse(workflow, isWorkflowFavoritedByUser(workflowId, currentUserId));
         }
 
         Long currentUserId = getCurrentUserIdOrNull();
@@ -370,7 +372,7 @@ public class WorkflowServiceImpl implements WorkflowService {
             if (!workflow.getCreatedBy().getId().equals(currentUserId)) {
                 throw new AccessDeniedException("You do not have permission to access this workflow");
             }
-            return toWorkflowDraftResponse(workflow);
+            return toWorkflowDraftResponse(workflow, false);
         }
 
         throw new ResourceNotFoundException("Workflow not found");
@@ -386,7 +388,8 @@ public class WorkflowServiceImpl implements WorkflowService {
             throw new ForbiddenException("You cannot rate your own workflow");
         }
 
-        WorkflowRatingEntity rating = workflowRatingRepository.findByWorkflowIdAndUserId(workflowId, currentUser.getId())
+        WorkflowRatingEntity rating = workflowRatingRepository
+                .findByWorkflowIdAndUserId(workflowId, currentUser.getId())
                 .orElseGet(() -> WorkflowRatingEntity.builder()
                         .workflow(workflow)
                         .user(currentUser)
@@ -471,7 +474,8 @@ public class WorkflowServiceImpl implements WorkflowService {
 
     private Long getCurrentUserIdOrNull() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
             return null;
         }
 
@@ -483,10 +487,15 @@ public class WorkflowServiceImpl implements WorkflowService {
     }
 
     private WorkflowDraftResponse toWorkflowDraftResponse(WorkflowEntity workflow) {
+        Long currentUserId = getCurrentUserIdOrNull();
+        return toWorkflowDraftResponse(workflow, isWorkflowFavoritedByUser(workflow.getId(), currentUserId));
+    }
+
+    private WorkflowDraftResponse toWorkflowDraftResponse(WorkflowEntity workflow, boolean favorited) {
         List<WorkflowStepEntity> steps = workflowStepRepository
                 .findAllByWorkflowIdOrderByPositionAscIdAsc(workflow.getId());
         if (steps.isEmpty()) {
-            return toWorkflowDraftResponse(workflow, Collections.emptyList());
+            return toWorkflowDraftResponse(workflow, Collections.emptyList(), favorited);
         }
 
         List<Long> stepIds = steps.stream().map(WorkflowStepEntity::getId).toList();
@@ -516,10 +525,16 @@ public class WorkflowServiceImpl implements WorkflowService {
                 })
                 .toList();
 
-        return toWorkflowDraftResponse(workflow, stepResponses);
+        return toWorkflowDraftResponse(workflow, stepResponses, favorited);
     }
 
     private WorkflowDraftResponse toWorkflowDraftResponse(WorkflowEntity workflow, List<WorkflowStepResponse> steps) {
+        Long currentUserId = getCurrentUserIdOrNull();
+        return toWorkflowDraftResponse(workflow, steps, isWorkflowFavoritedByUser(workflow.getId(), currentUserId));
+    }
+
+    private WorkflowDraftResponse toWorkflowDraftResponse(WorkflowEntity workflow, List<WorkflowStepResponse> steps,
+            boolean favorited) {
         return WorkflowDraftResponse.builder()
                 .id(workflow.getId())
                 .projectId(workflow.getProject().getId())
@@ -533,8 +548,43 @@ public class WorkflowServiceImpl implements WorkflowService {
                 .publicationVersion(workflow.getPublicationVersion())
                 .createdAt(workflow.getCreatedAt())
                 .updatedAt(workflow.getUpdatedAt())
+                .favorited(favorited)
                 .steps(steps)
                 .build();
+    }
+
+    private PageResponse<WorkflowDraftResponse> toPageResponse(Page<WorkflowEntity> workflows,
+            List<WorkflowDraftResponse> data) {
+        return new PageResponse<>(
+                data,
+                workflows.getNumber(),
+                workflows.getSize(),
+                workflows.getTotalElements(),
+                workflows.getTotalPages());
+    }
+
+    private List<WorkflowDraftResponse> mapWorkflowsToResponses(List<WorkflowEntity> workflows, Long currentUserId) {
+        Set<Long> favoritedWorkflowIds = resolveFavoritedWorkflowIds(workflows, currentUserId);
+        return workflows.stream()
+                .map(workflow -> toWorkflowDraftResponse(workflow, favoritedWorkflowIds.contains(workflow.getId())))
+                .toList();
+    }
+
+    private Set<Long> resolveFavoritedWorkflowIds(List<WorkflowEntity> workflows, Long currentUserId) {
+        if (currentUserId == null || workflows.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        List<Long> workflowIds = workflows.stream()
+                .map(WorkflowEntity::getId)
+                .toList();
+
+        return workflowFavoriteRepository.findFavoritedWorkflowIdsByUserIdAndWorkflowIdIn(currentUserId, workflowIds);
+    }
+
+    private boolean isWorkflowFavoritedByUser(Long workflowId, Long currentUserId) {
+        return currentUserId != null
+                && workflowFavoriteRepository.existsByWorkflowIdAndUserId(workflowId, currentUserId);
     }
 
     private WorkflowRatingResponse toWorkflowRatingResponse(WorkflowRatingEntity rating) {

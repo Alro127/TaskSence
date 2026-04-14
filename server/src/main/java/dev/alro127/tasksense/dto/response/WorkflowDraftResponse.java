@@ -36,5 +36,7 @@ public class WorkflowDraftResponse {
 
     private OffsetDateTime updatedAt;
 
+    private boolean favorited;
+
     private List<WorkflowStepResponse> steps;
 }

@@ -21,6 +21,8 @@ public interface WorkflowService {
 
     PageResponse<WorkflowDraftResponse> getMyWorkflows(WorkflowStatus status, Pageable pageable);
 
+    PageResponse<WorkflowDraftResponse> getMyFavoriteWorkflows(Pageable pageable);
+
     PageResponse<WorkflowDraftResponse> explorePublicWorkflows(String keyword, Pageable pageable);
 
     WorkflowDraftResponse getWorkflowDetail(Long workflowId);

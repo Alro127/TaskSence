@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { GitBranch, Heart, Loader2, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -23,12 +22,9 @@ export function PublicWorkflowCard({ workflow, onOpen }: PublicWorkflowCardProps
   const navigate = useNavigate();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const [toggleWorkflowFavorite, { isLoading: isTogglingFavorite }] = useToggleWorkflowFavoriteMutation();
-  const [localFavorited, setLocalFavorited] = useState<boolean | null>(null);
 
   const { data: ratingSummaryData } = useGetWorkflowRatingSummaryQuery({ workflowId: workflow.id });
   const ratingSummary = ratingSummaryData?.data;
-
-  const effectiveFavorite = localFavorited ?? false;
 
   const handleToggleFavorite = async () => {
     if (!isAuthenticated) {
@@ -38,8 +34,7 @@ export function PublicWorkflowCard({ workflow, onOpen }: PublicWorkflowCardProps
     }
 
     try {
-      const response = await toggleWorkflowFavorite({ workflowId: workflow.id }).unwrap();
-      setLocalFavorited(response.data.favorited);
+      await toggleWorkflowFavorite({ workflowId: workflow.id }).unwrap();
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to update favorite."));
     }
@@ -55,13 +50,13 @@ export function PublicWorkflowCard({ workflow, onOpen }: PublicWorkflowCardProps
           type="button"
           onClick={() => void handleToggleFavorite()}
           className="rounded-md p-1.5 text-[#444651] transition-colors hover:bg-[rgba(35,58,135,0.08)] hover:text-[#233a87] focus-visible:ring-2 focus-visible:ring-[#006a61]"
-          aria-label={effectiveFavorite ? "Remove from favorites" : "Add to favorites"}
+          aria-label={workflow.favorited ? "Remove from favorites" : "Add to favorites"}
           disabled={isTogglingFavorite}
         >
           {isTogglingFavorite ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Heart className={cn("h-4 w-4", effectiveFavorite && "fill-[#ba1a1a] text-[#ba1a1a]")} />
+            <Heart className={cn("h-4 w-4", workflow.favorited && "fill-[#ba1a1a] text-[#ba1a1a]")} />
           )}
         </button>
       </div>
