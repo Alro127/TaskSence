@@ -21,6 +21,9 @@
 
 | Date | Area | Decision | Rationale |
 | ---- | ---- | -------- | --------- |
+| 2026-04-14 | AI Retrieval | Use hybrid retrieval (SQL template router + Qdrant vector retrieval) for chatbot question answering. | Improves precision for ownership/list queries while preserving semantic recall for fuzzy questions. |
+| 2026-04-14 | AI Action Execution | Mutation-style requests are delegated from AI service to Spring MCP endpoint scaffold. | Keeps write-side authority in backend domain service and allows AI module to focus on planning/orchestration. |
+| 2026-04-14 | MCP Backend API | Expose `/mcp/execute` dispatcher that validates actor identity and routes to existing domain services. | Avoids bypassing business rules while enabling AI-driven command execution through one stable integration point. |
 
 ## Durable Constraints
 

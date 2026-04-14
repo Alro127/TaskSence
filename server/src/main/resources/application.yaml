@@ -51,6 +51,19 @@ spring:
           starttls:
             enable: true
 
+  ai:
+    mcp:
+      server:
+        protocol: STREAMABLE
+        type: SYNC
+        name: tasksense-mcp-server
+        version: 1.0.0
+        instructions: TaskSense MCP server for task and project execution tools
+        annotation-scanner:
+          enabled: true
+        streamable-http:
+          mcp-endpoint: /mcp
+
 aws:
   region: ${AWS_REGION:}
   access-key: ${AWS_ACCESS_KEY:}
@@ -95,3 +108,4 @@ springdoc:
     tags-sorter: alpha
     filter: true
     path: /swagger-ui
+

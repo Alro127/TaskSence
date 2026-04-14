@@ -19,6 +19,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.chatbot.components import Document
 from app.client.llms import get_llm
+from app.config.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +144,8 @@ def generate(query: str, docs: list[Document], conversation_history: str = "") -
     """
     Generate a grounded answer for the user query using the provided context.
 
+    System prompt can be disabled via ENABLE_SYSTEM_PROMPT env var (default: true).
+
     Args:
         query: Original user question.
         docs:  Filtered context documents (output of filter_docs).
@@ -158,13 +161,25 @@ def generate(query: str, docs: list[Document], conversation_history: str = "") -
     context = _build_context(docs)
     logger.info("[generator] context_chars=%d doc_count=%d\n%s", len(context), len(docs), context)
 
-    system_prompt = _load_prompt_template().replace("{context}", context).replace("{conversation_history}", conversation_history or "(no previous messages)")
+    settings = get_settings()
+    llm = get_llm()
 
-    response = get_llm().invoke([
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=query),
-    ])
+    # Build messages based on system prompt setting
+    if settings.enable_system_prompt:
+        system_prompt = _load_prompt_template().replace("{context}", context).replace("{conversation_history}", conversation_history or "(no previous messages)")
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=query),
+        ]
+        logger.info("[generator] using system prompt (ENABLE_SYSTEM_PROMPT=True)")
+    else:
+        # When system prompt is disabled, use a minimal instruction
+        context_section = f"CONTEXT:\n{context}\n\nCONVERSATION HISTORY:\n{conversation_history or '(no previous messages)'}"
+        user_message = f"{context_section}\n\nUSER QUESTION: {query}"
+        messages = [HumanMessage(content=user_message)]
+        logger.warning("[generator] system prompt disabled (ENABLE_SYSTEM_PROMPT=False) — using minimal context injection")
 
-    answer = response.content.strip() # type: ignore
+    response = llm.invoke(messages)
+    answer = response.content.strip()  # type: ignore
     logger.info("[generator] answer=%r", answer)
     return answer

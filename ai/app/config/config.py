@@ -53,7 +53,6 @@ class Settings:
 	llm_provider: str
 	openai_api_key: SecretStr
 	openai_model: str
-	openai_embedding_model: str
 	gemini_api_key: SecretStr
 	gemini_model: str
 	gemini_embedding_model: str
@@ -66,10 +65,14 @@ class Settings:
 	qdrant_host: str
 	qdrant_collection_tasks: str
 	qdrant_collection_projects: str
-	qdrant_vector_size: int
 
 	sync_interval_minutes: int
 	sync_batch_size: int
+	enable_sync: bool
+
+	chatbot_max_context_docs: int
+	chatbot_max_context_docs_for_list: int
+	enable_system_prompt: bool
 
 	postgres_dsn: str
 	postgres_host: str
@@ -112,7 +115,6 @@ def get_settings() -> Settings:
 		llm_provider=_env_str("LLM_PROVIDER", "gemini").lower(),
 		openai_api_key=_env_secret_str("OPENAI_API_KEY", ""),
 		openai_model=_env_str("OPENAI_MODEL", "gpt-4o-mini"),
-		openai_embedding_model=_env_str("GEMINI_EMBEDDING_MODEL", "models/text-embedding-004"),
 		gemini_api_key=_env_secret_str("GEMINI_API_KEY", ""),
 		gemini_model=_env_str("GEMINI_MODEL", "gemini-2.5-flash"),
 		gemini_embedding_model=_env_str(
@@ -133,9 +135,12 @@ def get_settings() -> Settings:
 		qdrant_host=_env_str("QDRANT_HOST", "http://localhost:6333"),
 		qdrant_collection_tasks=_env_str("QDRANT_COLLECTION_TASKS", "tasks"),
 		qdrant_collection_projects=_env_str("QDRANT_COLLECTION_PROJECTS", "projects"),
-		qdrant_vector_size=_env_int("QDRANT_VECTOR_SIZE", 3072),
 		sync_interval_minutes=_env_int("SYNC_INTERVAL_MINUTES", 60),
 		sync_batch_size=_env_int("SYNC_BATCH_SIZE", 50),
+		enable_sync=_env_bool("ENABLE_SYNC", True),
+		chatbot_max_context_docs=_env_int("CHATBOT_MAX_CONTEXT_DOCS", 3),
+		chatbot_max_context_docs_for_list=_env_int("CHATBOT_MAX_CONTEXT_DOCS_FOR_LIST", 10),
+		enable_system_prompt=_env_bool("ENABLE_SYSTEM_PROMPT", True),
 		postgres_dsn=_env_str("POSTGRES_DSN", ""),
 		postgres_host=_env_str("POSTGRES_HOST", "localhost"),
 		postgres_port=_env_int("POSTGRES_PORT", 5432),

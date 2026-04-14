@@ -13,3 +13,4 @@ def sync_all() -> None:
         sync_embeddings_from_postgres()
     except Exception:
         logger.exception("[sync] sync failed")
+        raise
