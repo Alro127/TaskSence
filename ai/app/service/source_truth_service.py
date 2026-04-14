@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from app.chatbot.components import Document
 from app.config.config import get_settings
@@ -21,7 +21,14 @@ def _connect():
             "psycopg is required for PostgreSQL source-of-truth operations"
         ) from exc
 
-    return psycopg.connect(settings.effective_postgres_dsn, row_factory=dict_row)
+    return psycopg.connect(
+        settings.effective_postgres_dsn,
+        row_factory=cast(Any, dict_row),
+    )
+
+
+def _as_dict_rows(rows: Any) -> list[dict[str, Any]]:
+    return [cast(dict[str, Any], row) for row in rows]
 
 
 def _normalize_task_row(row: dict[str, Any]) -> dict[str, Any]:
@@ -158,7 +165,7 @@ def fetch_tasks_for_embedding(last_entity_id: int, limit: int) -> list[dict[str,
         with _connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, (last_entity_id, limit))
-                rows = cur.fetchall()
+                rows = _as_dict_rows(cur.fetchall())
             enriched_rows = []
             for row in rows:
                 row["relation"] = _build_task_relation(row)
@@ -211,7 +218,7 @@ def fetch_projects_for_embedding(last_entity_id: int, limit: int) -> list[dict[s
         with _connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, (last_entity_id, limit))
-                rows = cur.fetchall()
+                rows = _as_dict_rows(cur.fetchall())
             enriched_rows = []
             for row in rows:
                 row["relation"] = _build_project_relation(row)
@@ -279,7 +286,7 @@ def _fetch_tasks_by_ids(ids: list[int]) -> dict[int, dict[str, Any]]:
         with _connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, (ids,))
-                rows = cur.fetchall()
+                rows = _as_dict_rows(cur.fetchall())
             return {
                 int(r["entityId"]): _normalize_task_row({**r, "relation": _build_task_relation(r)})
                 for r in rows
@@ -332,7 +339,7 @@ def _fetch_projects_by_ids(ids: list[int]) -> dict[int, dict[str, Any]]:
         with _connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, (ids,))
-                rows = cur.fetchall()
+                rows = _as_dict_rows(cur.fetchall())
             return {
                 int(r["entityId"]): _normalize_project_row({**r, "relation": _build_project_relation(r)})
                 for r in rows
@@ -404,15 +411,24 @@ def resolve_project_by_name(project_name: str, user_id: int) -> int | None:
                     WHERE LOWER(p.name) ILIKE LOWER(%s)
                     AND (
                         p.id IN (
-                            SELECT projectId FROM project_members WHERE userId = %s
+                            SELECT project_id
+                            FROM project_members
+                            WHERE user_id = %s
+                              AND deleted_at IS NULL
                         )
-                        OR p.ownerId = %s
+                        OR p.workspace_id IN (
+                            SELECT workspace_id
+                            FROM workspace_members
+                            WHERE user_id = %s
+                              AND deleted_at IS NULL
+                        )
                     )
+                    AND p.deleted_at IS NULL
                     LIMIT 1
                     """,
                     (f"%{project_name}%", user_id, user_id),
                 )
-                row = cur.fetchone()
+                row = cast(dict[str, Any] | None, cur.fetchone())
                 if row:
                     logger.info("[source-truth] found accessible project: %r id=%s", project_name, row["id"])
                     return int(row["id"])
@@ -423,11 +439,12 @@ def resolve_project_by_name(project_name: str, user_id: int) -> int | None:
                     SELECT p.id
                     FROM projects p
                     WHERE LOWER(p.name) ILIKE LOWER(%s)
+                    AND p.deleted_at IS NULL
                     LIMIT 1
                     """,
                     (f"%{project_name}%",),
                 )
-                row = cur.fetchone()
+                row = cast(dict[str, Any] | None, cur.fetchone())
                 if row:
                     logger.warning("[source-truth] project exists but user has no access: %r (user_id=%s)", project_name, user_id)
                     return None
@@ -486,8 +503,8 @@ def count_tasks_exact(
     try:
         with _connect() as conn:
             with conn.cursor() as cur:
-                cur.execute("\n".join(sql), params)
-                row = cur.fetchone()
+                cur.execute(cast(Any, "\n".join(sql)), params)
+                row = cast(dict[str, Any] | None, cur.fetchone())
         total = int(row["total"]) if row else 0
         if total == 0 and query.strip() and (project_id is not None or workspace_id is not None):
             logger.info(

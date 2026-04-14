@@ -5,12 +5,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from app.agent import run_action_agent
 from app.chatbot.components import Document
 from app.chatbot.components.classifier import classify
-from app.chatbot.components.filter import filter_docs, FilterResult
+from app.chatbot.components.filter import filter_docs
 from app.chatbot.components.generator import generate
 from app.chatbot.components.retriever import retrieve
 from app.chatbot.components.rewriter import rewrite
+from app.chatbot.components.sql_router import query_postgres_documents
 from app.service.chat_persistence_service import persist_chat_turn
 from app.service.source_truth_service import count_tasks_exact, hydrate_documents_with_postgres, resolve_project_by_name
 
@@ -19,6 +21,25 @@ logger = logging.getLogger(__name__)
 _MSG_UNRELATED = "Chi ho tro cau hoi lien quan den task/project."
 _MSG_NO_DATA = "Khong tim thay du lieu phu hop."
 _MSG_ERROR = "He thong AI dang gap loi."
+
+
+def _looks_like_action_request(query: str) -> bool:
+    normalized = query.lower()
+    action_phrases = [
+        "tao task",
+        "tạo task",
+        "create task",
+        "tao project",
+        "tạo project",
+        "create project",
+        "update task",
+        "chuyen task",
+        "chuyển task",
+        "from workflow",
+        "tu workflow",
+        "từ workflow",
+    ]
+    return any(phrase in normalized for phrase in action_phrases)
 
 
 def _extract_project_context(query: str, user_id: int) -> int | None:
@@ -44,7 +65,13 @@ Return format: Just the project name or "NONE", nothing else."""
 
         logger.info("[chatbot-service] extracting project name from query")
         response = llm.invoke(extraction_prompt)
-        project_name = response.content.strip()
+        raw_content = response.content
+        if isinstance(raw_content, str):
+            project_name = raw_content.strip()
+        elif isinstance(raw_content, list):
+            project_name = "\n".join(str(item) for item in raw_content).strip()
+        else:
+            project_name = str(raw_content).strip()
 
         logger.debug("[chatbot-service] LLM extraction result: %r", project_name)
 
@@ -136,6 +163,40 @@ def run_chatbot_pipeline(
     conversation_history = _get_conversation_history(session_id)
 
     try:
+        if _looks_like_action_request(query):
+            action_result = run_action_agent(query=query, user_id=user_id)
+            if action_result.executed:
+                action_answer = (
+                    f"Da thuc thi hanh dong {action_result.action} qua MCP. "
+                    "Neu ban muon, minh co the truy van lai de kiem tra ket qua moi nhat."
+                )
+                session_id = persist_chat_turn(
+                    user_id=user_id,
+                    query=query,
+                    answer=action_answer,
+                    context_docs=[],
+                    sources=[],
+                    session_id=session_id,
+                    is_first_turn=is_new_session,
+                )
+                return _response(action_answer, [], session_id)
+
+            if action_result.action != "none" and "mcp execution failed" in action_result.message:
+                action_answer = (
+                    "Minh da nhan yeu cau thao tac nhung MCP server chua thuc thi thanh cong. "
+                    "Ban co the thu lai hoac cung cap them thong tin bat buoc cho lenh nay."
+                )
+                session_id = persist_chat_turn(
+                    user_id=user_id,
+                    query=query,
+                    answer=action_answer,
+                    context_docs=[],
+                    sources=[],
+                    session_id=session_id,
+                    is_first_turn=is_new_session,
+                )
+                return _response(action_answer, [], session_id)
+
         classification = classify(query)
         if not classification.get("is_relevant"):
             session_id = persist_chat_turn(
@@ -197,8 +258,21 @@ def run_chatbot_pipeline(
             logger.info("[chatbot-service] chatbot response sent (count_query)")
             return _response(answer, [], session_id)
 
-        logger.info("[chatbot-service] retrieving documents from Qdrant (limit=%s)", requested_limit)
+        logger.info("[chatbot-service] retrieving documents from SQL router and Qdrant (limit=%s)", requested_limit)
         raw_docs: list[Document] = []
+
+        sql_docs = query_postgres_documents(
+            query=query,
+            user_id=user_id,
+            intent=intent,
+            is_personal=is_personal,
+            requested_limit=requested_limit,
+            project_id=project_id,
+        )
+        if sql_docs:
+            logger.info("[chatbot-service] sql-router returned %d docs", len(sql_docs))
+            raw_docs.extend(sql_docs)
+
         for rewritten_query in rewritten:
             docs = retrieve(
                 rewritten_query,

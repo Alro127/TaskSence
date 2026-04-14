@@ -53,6 +53,8 @@ class JwtAuthMiddleware(BaseHTTPMiddleware):
             return _unauthorized("Invalid token type")
 
         raw_user_id = claims.get("userId")
+        if not isinstance(raw_user_id, (int, str)):
+            return _unauthorized("Token missing userId claim")
         try:
             user_id = int(raw_user_id)
         except (TypeError, ValueError):

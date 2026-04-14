@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 
 from app.chatbot.components import Document
 from app.config.config import get_settings
@@ -23,7 +23,18 @@ def _connect():
             "psycopg is required for chat persistence operations"
         ) from exc
 
-    return psycopg.connect(settings.effective_postgres_dsn, row_factory=dict_row)
+    return psycopg.connect(
+        settings.effective_postgres_dsn,
+        row_factory=cast(Any, dict_row),
+    )
+
+
+def _coerce_content_to_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(str(item) for item in content)
+    return str(content)
 
 
 def _build_session_title(query: str) -> str:
@@ -60,7 +71,7 @@ Assistant: {answer}
 Reply with ONLY the title, no quotes or explanation."""
 
         response = llm.invoke(prompt)
-        title = response.content.strip()
+        title = _coerce_content_to_text(response.content).strip()
 
         # Ensure it's not too long
         if len(title) > 120:
@@ -122,7 +133,9 @@ def persist_chat_turn(
                         """,
                         (user_id, session_title),
                     )
-                    session_row = cur.fetchone()
+                    session_row = cast(dict[str, Any] | None, cur.fetchone())
+                    if session_row is None:
+                        raise RuntimeError("Failed to create chat session")
                     resolved_session_id = int(session_row["id"])
 
                 cur.execute(
