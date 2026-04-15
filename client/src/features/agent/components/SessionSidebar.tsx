@@ -25,7 +25,7 @@ export function SessionSidebar({
   onDeleteSession,
 }: SessionSidebarProps) {
   return (
-    <aside className="flex h-full flex-col rounded-xl border border-[rgba(197,197,211,0.3)] bg-white p-3">
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-[rgba(197,197,211,0.3)] bg-white p-3">
       <button
         onClick={onCreateSession}
         disabled={isInitSessionLoading}
@@ -44,7 +44,7 @@ export function SessionSidebar({
         </span>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto pr-1">
+      <div className="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
         {isSessionsLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 5 }).map((_, idx) => (

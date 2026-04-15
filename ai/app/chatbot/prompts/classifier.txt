@@ -23,6 +23,8 @@ Personal scope:
 requested_limit:
 - integer 1..100 or null
 - explicit all/everything/list all => 100
+- Vietnamese all keywords: "tất cả", "hết", "toàn bộ", "tất thảy" => 100
+- "list" (case-insensitive) with optional "all" => 100
 - explicit number "top N", "N items" => N clamped to 100
 - detail question for one item => 1..3
 - no quantity => null

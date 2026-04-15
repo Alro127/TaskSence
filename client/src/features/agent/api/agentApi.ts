@@ -73,12 +73,12 @@ export const agentApi = createApi({
     }),
     callChatAgent: builder.mutation<
       ApiResponse<AIAgentResponse>,
-      { sessionId: number; query: string }
+      { sessionId: number; query: string; agent?: boolean }
     >({
-      query: ({ sessionId, query }) => ({
+      query: ({ sessionId, query, agent = false }) => ({
         url: `/api/v1/ai/chat/${sessionId}`,
         method: "POST",
-        body: { query },
+        body: { query, agent },
       }),
       invalidatesTags: (_result, _error, arg) => [
         "AgentSession",
