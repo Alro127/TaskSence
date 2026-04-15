@@ -17,6 +17,7 @@ export function AgentChatPage() {
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
   const [input, setInput] = useState("");
+  const [agentMode, setAgentMode] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -130,7 +131,7 @@ export function AgentChatPage() {
     setPendingUserMessage(trimmed);
 
     try {
-      await callAgent({ sessionId: activeSessionId, query: trimmed }).unwrap();
+      await callAgent({ sessionId: activeSessionId, query: trimmed, agent: agentMode }).unwrap();
       setPendingUserMessage(null);
       await Promise.all([refetchMessages(), refetchSessions()]);
     } catch (err) {
@@ -149,7 +150,7 @@ export function AgentChatPage() {
     setPendingUserMessage(continuationQuery);
 
     try {
-      await callAgent({ sessionId: activeSessionId, query: continuationQuery }).unwrap();
+      await callAgent({ sessionId: activeSessionId, query: continuationQuery, agent: agentMode }).unwrap();
       setPendingUserMessage(null);
       await Promise.all([refetchMessages(), refetchSessions()]);
     } catch (err) {
@@ -165,7 +166,7 @@ export function AgentChatPage() {
   };
 
   return (
-    <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[300px_1fr]">
+    <div className="grid h-full min-h-0 grid-cols-1 gap-4 overflow-hidden lg:grid-cols-[300px_1fr]">
       <SessionSidebar
         sessions={sessions}
         selectedSessionId={activeSessionId}
@@ -179,7 +180,7 @@ export function AgentChatPage() {
         }}
       />
 
-      <div className="flex h-full flex-col">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
         <div className="mb-4 flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand">
             <Bot className="h-5 w-5 text-white" />
@@ -213,8 +214,10 @@ export function AgentChatPage() {
           isLoading={isLoading}
           selectedSessionId={activeSessionId}
           isDeleteSessionLoading={isDeleteSessionLoading}
+          agentMode={agentMode}
           textareaRef={textareaRef}
           onInputChange={handleTextareaChange}
+          onToggleAgentMode={() => setAgentMode((prev) => !prev)}
           onSend={() => {
             void handleSend(input);
           }}

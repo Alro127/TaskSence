@@ -27,6 +27,7 @@ class ChatRequest(BaseModel):
     """Request payload for chatbot endpoint."""
 
     query: str = Field(..., min_length=1, max_length=1000, description="User question")
+    agent: bool = Field(default=False, description="Enable action-agent mode")
 
     @field_validator("query")
     @classmethod
@@ -95,14 +96,16 @@ async def chat(
     user_id: int = Depends(get_current_user_id),
 ) -> ResponseObject[ChatResponse]:
     logger.info(
-        "[chatbot-controller] POST /ai/chat userId=%s",
+        "[chatbot-controller] POST /ai/chat userId=%s agent=%s",
         user_id,
+        request.agent,
     )
     try:
         result = run_chatbot_pipeline(
             query=request.query,
             user_id=user_id,
             session_id=session_id,
+            agent=request.agent,
         )
     except Exception as exc:
         logger.exception("[chatbot-controller] service execution failed: %s", exc)

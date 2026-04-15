@@ -17,6 +17,7 @@ Agents must read in this order:
 
 | Run ID             | Date       | Summary                                                                                                                              | Linked Files                                                    |
 | ------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| RUN-2026-04-15-001 | 2026-04-15 | Refactored chatbot service into modular package and added end-to-end Agent Mode toggle with explicit FE->AI `agent` payload wiring. | ai chatbot service modules + agent page/api                     |
 | RUN-2026-04-14-003 | 2026-04-14 | Cleared all AI Python type diagnostics via uv + pyright, including `__getitem__` TupleRow overload errors.                         | ai typing-critical modules                                      |
 | RUN-2026-04-14-002 | 2026-04-14 | Bootstrapped Spring MCP server endpoint `/mcp/execute` with dispatcher for create task/project and update task status actions.      | server MCP controller/service/dto                               |
 | RUN-2026-04-14-001 | 2026-04-14 | Introduced hybrid SQL-template + Qdrant retrieval, optimized chatbot prompts, and scaffolded agent->MCP action execution flow.      | ai chatbot modules + prompts + tests                            |

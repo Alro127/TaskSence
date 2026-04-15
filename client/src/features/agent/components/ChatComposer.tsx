@@ -1,4 +1,4 @@
-import { Send } from "lucide-react";
+import { Send, Sparkles } from "lucide-react";
 import type { KeyboardEvent, RefObject } from "react";
 
 import { cn } from "@/lib/utils";
@@ -8,8 +8,10 @@ interface ChatComposerProps {
   isLoading: boolean;
   selectedSessionId: number | null;
   isDeleteSessionLoading: boolean;
+  agentMode: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   onInputChange: (value: string, textarea: HTMLTextAreaElement) => void;
+  onToggleAgentMode: () => void;
   onSend: () => void;
 }
 
@@ -18,8 +20,10 @@ export function ChatComposer({
   isLoading,
   selectedSessionId,
   isDeleteSessionLoading,
+  agentMode,
   textareaRef,
   onInputChange,
+  onToggleAgentMode,
   onSend,
 }: ChatComposerProps) {
   const disabled = isLoading || selectedSessionId === null || isDeleteSessionLoading;
@@ -49,7 +53,21 @@ export function ChatComposer({
         style={{ minHeight: "24px", maxHeight: "160px" }}
       />
       <div className="flex items-center justify-between pt-1.5">
-        <p className="text-[10px] text-text-secondary/50">Shift + Enter for new line</p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleAgentMode}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-wide transition-colors",
+              agentMode
+                ? "border-[rgba(35,58,135,0.28)] bg-[rgba(35,58,135,0.08)] text-[#233a87]"
+                : "border-[rgba(197,197,211,0.8)] bg-white text-[#444651] hover:border-[rgba(35,58,135,0.28)] hover:text-[#233a87]"
+            )}
+          >
+            <Sparkles className="h-3 w-3" />
+            Agent Mode: {agentMode ? "ON" : "OFF"}
+          </button>
+        </div>
         <button
           onClick={onSend}
           disabled={!input.trim() || isLoading || selectedSessionId === null}
