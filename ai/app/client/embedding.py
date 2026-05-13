@@ -61,7 +61,7 @@ class OpenRouterEmbeddings(Embeddings):
                 if attempt >= self.max_retries or not _is_retryable_status(status_code):
                     raise
                 logger.warning(
-                    "[embedding-client] openrouter /embeddings failed with status=%d; retrying attempt=%d/%d",
+                    "[embedding-client] /embeddings failed with status=%d; retrying attempt=%d/%d",
                     status_code,
                     attempt,
                     self.max_retries,
@@ -71,7 +71,7 @@ class OpenRouterEmbeddings(Embeddings):
                 if attempt >= self.max_retries:
                     raise
                 logger.warning(
-                    "[embedding-client] openrouter /embeddings transport error (%s); retrying attempt=%d/%d",
+                    "[embedding-client] /embeddings transport error (%s); retrying attempt=%d/%d",
                     exc.__class__.__name__,
                     attempt,
                     self.max_retries,
@@ -79,15 +79,15 @@ class OpenRouterEmbeddings(Embeddings):
                 self._sleep_before_retry(attempt)
 
         if response is None:
-            raise RuntimeError("OpenRouter embeddings request did not return a response")
+            raise RuntimeError("Embeddings request did not return a response")
 
         payload = response.json()
         data = payload.get("data")
         if not isinstance(data, list) or not data:
-            raise ValueError("OpenRouter embeddings response has no data")
+            raise ValueError("Embeddings response has no data")
         if len(data) != len(texts):
             raise ValueError(
-                "OpenRouter embeddings response size mismatch "
+                "Embeddings response size mismatch "
                 f"expected={len(texts)} actual={len(data)}"
             )
 
@@ -95,7 +95,7 @@ class OpenRouterEmbeddings(Embeddings):
         for item in data:
             vector = item.get("embedding") if isinstance(item, dict) else None
             if not isinstance(vector, list) or not vector:
-                raise ValueError("OpenRouter embeddings response item missing vector")
+                raise ValueError("Embeddings response item missing vector")
             vectors.append([float(v) for v in vector])
         return vectors
 
@@ -111,6 +111,12 @@ class OpenRouterEmbeddings(Embeddings):
     def embed_query(self, text: str) -> list[float]:
         vectors = self._embed_batch([text])
         return vectors[0]
+
+
+class SiliconFlowEmbeddings(OpenRouterEmbeddings):
+    """SiliconFlow exposes an OpenAI-compatible /embeddings endpoint."""
+
+    pass
     
 
 def get_embedding() -> Embeddings:
@@ -129,6 +135,15 @@ def get_embedding() -> Embeddings:
             model=settings.openrouter_embedding_model,
             api_key=settings.openrouter_api_key,
             base_url=settings.openrouter_base_url,
+        )
+    if "siliconflow" == settings.llm_provider:
+        if not settings.siliconflow_api_key or not settings.siliconflow_api_key.get_secret_value():
+            raise ValueError("SILICONFLOW_API_KEY is required for embedding sync")
+
+        return SiliconFlowEmbeddings(
+            model=settings.siliconflow_embedding_model,
+            api_key=settings.siliconflow_api_key,
+            base_url=settings.siliconflow_base_url,
         )
     elif "gemini" == settings.llm_provider:
         if not settings.gemini_api_key or not settings.gemini_api_key.get_secret_value():

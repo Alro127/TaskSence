@@ -6,6 +6,8 @@ import dev.alro127.tasksense.domain.enums.TaskPriority;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
 import dev.alro127.tasksense.dto.request.CreateProjectRequest;
 import dev.alro127.tasksense.dto.request.CreateTaskRequest;
+import dev.alro127.tasksense.dto.request.CreateWorkspaceRequest;
+import dev.alro127.tasksense.dto.request.CreateWorkflowFromProjectRequest;
 import dev.alro127.tasksense.dto.request.McpExecuteRequest;
 import dev.alro127.tasksense.dto.request.UpdateTaskStatusRequest;
 import dev.alro127.tasksense.dto.response.McpExecuteResponse;
@@ -18,6 +20,8 @@ import dev.alro127.tasksense.service.McpService;
 import dev.alro127.tasksense.service.ProjectService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.TaskService;
+import dev.alro127.tasksense.service.WorkspaceService;
+import dev.alro127.tasksense.service.WorkflowService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +40,8 @@ public class McpServiceImpl implements McpService {
 
     private static final String ACTION_CREATE_TASK = "create_task";
     private static final String ACTION_CREATE_PROJECT = "create_project";
+    private static final String ACTION_CREATE_WORKSPACE = "create_workspace";
+    private static final String ACTION_CREATE_WORKFLOW_FROM_PROJECT = "create_workflow_from_project";
     private static final String ACTION_UPDATE_TASK_STATUS = "update_task_status";
     private static final String ACTION_CREATE_PROJECT_FROM_WORKFLOW = "create_project_from_workflow";
 
@@ -44,6 +50,8 @@ public class McpServiceImpl implements McpService {
     private final PermissionChecker permissionChecker;
     private final TaskService taskService;
     private final ProjectService projectService;
+    private final WorkspaceService workspaceService;
+    private final WorkflowService workflowService;
 
     @Override
     public McpExecuteResponse execute(McpExecuteRequest request) {
@@ -57,6 +65,8 @@ public class McpServiceImpl implements McpService {
         return switch (action) {
             case ACTION_CREATE_TASK -> executeCreateTask(arguments);
             case ACTION_CREATE_PROJECT -> executeCreateProject(arguments);
+            case ACTION_CREATE_WORKSPACE -> executeCreateWorkspace(arguments);
+            case ACTION_CREATE_WORKFLOW_FROM_PROJECT -> executeCreateWorkflowFromProject(arguments);
             case ACTION_UPDATE_TASK_STATUS -> executeUpdateTaskStatus(arguments);
             case ACTION_CREATE_PROJECT_FROM_WORKFLOW -> McpExecuteResponse.builder()
                     .action(action)
@@ -66,6 +76,45 @@ public class McpServiceImpl implements McpService {
                     .build();
             default -> throw new BadRequestException("Unsupported MCP action: " + action);
         };
+    }
+
+    private McpExecuteResponse executeCreateWorkspace(Map<String, Object> arguments) {
+        CreateWorkspaceArgs args = objectMapper.convertValue(arguments, CreateWorkspaceArgs.class);
+
+        CreateWorkspaceRequest request = new CreateWorkspaceRequest();
+        request.setName(requireNonBlank(args.getName(), "name is required for create_workspace"));
+        request.setDescription(args.getDescription());
+        request.setIsPublic(args.getIsPublic());
+
+        Object result = workspaceService.createWorkspace(request);
+        return McpExecuteResponse.builder()
+                .action(ACTION_CREATE_WORKSPACE)
+                .executed(true)
+                .message("Workspace created successfully")
+                .result(result)
+                .build();
+    }
+
+    private McpExecuteResponse executeCreateWorkflowFromProject(Map<String, Object> arguments) {
+        CreateWorkflowFromProjectArgs args = objectMapper.convertValue(arguments, CreateWorkflowFromProjectArgs.class);
+        if (args.getProjectId() == null) {
+            throw new BadRequestException("projectId is required for create_workflow_from_project");
+        }
+
+        permissionChecker.requireProjectPermission(args.getProjectId(), ProjectPermission.VIEW_TASKS);
+
+        CreateWorkflowFromProjectRequest request = new CreateWorkflowFromProjectRequest();
+        request.setIncludeSubtasks(args.getIncludeSubtasks());
+        request.setIncludeCompletedTasks(args.getIncludeCompletedTasks());
+        request.setUseAiRefinement(args.getUseAiRefinement());
+
+        Object result = workflowService.createWorkflowFromProject(args.getProjectId(), request);
+        return McpExecuteResponse.builder()
+                .action(ACTION_CREATE_WORKFLOW_FROM_PROJECT)
+                .executed(true)
+                .message("Workflow draft created from project successfully")
+                .result(result)
+                .build();
     }
 
     private McpExecuteResponse executeCreateTask(Map<String, Object> arguments) {
@@ -231,6 +280,21 @@ public class McpServiceImpl implements McpService {
         private String status;
         private LocalDate startDate;
         private LocalDate endDate;
+    }
+
+    @Data
+    private static class CreateWorkspaceArgs {
+        private String name;
+        private String description;
+        private Boolean isPublic;
+    }
+
+    @Data
+    private static class CreateWorkflowFromProjectArgs {
+        private Long projectId;
+        private Boolean includeSubtasks;
+        private Boolean includeCompletedTasks;
+        private Boolean useAiRefinement;
     }
 
     @Data

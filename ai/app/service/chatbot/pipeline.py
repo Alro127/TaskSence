@@ -26,6 +26,7 @@ def run_chatbot_pipeline(
     user_id: int,
     session_id: int | None = None,
     agent: bool = False,
+    auth_token: str | None = None,
 ) -> dict[str, Any]:
     """Execute full chatbot pipeline from classification to grounded answer."""
     logger.info(
@@ -42,7 +43,8 @@ def run_chatbot_pipeline(
     try:
         should_try_action_agent = bool(agent) or looks_like_action_request(query, _ACTION_PHRASES)
         if should_try_action_agent:
-            action_result = run_action_agent(query=query, user_id=user_id)
+            action_result = run_action_agent(query=query, user_id=user_id, auth_token=auth_token)
+            action_reasoning = _extract_agent_reasoning(action_result.payload)
             if action_result.executed:
                 action_answer = (
                     f"Da thuc thi hanh dong {action_result.action} qua MCP. "
@@ -56,8 +58,23 @@ def run_chatbot_pipeline(
                     sources=[],
                     session_id=session_id,
                     is_first_turn=is_new_session,
+                    extra_context={"agentReasoning": action_reasoning, "agentAction": action_result.action},
                 )
-                return _response(action_answer, [], session_id)
+                return _response(action_answer, [], session_id, action_reasoning)
+
+            if action_result.action != "none" and "missing required fields" in action_result.message:
+                action_answer = action_result.message
+                session_id = persist_chat_turn(
+                    user_id=user_id,
+                    query=query,
+                    answer=action_answer,
+                    context_docs=[],
+                    sources=[],
+                    session_id=session_id,
+                    is_first_turn=is_new_session,
+                    extra_context={"agentReasoning": action_reasoning, "agentAction": action_result.action},
+                )
+                return _response(action_answer, [], session_id, action_reasoning)
 
             if action_result.action != "none" and "mcp execution failed" in action_result.message:
                 action_answer = (
@@ -72,8 +89,9 @@ def run_chatbot_pipeline(
                     sources=[],
                     session_id=session_id,
                     is_first_turn=is_new_session,
+                    extra_context={"agentReasoning": action_reasoning, "agentAction": action_result.action},
                 )
-                return _response(action_answer, [], session_id)
+                return _response(action_answer, [], session_id, action_reasoning)
 
         classification = classify(query)
         if not classification.get("is_relevant"):
@@ -165,6 +183,7 @@ def run_chatbot_pipeline(
             raw_docs,
             intent=intent,
             requested_limit=requested_limit,
+            query=primary_query,
         )
 
         context = filter_result["documents"]
@@ -216,5 +235,18 @@ def _response(
     answer: str,
     sources: list[dict[str, Any]],
     session_id: int | None = None,
+    reasoning: list[str] | None = None,
 ) -> dict[str, Any]:
-    return {"answer": answer, "sources": sources, "sessionId": session_id}
+    response: dict[str, Any] = {"answer": answer, "sources": sources, "sessionId": session_id}
+    if reasoning:
+        response["reasoning"] = reasoning
+    return response
+
+
+def _extract_agent_reasoning(payload: dict[str, Any] | None) -> list[str]:
+    if not payload:
+        return []
+    reasoning = payload.get("reasoning")
+    if isinstance(reasoning, list):
+        return [str(item) for item in reasoning if str(item).strip()]
+    return []

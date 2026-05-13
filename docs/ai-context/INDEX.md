@@ -17,6 +17,7 @@ Agents must read in this order:
 
 | Run ID             | Date       | Summary                                                                                                                              | Linked Files                                                    |
 | ------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| RUN-2026-05-12-001 | 2026-05-12 | Added Spring AI MCP facade, safer Agent Mode actions/JWT forwarding, deterministic RAG reranking, workflow MCP wrapper, and visible reasoning UI. | server MCP + ai agent/RAG + client agent UI                     |
 | RUN-2026-04-15-001 | 2026-04-15 | Refactored chatbot service into modular package and added end-to-end Agent Mode toggle with explicit FE->AI `agent` payload wiring. | ai chatbot service modules + agent page/api                     |
 | RUN-2026-04-14-003 | 2026-04-14 | Cleared all AI Python type diagnostics via uv + pyright, including `__getitem__` TupleRow overload errors.                         | ai typing-critical modules                                      |
 | RUN-2026-04-14-002 | 2026-04-14 | Bootstrapped Spring MCP server endpoint `/mcp/execute` with dispatcher for create task/project and update task status actions.      | server MCP controller/service/dto                               |
@@ -29,6 +30,7 @@ Agents must read in this order:
 
 | Date | Decision Needed | Owner | Due | Status |
 | ---- | --------------- | ----- | --- | ------ |
+| 2026-05-12 | Choose AI service -> Java MCP auth model: forward user JWT vs service token with delegated identity. | Backend/AI | TBD | Open |
 
 ## Active Constraints
 
@@ -39,3 +41,5 @@ Agents must read in this order:
 
 | Date | Risk | Severity | Mitigation |
 | ---- | ---- | -------- | ---------- |
+| 2026-05-12 | MCP tool discovery/e2e calls are unverified even though backend compile now passes. | Medium | Run the Spring app with local infra and validate MCP tool listing plus create-tool calls. |
+| 2026-05-13 | Frontend dependency audit reports 11 vulnerabilities after restoring `client/node_modules`. | Medium | Review `npm audit` output separately before release; avoid blind `npm audit fix` if it changes major versions. |

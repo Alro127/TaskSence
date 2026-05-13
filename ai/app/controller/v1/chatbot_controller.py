@@ -14,7 +14,7 @@ import logging
 from fastapi import APIRouter, Depends, Path, Query
 from pydantic import BaseModel, Field, field_validator
 
-from app.auth.dependencies import get_current_user_id
+from app.auth.dependencies import get_current_jwt_token, get_current_user_id
 from app.service.chatbot_service import run_chatbot_pipeline
 from app.service.session_service import create_chat_session
 
@@ -48,6 +48,7 @@ class ChatResponse(BaseModel):
     answer: str
     sources: list[SourceItem]
     sessionId: int | None = None
+    reasoning: list[str] | None = None
 
 
 class InitSessionRequest(BaseModel):
@@ -94,6 +95,7 @@ async def chat(
     request: ChatRequest,
     session_id: Annotated[int, Path(title="The ID of the item to get")],
     user_id: int = Depends(get_current_user_id),
+    jwt_token: str = Depends(get_current_jwt_token),
 ) -> ResponseObject[ChatResponse]:
     logger.info(
         "[chatbot-controller] POST /ai/chat userId=%s agent=%s",
@@ -106,6 +108,7 @@ async def chat(
             user_id=user_id,
             session_id=session_id,
             agent=request.agent,
+            auth_token=jwt_token,
         )
     except Exception as exc:
         logger.exception("[chatbot-controller] service execution failed: %s", exc)
@@ -123,6 +126,7 @@ async def chat(
             answer=result["answer"],
             sources=[SourceItem(**source) for source in result["sources"]],
             sessionId=result.get("sessionId"),
+            reasoning=result.get("reasoning"),
         ),
         errors=None,
     )

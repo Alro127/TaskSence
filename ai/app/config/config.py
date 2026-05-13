@@ -60,6 +60,10 @@ class Settings:
 	openrouter_model: str
 	openrouter_embedding_model: str
 	openrouter_base_url: str
+	siliconflow_api_key: SecretStr
+	siliconflow_model: str
+	siliconflow_embedding_model: str
+	siliconflow_base_url: str
 	jwt_secret: str
 
 	qdrant_host: str
@@ -127,6 +131,16 @@ def get_settings() -> Settings:
 		),
 		openrouter_base_url=_env_str(
 			"OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
+		),
+		siliconflow_api_key=_env_secret_str("SILICONFLOW_API_KEY", ""),
+		siliconflow_model=_env_str(
+			"SILICONFLOW_MODEL", "deepseek-ai/DeepSeek-V3"
+		),
+		siliconflow_embedding_model=_env_str(
+			"SILICONFLOW_EMBEDDING_MODEL", "BAAI/bge-m3"
+		),
+		siliconflow_base_url=_env_str(
+			"SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1"
 		),
 		jwt_secret=_env_str(
 			"SECURITY_JWT_SECRET",

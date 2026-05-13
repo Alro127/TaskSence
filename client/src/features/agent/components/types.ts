@@ -5,4 +5,5 @@ export interface ChatMessage {
   content: string;
   sources?: AIAgentSource[];
   pagination?: PaginationMetadata;
+  reasoning?: string[];
 }

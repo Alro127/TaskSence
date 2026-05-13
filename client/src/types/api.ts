@@ -744,6 +744,7 @@ export interface AIAgentResponse {
   sources: AIAgentSource[];
   sessionId: number | null;
   pagination?: PaginationMetadata;
+  reasoning?: string[] | null;
 }
 
 export interface AISession {

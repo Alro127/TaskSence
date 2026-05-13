@@ -77,6 +77,13 @@ export function AgentChatPage() {
             message.pagination = ctx.pagination as ChatMessage["pagination"];
           }
         }
+
+        if (m.context && typeof m.context === "object" && "agentReasoning" in m.context) {
+          const ctx = m.context as Record<string, unknown>;
+          if (Array.isArray(ctx.agentReasoning)) {
+            message.reasoning = ctx.agentReasoning.map(String);
+          }
+        }
       }
 
       return message;
@@ -131,9 +138,12 @@ export function AgentChatPage() {
     setPendingUserMessage(trimmed);
 
     try {
-      await callAgent({ sessionId: activeSessionId, query: trimmed, agent: agentMode }).unwrap();
+      const response = await callAgent({ sessionId: activeSessionId, query: trimmed, agent: agentMode }).unwrap();
       setPendingUserMessage(null);
       await Promise.all([refetchMessages(), refetchSessions()]);
+      if (response.data.reasoning?.length) {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
     } catch (err) {
       setPendingUserMessage(null);
       toast.error(getApiErrorMessage(err, "Failed to send message."));

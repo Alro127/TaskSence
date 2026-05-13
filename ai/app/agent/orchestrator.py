@@ -20,9 +20,18 @@ _PROMPT_PATH = Path(__file__).parent.parent / "chatbot" / "prompts" / "agent_act
 _ALLOWED_ACTIONS = {
     "none",
     "create_task",
-    "create_project_from_workflow",
+    "create_workspace",
+    "create_workflow_from_project",
     "update_task_status",
     "create_project",
+}
+
+_REQUIRED_ARGUMENTS = {
+    "create_task": {"projectId", "title"},
+    "create_project": {"workspaceId", "name"},
+    "create_workspace": {"name"},
+    "update_task_status": {"projectId", "taskId", "status"},
+    "create_workflow_from_project": {"projectId"},
 }
 
 
@@ -80,10 +89,35 @@ def _plan_action(query: str) -> dict[str, Any]:
         "action": action,
         "reason": str(planned.get("reason", "")),
         "arguments": arguments,
+        "reasoning": _normalize_reasoning(planned.get("reasoning"), planned.get("reason", "")),
     }
 
 
-def run_action_agent(query: str, user_id: int, mcp_client: SpringBootMcpClient | None = None) -> AgentActionResult:
+def _normalize_reasoning(value: Any, fallback_reason: Any) -> list[str]:
+    if isinstance(value, list):
+        cleaned = [str(item).strip() for item in value if str(item).strip()]
+        if cleaned:
+            return cleaned[:6]
+    fallback = str(fallback_reason).strip()
+    return [fallback] if fallback else []
+
+
+def _missing_required_arguments(action: str, arguments: dict[str, Any]) -> list[str]:
+    required = _REQUIRED_ARGUMENTS.get(action, set())
+    missing = []
+    for field in sorted(required):
+        value = arguments.get(field)
+        if value is None or (isinstance(value, str) and not value.strip()):
+            missing.append(field)
+    return missing
+
+
+def run_action_agent(
+    query: str,
+    user_id: int,
+    mcp_client: SpringBootMcpClient | None = None,
+    auth_token: str | None = None,
+) -> AgentActionResult:
     """Plan an executable action and delegate it to the Spring Boot MCP server."""
     plan = _plan_action(query)
     if not plan["should_execute"]:
@@ -91,21 +125,39 @@ def run_action_agent(query: str, user_id: int, mcp_client: SpringBootMcpClient |
             executed=False,
             action="none",
             message=plan.get("reason", "not an execution request"),
-            payload=None,
+            payload={"reasoning": plan.get("reasoning", [])},
         )
 
     client = mcp_client or SpringBootMcpClient()
+    missing_fields = _missing_required_arguments(plan["action"], plan["arguments"])
+    if missing_fields:
+        return AgentActionResult(
+            executed=False,
+            action=plan["action"],
+            message=(
+                "missing required fields for "
+                f"{plan['action']}: {', '.join(missing_fields)}. "
+                "Vui long bo sung cac thong tin nay truoc khi minh thuc thi."
+            ),
+            payload={
+                "missingFields": missing_fields,
+                "plannedArguments": plan["arguments"],
+                "reasoning": plan.get("reasoning", []),
+            },
+        )
+
     try:
-        payload = client.execute(
+        payload = client.execute_with_token(
             action=plan["action"],
             arguments=plan["arguments"],
             user_id=user_id,
+            auth_token=auth_token,
         )
         return AgentActionResult(
             executed=True,
             action=plan["action"],
             message="action executed via MCP",
-            payload=payload,
+            payload={"mcp": payload, "reasoning": plan.get("reasoning", [])},
         )
     except Exception as exc:
         logger.warning("[action-agent] MCP execution failed action=%s err=%s", plan["action"], exc)
