@@ -60,7 +60,7 @@ export function getNotificationText(
     },
     WORKSPACE_ROLE_CHANGE: {
       title: "Role changed",
-      description: `Your role in "${workspaceName}" has been updated`,
+      description: `Your role in "${workspaceName}" has been updated to ${newRole}`,
     },
     WORKSPACE_LEAVE: {
       title: "Member left workspace",
@@ -88,7 +88,7 @@ export function getNotificationText(
     },
     PROJECT_ROLE_CHANGE: {
       title: "Project role changed",
-      description: `Your role in "${projectName}" has been updated`,
+      description: `Your role in "${projectName}" has been updated to ${newRole}`,
     },
     PROJECT_LEAVE: {
       title: "Member left project",

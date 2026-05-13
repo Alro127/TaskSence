@@ -669,7 +669,7 @@ export function TimelineView({ tasks, project, workspaceId, projectId }: Timelin
               className="sticky left-0 z-10 shrink-0 border-r bg-card"
               style={{ width: LEFT_PANEL_WIDTH }}
             >
-              {rowPositions.map(({ row, top, height }) => {
+              {rowPositions.map(({ row, top }) => {
                 if (row.type === "group") {
                   const isCollapsed = collapsedGroups.has(row.id);
                   return (

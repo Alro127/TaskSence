@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import logging
-import os
 import time
 from typing import Any
 
 import httpx
+
+from app.config.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -23,60 +24,19 @@ class SpringBootMcpClient:
 
     def __init__(
         self,
-        base_url: str | None = None,
+        endpoint: str | None = None,
         timeout_seconds: float | None = None,
         api_key: str | None = None,
     ) -> None:
-        self.base_url = (base_url or os.getenv("SPRING_MCP_BASE_URL") or "http://localhost:8080/api/v1/mcp").rstrip("/")
-        self.mcp_endpoint = (os.getenv("SPRING_MCP_ENDPOINT") or self.base_url).rstrip("/")
-        self.timeout_seconds = timeout_seconds or float(os.getenv("SPRING_MCP_TIMEOUT_SECONDS", "20"))
-        self.api_key = api_key or os.getenv("SPRING_MCP_API_KEY", "")
-        self.transport = (os.getenv("SPRING_MCP_TRANSPORT") or "auto").strip().lower()
+        settings = get_settings()
+        configured_api_key = settings.mcp_api_key.get_secret_value()
+        self.mcp_endpoint = (endpoint or settings.mcp_endpoint).rstrip("/")
+        self.timeout_seconds = timeout_seconds or settings.mcp_timeout_seconds
+        self.api_key = api_key if api_key is not None else configured_api_key
 
     def execute(self, action: str, arguments: dict[str, Any], user_id: int) -> dict[str, Any]:
-        """Execute one action through MCP server.
-
-        The server contract is expected as:
-        POST /execute
-        {
-            "action": "create_task",
-            "arguments": {...},
-            "actorUserId": 123
-        }
-        """
-        if self.transport in {"streamable", "official", "mcp"}:
-            return self._execute_streamable_http(action, arguments)
-        if self.transport == "auto":
-            try:
-                return self._execute_streamable_http(action, arguments)
-            except Exception as exc:
-                logger.warning(
-                    "[agent-mcp] streamable MCP failed action=%s, falling back to compatibility REST: %s",
-                    action,
-                    exc,
-                )
-
-        payload = {
-            "action": action,
-            "arguments": arguments,
-            "actorUserId": user_id,
-        }
-
-        headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-
-        url = f"{self.base_url}/execute"
-        logger.info("[agent-mcp] execute action=%s url=%s", action, url)
-
-        with httpx.Client(timeout=self.timeout_seconds) as client:
-            response = client.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-
-        if not isinstance(data, dict):
-            raise ValueError("MCP response must be a JSON object")
-        return data
+        """Execute one action through Spring AI MCP Streamable HTTP."""
+        return self._execute_streamable_http(action, arguments)
 
     def _execute_streamable_http(self, action: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Call an official MCP Streamable HTTP endpoint using JSON-RPC tool calls."""
@@ -198,7 +158,7 @@ class SpringBootMcpClient:
         user_id: int,
         auth_token: str | None,
     ) -> dict[str, Any]:
-        """Execute one compatibility MCP action with the authenticated user JWT when available."""
+        """Execute one MCP tool call with the authenticated user JWT when available."""
         previous_api_key = self.api_key
         if auth_token:
             self.api_key = auth_token

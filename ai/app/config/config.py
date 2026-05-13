@@ -86,6 +86,10 @@ class Settings:
 	postgres_password: str
 	postgres_sslmode: str
 
+	mcp_endpoint: str
+	mcp_timeout_seconds: float
+	mcp_api_key: SecretStr
+
 	@property
 	def effective_postgres_dsn(self) -> str:
 		if self.postgres_dsn:
@@ -162,4 +166,7 @@ def get_settings() -> Settings:
 		postgres_user=_env_str("POSTGRES_USER", "postgres"),
 		postgres_password=_env_str("POSTGRES_PASSWORD", "postgres"),
 		postgres_sslmode=_env_str("POSTGRES_SSLMODE", "prefer"),
+		mcp_endpoint=_env_str("SPRING_MCP_ENDPOINT", "http://localhost:8080/api/v1/mcp"),
+		mcp_timeout_seconds=float(_env_str("SPRING_MCP_TIMEOUT_SECONDS", "20")),
+		mcp_api_key=_env_secret_str("SPRING_MCP_API_KEY", ""),
 	)
