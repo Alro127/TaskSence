@@ -11,7 +11,6 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
-  Zap,
 } from "lucide-react";
 import { useAppSelector } from "@/app/hooks";
 

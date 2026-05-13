@@ -90,6 +90,7 @@ def persist_chat_turn(
     sources: list[dict[str, Any]],
     session_id: int | None = None,
     is_first_turn: bool = False,
+    extra_context: dict[str, Any] | None = None,
 ) -> int | None:
     """Store a user question and assistant answer in the shared PostgreSQL tables.
 
@@ -105,7 +106,10 @@ def persist_chat_turn(
     If is_first_turn is True, generates a title from the answer using AI (with fallback to query).
     """
     session_title = _build_session_title(query)
-    context_payload = _serialize_documents(context_docs)
+    serialized_documents = _serialize_documents(context_docs)
+    context_payload: Any = serialized_documents
+    if extra_context:
+        context_payload = {"documents": serialized_documents, **extra_context}
 
     try:
         with _connect() as conn:

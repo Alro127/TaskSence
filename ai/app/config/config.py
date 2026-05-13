@@ -60,6 +60,10 @@ class Settings:
 	openrouter_model: str
 	openrouter_embedding_model: str
 	openrouter_base_url: str
+	siliconflow_api_key: SecretStr
+	siliconflow_model: str
+	siliconflow_embedding_model: str
+	siliconflow_base_url: str
 	jwt_secret: str
 
 	qdrant_host: str
@@ -81,6 +85,10 @@ class Settings:
 	postgres_user: str
 	postgres_password: str
 	postgres_sslmode: str
+
+	mcp_endpoint: str
+	mcp_timeout_seconds: float
+	mcp_api_key: SecretStr
 
 	@property
 	def effective_postgres_dsn(self) -> str:
@@ -128,6 +136,16 @@ def get_settings() -> Settings:
 		openrouter_base_url=_env_str(
 			"OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
 		),
+		siliconflow_api_key=_env_secret_str("SILICONFLOW_API_KEY", ""),
+		siliconflow_model=_env_str(
+			"SILICONFLOW_MODEL", "deepseek-ai/DeepSeek-V3"
+		),
+		siliconflow_embedding_model=_env_str(
+			"SILICONFLOW_EMBEDDING_MODEL", "BAAI/bge-m3"
+		),
+		siliconflow_base_url=_env_str(
+			"SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1"
+		),
 		jwt_secret=_env_str(
 			"SECURITY_JWT_SECRET",
 			_env_str("JWT_SECRET", "my-super-secret-key-which-is-very-long-123456"),
@@ -148,4 +166,7 @@ def get_settings() -> Settings:
 		postgres_user=_env_str("POSTGRES_USER", "postgres"),
 		postgres_password=_env_str("POSTGRES_PASSWORD", "postgres"),
 		postgres_sslmode=_env_str("POSTGRES_SSLMODE", "prefer"),
+		mcp_endpoint=_env_str("SPRING_MCP_ENDPOINT", "http://localhost:8080/api/v1/mcp"),
+		mcp_timeout_seconds=float(_env_str("SPRING_MCP_TIMEOUT_SECONDS", "20")),
+		mcp_api_key=_env_secret_str("SPRING_MCP_API_KEY", ""),
 	)

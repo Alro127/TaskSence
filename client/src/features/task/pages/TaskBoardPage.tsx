@@ -1004,7 +1004,7 @@ export function TaskBoardPage() {
 
           {/* New task */}
           {canCreateTask && (
-            <Button size="sm" onClick={handleOpenCreate}>
+            <Button size="sm" onClick={() => handleOpenCreate()}>
               <Plus className="mr-2 h-4 w-4" />
               New Task
             </Button>
@@ -1176,7 +1176,7 @@ export function TaskBoardPage() {
             Create the first task for this project.
           </p>
           {canCreateTask && (
-            <Button size="sm" onClick={handleOpenCreate}>
+            <Button size="sm" onClick={() => handleOpenCreate()}>
               <Plus className="mr-2 h-4 w-4" />
               New Task
             </Button>

@@ -735,7 +735,7 @@ function RecentActivityCard() {
                     <Icon className="h-3.5 w-3.5" style={{ color }} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={cn("text-xs leading-snug text-[#1a1c1b]", !notif.isRead && "font-medium")}>
+                    <p className={cn("text-xs leading-snug text-[#1a1c1b]", !notif.read && "font-medium")}>
                       {title}
                     </p>
                     <p className="mt-0.5 truncate text-[11px] text-[#444651]">{description}</p>

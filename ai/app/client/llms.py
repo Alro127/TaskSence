@@ -3,11 +3,13 @@ LLM factory and shared LLM output utilities.
 
 Environment variables
 ---------------------
-LLM_PROVIDER   : "openai" (default) | "gemini"
+LLM_PROVIDER   : "openai" (default) | "gemini" | "openrouter" | "siliconflow"
 OPENAI_API_KEY : required when LLM_PROVIDER=openai
 OPENAI_MODEL   : model name, default "gpt-4o-mini"
 GEMINI_API_KEY : required when LLM_PROVIDER=gemini
 GEMINI_MODEL   : model name, default "gemini-1.5-flash"
+SILICONFLOW_API_KEY : required when LLM_PROVIDER=siliconflow
+SILICONFLOW_MODEL   : model name, default "deepseek-ai/DeepSeek-V3"
 """
 
 import json
@@ -72,8 +74,24 @@ def get_llm() -> BaseChatModel:
             temperature=0.3,
             api_key=api_key,
         )    
+
+    if provider == "siliconflow":
+        from langchain_openai import ChatOpenAI
+
+        api_key = settings.siliconflow_api_key
+        if not api_key or not api_key.get_secret_value():
+            raise ValueError("SILICONFLOW_API_KEY is not set")
+
+        return ChatOpenAI(
+            model=settings.siliconflow_model,
+            temperature=0.7,
+            api_key=api_key,
+            base_url=settings.siliconflow_base_url,
+            max_retries=3,
+        )
+
     raise ValueError(
-        f"Unsupported LLM_PROVIDER: '{provider}'. Accepted values: 'openai', 'gemini', 'openrouter'."
+        f"Unsupported LLM_PROVIDER: '{provider}'. Accepted values: 'openai', 'gemini', 'openrouter', 'siliconflow'."
     )
 
 

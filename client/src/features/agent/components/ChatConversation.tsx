@@ -1,4 +1,4 @@
-import { Bot, Sparkles, ArrowDown, ChevronDown } from "lucide-react";
+import { Bot, Sparkles, ArrowDown, ChevronDown, BrainCircuit } from "lucide-react";
 import type { RefObject } from "react";
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
@@ -208,6 +208,20 @@ export function ChatConversation({
                             </div>
                           );
                         })()}
+                      </div>
+                    )}
+
+                    {message.role === "assistant" && message.reasoning && message.reasoning.length > 0 && (
+                      <div className="mt-2 w-full rounded-xl border border-[#d8d6d1] bg-white/80 p-3 text-xs text-[#444651] shadow-sm">
+                        <div className="mb-2 flex items-center gap-1.5 font-semibold uppercase tracking-wider text-[#233a87]">
+                          <BrainCircuit className="h-3.5 w-3.5" />
+                          AI reasoning
+                        </div>
+                        <ol className="ml-4 list-decimal space-y-1">
+                          {message.reasoning.map((step, stepIndex) => (
+                            <li key={`${index}-${stepIndex}`}>{step}</li>
+                          ))}
+                        </ol>
                       </div>
                     )}
 

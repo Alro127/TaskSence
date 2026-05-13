@@ -22,3 +22,16 @@ def get_current_user_id(
             detail="Not authenticated",
         )
     return int(user_id)
+
+
+def get_current_jwt_token(
+    request: Request,
+    _: HTTPAuthorizationCredentials = Depends(bearer_auth),
+) -> str:
+    token = getattr(request.state, "jwt_token", None)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+    return str(token)

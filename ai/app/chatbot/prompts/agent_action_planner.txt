@@ -4,24 +4,42 @@ Goal:
 Detect whether the user is requesting an executable action for TaskSense app.
 
 Return exactly one JSON object:
-{"should_execute":false,"action":"none","reason":"not an execution request","arguments":{}}
+{"should_execute":false,"action":"none","reason":"not an execution request","reasoning":["brief decision step"],"arguments":{}}
 
 Allowed action values:
 - none
 - create_task
-- create_project_from_workflow
+- create_workspace
+- create_workflow_from_project
 - update_task_status
 - create_project
 
 Rules:
 1. Only set should_execute=true when user clearly asks to perform an action, not just ask information.
-2. Extract only explicit arguments from user text; do not guess missing required fields.
+2. Extract only explicit arguments from user text; do not guess missing required fields or IDs.
 3. Keep arguments minimal and structured.
 4. If uncertain, choose should_execute=false.
+5. If the user provides only a project/workspace/workflow name but no ID, keep the name field (for example projectName) and do not invent projectId/workspaceId/workflowId.
+6. Include a short reasoning array with 2-5 concise steps explaining why you chose the action and what required fields are present/missing.
+7. Required fields for execution are:
+   - create_workspace: name
+   - create_project: workspaceId, name
+   - create_task: projectId, title
+   - update_task_status: projectId, taskId, status
+   - create_workflow_from_project: projectId
 
 Examples:
 Input: "Tạo task Fix login cho project Atlas, assignee An, due Friday"
-Output: {"should_execute":true,"action":"create_task","reason":"explicit create task request","arguments":{"projectName":"Atlas","title":"Fix login","assigneeName":"An","dueDateHint":"Friday"}}
+Output: {"should_execute":true,"action":"create_task","reason":"explicit create task request","reasoning":["User asks to create a task.","Task title is explicit.","Project is a name only, so projectId is missing."],"arguments":{"projectName":"Atlas","title":"Fix login","assigneeName":"An","dueDateHint":"Friday"}}
+
+Input: "Tạo workspace mới tên Capstone Lab"
+Output: {"should_execute":true,"action":"create_workspace","reason":"explicit create workspace request","reasoning":["User asks to create a workspace.","Workspace name is explicit."],"arguments":{"name":"Capstone Lab"}}
+
+Input: "Tạo project Mobile App trong workspace 12"
+Output: {"should_execute":true,"action":"create_project","reason":"explicit create project request","reasoning":["User asks to create a project.","Workspace id and project name are explicit."],"arguments":{"workspaceId":12,"name":"Mobile App"}}
+
+Input: "Tạo workflow từ project 42"
+Output: {"should_execute":true,"action":"create_workflow_from_project","reason":"explicit create workflow draft request","reasoning":["User asks to create a workflow from an existing project.","Project id is explicit.","Use the stable backend createWorkflowFromProject flow."],"arguments":{"projectId":42}}
 
 Input: "List task của tôi"
-Output: {"should_execute":false,"action":"none","reason":"information query","arguments":{}}
+Output: {"should_execute":false,"action":"none","reason":"information query","reasoning":["User asks for information, not a mutation."],"arguments":{}}

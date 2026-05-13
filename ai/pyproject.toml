@@ -9,6 +9,7 @@ requires-python = ">=3.10"
 
 dependencies = [
     "fastapi",
+    "httpx",
     "uvicorn[standard]",
     "python-dotenv",
     # LangChain core + integrations
