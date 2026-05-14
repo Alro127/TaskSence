@@ -116,7 +116,7 @@ services:
       - tasksense_net
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: qdrant
+    container_name: tasksense_qdrant
     restart: unless-stopped
 
     ports:
