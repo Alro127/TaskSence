@@ -1,4 +1,5 @@
-FROM python:3.13-slim
+# Base stage
+FROM python:3.13-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
 	PYTHONUNBUFFERED=1 \
@@ -9,11 +10,23 @@ WORKDIR /workspace
 
 RUN pip install --no-cache-dir uv
 
-# Build context should be the ai/ folder.
+# Dependency stage. Build context should be the ai/ folder.
+FROM base AS dependencies
+
 COPY pyproject.toml ./
+COPY uv.lock ./
+
+RUN uv sync --frozen --no-dev --no-install-project
+
+# Runtime stage
+FROM base AS runtime
+
+COPY --from=dependencies /workspace/.venv ./.venv
+COPY pyproject.toml ./
+COPY uv.lock ./
 COPY app ./app
 
-RUN uv sync --no-dev
+RUN uv sync --frozen --no-dev
 
 EXPOSE 8000
 

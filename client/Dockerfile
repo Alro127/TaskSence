@@ -1,38 +1,32 @@
-# Build stage
-FROM node:20-alpine AS builder
+# Dependency stage
+FROM node:20-alpine AS dependencies
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --frozen-lockfile
+RUN npm ci
 
-# Copy source code
+# Build stage
+FROM dependencies AS build
+
 COPY . .
 
-# Build the application
 RUN npm run build
 
 # Runtime stage
-FROM node:20-alpine
+FROM node:20-alpine AS runtime
 
 WORKDIR /app
 
-# Install serve to run the production build
 RUN npm install -g serve
 
-# Copy built assets from builder
-COPY --from=builder /app/dist ./dist
+COPY --from=build /app/dist ./dist
 COPY package.json ./
 
-# Create non-root user
-RUN addgroup -g 1000 appuser && \
-    adduser -D -u 1000 -G appuser appuser && \
-    chown -R appuser:appuser /app
+RUN chown -R node:node /app
 
-USER appuser
+USER node
 
 EXPOSE 5173
 
