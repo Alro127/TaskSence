@@ -37,6 +37,18 @@ def test_run_action_agent_uses_natural_tool_when_project_id_missing():
     assert fake_client.execute_with_token.call_args.kwargs["action"] == "create_task_natural"
 
 
+def test_run_action_agent_assigns_current_user_when_user_says_me():
+    llm_output = '{"should_execute":true,"action":"create_task","reason":"explicit request","arguments":{"projectName":"Website Redesign","title":"update ui admin"}}'
+    fake_client = MagicMock()
+    fake_client.execute_with_token.return_value = {"code": "SUCCESS", "data": {"result": {"id": 123}}}
+
+    with patch("app.agent.orchestrator.get_llm", return_value=_mock_llm(llm_output)):
+        result = run_action_agent(query="tao task update ui admin va dinh toi vao task do", user_id=7, mcp_client=fake_client)
+
+    assert result.executed is True
+    assert fake_client.execute_with_token.call_args.kwargs["arguments"]["assigneeIds"] == [7]
+
+
 def test_run_action_agent_executes_via_mcp_when_planned():
     llm_output = '{"should_execute":true,"action":"create_task","reason":"explicit request","arguments":{"projectId":3,"title":"Fix bug"}}'
     fake_client = MagicMock()

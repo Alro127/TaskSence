@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -137,6 +138,25 @@ def _tool_name_for_action(action: str) -> str:
     return _NATURAL_ACTIONS.get(action, action)
 
 
+def _augment_arguments(action: str, arguments: dict[str, Any], query: str, user_id: int) -> dict[str, Any]:
+    augmented = dict(arguments)
+    if action == "create_task" and "assigneeIds" not in augmented and _mentions_self_assignment(query):
+        augmented["assigneeIds"] = [user_id]
+    return augmented
+
+
+def _mentions_self_assignment(query: str) -> bool:
+    normalized = query.lower()
+    patterns = [
+        r"\bassign\s+me\b",
+        r"\bassign\s+to\s+me\b",
+        r"\bgan\s+(toi|minh)\b",
+        r"\bdinh\s+(toi|minh)\b",
+        r"\bcho\s+(toi|minh)\b",
+    ]
+    return any(re.search(pattern, normalized) for pattern in patterns)
+
+
 def _is_resolution_payload(payload: Any) -> bool:
     if not isinstance(payload, dict):
         return False
@@ -195,6 +215,7 @@ def run_action_agent(
         )
 
     client = mcp_client or SpringBootMcpClient()
+    plan["arguments"] = _augment_arguments(plan["action"], plan["arguments"], query, user_id)
     missing_fields = _missing_required_arguments(plan["action"], plan["arguments"])
     if missing_fields:
         return AgentActionResult(

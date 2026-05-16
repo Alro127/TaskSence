@@ -66,8 +66,8 @@ public class TaskSenseMcpTools {
         CreateTaskRequest request = new CreateTaskRequest();
         request.setTitle(requireNonBlank(toolRequest.getTitle(), "title is required for create_task"));
         request.setDescription(trimToNull(toolRequest.getDescription()));
-        request.setPriority(toolRequest.getPriority());
-        request.setStatus(toolRequest.getStatus());
+        request.setPriority(toolRequest.getPriority() != null ? toolRequest.getPriority() : TaskPriority.MEDIUM);
+        request.setStatus(toolRequest.getStatus() != null ? toolRequest.getStatus() : TaskStatus.TODO);
         request.setStartDate(toolRequest.getStartDate());
         request.setDueDate(toolRequest.getDueDate());
         request.setParentTaskId(toolRequest.getParentTaskId());
@@ -202,8 +202,8 @@ public class TaskSenseMcpTools {
         request.setProjectId(projectId);
         request.setTitle(toolRequest.getTitle());
         request.setDescription(toolRequest.getDescription());
-        request.setPriority(toolRequest.getPriority());
-        request.setStatus(toolRequest.getStatus());
+        request.setPriority(toolRequest.getPriority() != null ? toolRequest.getPriority() : TaskPriority.MEDIUM);
+        request.setStatus(toolRequest.getStatus() != null ? toolRequest.getStatus() : TaskStatus.TODO);
         request.setStartDate(toolRequest.getStartDate());
         request.setDueDate(toolRequest.getDueDate());
         request.setParentTaskId(toolRequest.getParentTaskId());
@@ -264,8 +264,8 @@ public class TaskSenseMcpTools {
             taskRequest.setProjectId(project.getId());
             taskRequest.setTitle(task.getTitle());
             taskRequest.setDescription(task.getDescription());
-            taskRequest.setPriority(task.getPriority());
-            taskRequest.setStatus(task.getStatus());
+            taskRequest.setPriority(task.getPriority() != null ? task.getPriority() : TaskPriority.MEDIUM);
+            taskRequest.setStatus(task.getStatus() != null ? task.getStatus() : TaskStatus.TODO);
             taskRequest.setStartDate(task.getStartDate());
             taskRequest.setDueDate(task.getDueDate());
             createdTasks.add(createTask(taskRequest));
