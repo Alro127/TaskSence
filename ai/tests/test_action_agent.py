@@ -106,3 +106,20 @@ def test_mcp_client_resolves_sse_message_endpoint_under_api_context():
     endpoint = client._resolve_sse_message_endpoint("/mcp/message?sessionId=abc")
 
     assert endpoint == "http://localhost:8080/api/v1/mcp/message?sessionId=abc"
+
+
+def test_mcp_client_wraps_arguments_for_single_tool_param():
+    client = SpringBootMcpClient(endpoint="http://localhost:8080/api/v1/mcp")
+
+    assert client._wrap_tool_request({"title": "Fix bug"}) == {"toolRequest": {"title": "Fix bug"}}
+    assert client._wrap_tool_request({"toolRequest": {"title": "Fix bug"}}) == {"toolRequest": {"title": "Fix bug"}}
+
+
+def test_mcp_client_normalizes_text_json_tool_result():
+    client = SpringBootMcpClient(endpoint="http://localhost:8080/api/v1/mcp")
+
+    result = client._normalize_tool_result(
+        {"content": [{"type": "text", "text": '{"status":"CONFIRMATION_REQUIRED","confirmationToken":"tok"}'}], "isError": False}
+    )
+
+    assert result == {"status": "CONFIRMATION_REQUIRED", "confirmationToken": "tok"}

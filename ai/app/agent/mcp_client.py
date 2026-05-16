@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import json
 import time
 from typing import Any
 from urllib.parse import urlparse
@@ -44,6 +45,7 @@ class SpringBootMcpClient:
         """Call the Spring AI WebMVC SSE MCP endpoint using JSON-RPC tool calls."""
         headers = self._headers(accept="application/json, text/event-stream")
         logger.info("[agent-mcp] call official MCP tool=%s endpoint=%s", action, self.mcp_endpoint)
+        tool_arguments = self._wrap_tool_request(arguments)
 
         with httpx.Client(timeout=self.timeout_seconds) as client:
             with client.stream("GET", self.mcp_endpoint, headers=headers) as stream:
@@ -75,14 +77,16 @@ class SpringBootMcpClient:
 
                 call_payload = self._rpc_payload(
                     "tools/call",
-                    {"name": action, "arguments": arguments},
+                    {"name": action, "arguments": tool_arguments},
                 )
                 call_id = self._post_sse_message(client, message_endpoint, call_payload, headers)
                 rpc = self._read_sse_rpc_response(lines, call_id)
 
         if "error" in rpc:
             raise RuntimeError(f"MCP tool call failed: {rpc['error']}")
-        result = rpc.get("result")
+        result = self._normalize_tool_result(rpc.get("result"))
+        if isinstance(result, dict) and result.get("isError") is True:
+            raise RuntimeError(f"MCP tool returned an error: {self._tool_result_text(result)}")
         return {
             "code": "SUCCESS",
             "message": "MCP tool executed successfully",
@@ -157,6 +161,35 @@ class SpringBootMcpClient:
             return urlunparse((parsed.scheme, parsed.netloc, f"{context_path}{endpoint}", "", "", ""))
         base_path = self.mcp_endpoint.rsplit("/", 1)[0]
         return f"{base_path}/{endpoint.lstrip('/')}"
+
+    def _wrap_tool_request(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        if "toolRequest" in arguments:
+            return arguments
+        return {"toolRequest": arguments}
+
+    def _normalize_tool_result(self, result: Any) -> Any:
+        if not isinstance(result, dict) or result.get("isError") is True:
+            return result
+        text = self._tool_result_text(result)
+        if not text:
+            return result
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            return result
+        return parsed if isinstance(parsed, dict) else result
+
+    def _tool_result_text(self, result: dict[str, Any]) -> str:
+        content = result.get("content")
+        if not isinstance(content, list):
+            return ""
+        parts = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                text = item.get("text")
+                if text:
+                    parts.append(str(text))
+        return "\n".join(parts)
 
     def _post_sse_message(
         self,
