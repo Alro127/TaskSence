@@ -61,7 +61,7 @@ public interface WorkspaceRepository extends JpaRepository<WorkspaceEntity, Long
                 JOIN WorkspaceMemberEntity wm ON wm.workspace = w
                 WHERE wm.user.id = :userId
                 AND wm.role IN :allowedRoles
-                AND (:name IS NULL OR LOWER(w.name) = LOWER(:name))
+                AND (CAST(:name AS string) IS NULL OR LOWER(w.name) = LOWER(CAST(:name AS string)))
                 ORDER BY w.updatedAt DESC, w.id DESC
             """)
     List<WorkspaceEntity> findAuthorizedExactName(
@@ -76,7 +76,7 @@ public interface WorkspaceRepository extends JpaRepository<WorkspaceEntity, Long
                 JOIN WorkspaceMemberEntity wm ON wm.workspace = w
                 WHERE wm.user.id = :userId
                 AND wm.role IN :allowedRoles
-                AND (:name IS NULL OR LOWER(w.name) LIKE LOWER(CONCAT('%', :name, '%')))
+                AND (CAST(:name AS string) IS NULL OR LOWER(w.name) LIKE LOWER(CONCAT('%', CAST(:name AS string), '%')))
                 ORDER BY w.updatedAt DESC, w.id DESC
             """)
     List<WorkspaceEntity> findAuthorizedNameLike(

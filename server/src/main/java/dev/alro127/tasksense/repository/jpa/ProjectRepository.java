@@ -76,9 +76,9 @@ public interface ProjectRepository extends JpaRepository<ProjectEntity, Long> {
         SELECT DISTINCT p
         FROM ProjectEntity p
         JOIN FETCH p.workspace w
-        WHERE (:projectName IS NULL OR LOWER(p.name) = LOWER(:projectName))
+        WHERE (CAST(:projectName AS string) IS NULL OR LOWER(p.name) = LOWER(CAST(:projectName AS string)))
         AND (:workspaceId IS NULL OR w.id = :workspaceId)
-        AND (:workspaceName IS NULL OR LOWER(w.name) = LOWER(:workspaceName))
+        AND (CAST(:workspaceName AS string) IS NULL OR LOWER(w.name) = LOWER(CAST(:workspaceName AS string)))
         AND (
             EXISTS (
                 SELECT 1 FROM ProjectMemberEntity pm
@@ -108,9 +108,9 @@ public interface ProjectRepository extends JpaRepository<ProjectEntity, Long> {
         SELECT DISTINCT p
         FROM ProjectEntity p
         JOIN FETCH p.workspace w
-        WHERE (:projectName IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :projectName, '%')))
+        WHERE (CAST(:projectName AS string) IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:projectName AS string), '%')))
         AND (:workspaceId IS NULL OR w.id = :workspaceId)
-        AND (:workspaceName IS NULL OR LOWER(w.name) LIKE LOWER(CONCAT('%', :workspaceName, '%')))
+        AND (CAST(:workspaceName AS string) IS NULL OR LOWER(w.name) LIKE LOWER(CONCAT('%', CAST(:workspaceName AS string), '%')))
         AND (
             EXISTS (
                 SELECT 1 FROM ProjectMemberEntity pm

@@ -9,17 +9,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
-import org.springframework.web.context.annotation.RequestScope;
 
-@RequestScope
 @RequiredArgsConstructor
 @Component
 public class SecurityServiceImpl implements SecurityService {
 
     private final UserRepository userRepository;
-
-    private UserEntity currentUser;
 
     @Override
     public Authentication getAuthentication() {
@@ -39,11 +34,8 @@ public class SecurityServiceImpl implements SecurityService {
 
     @Override
     public UserEntity getCurrentUser() {
-        if (currentUser == null) {
-            currentUser =  userRepository.findByEmail(getCurrentUsername())
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        }
-        return currentUser;
+        return userRepository.findByEmail(getCurrentUsername())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     @Override

@@ -6,6 +6,7 @@ import logging
 import time
 from typing import Any
 from urllib.parse import urlparse
+from urllib.parse import urlunparse
 
 import httpx
 
@@ -150,6 +151,10 @@ class SpringBootMcpClient:
     def _resolve_sse_message_endpoint(self, endpoint: str) -> str:
         if urlparse(endpoint).scheme:
             return endpoint
+        if endpoint.startswith("/"):
+            parsed = urlparse(self.mcp_endpoint)
+            context_path = parsed.path.removesuffix("/mcp")
+            return urlunparse((parsed.scheme, parsed.netloc, f"{context_path}{endpoint}", "", "", ""))
         base_path = self.mcp_endpoint.rsplit("/", 1)[0]
         return f"{base_path}/{endpoint.lstrip('/')}"
 

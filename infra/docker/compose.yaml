@@ -132,11 +132,11 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-http://localhost:5173}
 
-      AWS_REGION: ${AWS_REGION:-}
-      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY:-}
-      AWS_SECRET_KEY: ${AWS_SECRET_KEY:-}
-      AWS_BUCKET: ${AWS_BUCKET:-}
-      AWS_ENDPOINT: ${AWS_ENDPOINT:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY:-local-access-key}
+      AWS_SECRET_KEY: ${AWS_SECRET_KEY:-local-secret-key}
+      AWS_BUCKET: ${AWS_BUCKET:-tasksense}
+      AWS_ENDPOINT: ${AWS_ENDPOINT:-localhost}
 
       JAVA_OPTS: -Xms512m -Xmx1024m -XX:+UseG1GC
     ports:
@@ -192,6 +192,7 @@ services:
       QDRANT_HOST: http://tasksense-qdrant:6333
       QDRANT_PORT: 6333
       BACKEND_URL: http://tasksense-spring-api:8080/api/v1
+      SPRING_MCP_ENDPOINT: http://tasksense-spring-api:8080/api/v1/mcp
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       REDIS_URL: redis://tasksense-redis:6379
