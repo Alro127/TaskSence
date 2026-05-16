@@ -54,15 +54,14 @@ spring:
   ai:
     mcp:
       server:
-        protocol: STREAMABLE
         type: SYNC
         name: tasksense-mcp-server
         version: 1.0.0
         instructions: TaskSense MCP server for task and project execution tools
         annotation-scanner:
           enabled: true
-        streamable-http:
-          mcp-endpoint: /mcp
+        sse-endpoint: /mcp
+        sse-message-endpoint: /mcp/message
 
 aws:
   region: ${AWS_REGION:}

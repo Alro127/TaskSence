@@ -43,7 +43,7 @@ public class SecurityConfig {
                         .requestMatchers(new RegexRequestMatcher("^/workflows/\\d+$", "GET")).permitAll()
                         .requestMatchers("/auth/**", "/api-docs/**", "/swagger-ui/**", "/actuator/health/**",
                                         "/actuator/prometheus", "/actuator/metrics", "/health",
-                                        "/pings/**", "/ws/**", "/ws"
+                                        "/pings/**", "/ws/**", "/ws", "/mcp", "/mcp/**"
                                 ).permitAll()
                         .anyRequest().authenticated()
                 )
