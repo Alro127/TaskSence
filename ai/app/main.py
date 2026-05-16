@@ -14,6 +14,7 @@ import uvicorn
 
 from fastapi import FastAPI  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from qdrant_client import QdrantClient  # noqa: E402
 
 from app.auth.middleware import JwtAuthMiddleware  # noqa: E402
 from app.config.config import get_settings  # noqa: E402
@@ -72,6 +73,38 @@ app.include_router(router)
 @app.get("/health", tags=["ops"])
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/ready", tags=["ops"])
+async def readiness_check() -> dict[str, object]:
+    checks = {
+        "jwtSecret": bool(settings.jwt_secret),
+        "qdrant": _qdrant_ready(),
+        "postgres": _postgres_ready(),
+    }
+    return {"status": "ready" if all(checks.values()) else "degraded", "checks": checks}
+
+
+def _qdrant_ready() -> bool:
+    try:
+        QdrantClient(url=settings.qdrant_host).get_collections()
+        return True
+    except Exception as exc:
+        logger.warning("[ready] qdrant check failed host=%s err=%s", settings.qdrant_host, exc)
+        return False
+
+
+def _postgres_ready() -> bool:
+    try:
+        from app.service.source_truth.db import connect
+
+        with connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+        return True
+    except Exception as exc:
+        logger.warning("[ready] postgres check failed host=%s err=%s", settings.postgres_host, exc)
+        return False
 
 
 if __name__ == "__main__":

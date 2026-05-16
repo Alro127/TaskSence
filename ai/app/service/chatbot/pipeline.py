@@ -207,6 +207,8 @@ def run_chatbot_pipeline(
             )
             raw_docs.extend(docs)
 
+        raw_docs = _dedupe_documents(raw_docs)
+
         logger.info("[chatbot-service] raw docs retrieved: %d (before filtering)", len(raw_docs))
         filter_result = filter_docs(
             raw_docs,
@@ -238,7 +240,7 @@ def run_chatbot_pipeline(
             _store_cache_if_allowed(cache_key, response)
             return response
 
-        hydrated_context = hydrate_documents_with_postgres(context)
+        hydrated_context = hydrate_documents_with_postgres(context, user_id=user_id)
         logger.info("[chatbot-service] hydrated context: %d documents enriched from postgres", len(hydrated_context))
         answer = generate(query, hydrated_context, conversation_history=conversation_history)
         sources = [
@@ -283,6 +285,18 @@ def _extract_agent_reasoning(payload: dict[str, Any] | None) -> list[str]:
     if isinstance(reasoning, list):
         return [str(item) for item in reasoning if str(item).strip()]
     return []
+
+
+def _dedupe_documents(docs: list[Document]) -> list[Document]:
+    """Keep the highest-scoring document for each source entity."""
+    deduped: dict[tuple[str, Any], Document] = {}
+    for doc in docs:
+        entity_id = doc["source"].get("entityId", doc["id"])
+        key = (doc["index"], entity_id)
+        existing = deduped.get(key)
+        if existing is None or doc["score"] > existing["score"]:
+            deduped[key] = doc
+    return sorted(deduped.values(), key=lambda d: d["score"], reverse=True)
 
 
 def _store_cache_if_allowed(cache_key: str | None, response: dict[str, Any]) -> None:

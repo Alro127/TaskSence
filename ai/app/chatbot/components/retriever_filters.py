@@ -13,6 +13,11 @@ def task_user_filter(user_id: int) -> Filter:
     )
 
 
+def _with_user_visibility(scope: FieldCondition, user_id: int) -> Filter:
+    """Combine a task scope with caller visibility constraints."""
+    return Filter(must=[scope, task_user_filter(user_id)])
+
+
 def build_task_scope_filter(
     user_id: int,
     workspace_id: int | None,
@@ -23,7 +28,13 @@ def build_task_scope_filter(
     if is_personal:
         return task_user_filter(user_id)
     if project_id is not None:
-        return Filter(must=[FieldCondition(key="projectId", match=MatchValue(value=project_id))])
+        return _with_user_visibility(
+            FieldCondition(key="projectId", match=MatchValue(value=project_id)),
+            user_id,
+        )
     if workspace_id is not None:
-        return Filter(must=[FieldCondition(key="workspaceId", match=MatchValue(value=workspace_id))])
-    return None
+        return _with_user_visibility(
+            FieldCondition(key="workspaceId", match=MatchValue(value=workspace_id)),
+            user_id,
+        )
+    return task_user_filter(user_id)

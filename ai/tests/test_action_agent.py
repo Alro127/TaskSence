@@ -22,14 +22,28 @@ def test_run_action_agent_skips_non_action_query():
     assert result.action == "none"
 
 
-def test_run_action_agent_executes_via_mcp_when_planned():
+def test_run_action_agent_reports_missing_required_fields():
     llm_output = '{"should_execute":true,"action":"create_task","reason":"explicit request","arguments":{"title":"Fix bug"}}'
     fake_client = MagicMock()
-    fake_client.execute.return_value = {"ok": True, "id": 123}
 
     with patch("app.agent.orchestrator.get_llm", return_value=_mock_llm(llm_output)):
         result = run_action_agent(query="create task Fix bug", user_id=7, mcp_client=fake_client)
 
+    assert result.executed is False
+    assert result.action == "create_task"
+    assert result.payload is not None
+    assert result.payload["missingFields"] == ["projectId"]
+    fake_client.execute_with_token.assert_not_called()
+
+
+def test_run_action_agent_executes_via_mcp_when_planned():
+    llm_output = '{"should_execute":true,"action":"create_task","reason":"explicit request","arguments":{"projectId":3,"title":"Fix bug"}}'
+    fake_client = MagicMock()
+    fake_client.execute_with_token.return_value = {"ok": True, "id": 123}
+
+    with patch("app.agent.orchestrator.get_llm", return_value=_mock_llm(llm_output)):
+        result = run_action_agent(query="create task Fix bug in project 3", user_id=7, mcp_client=fake_client)
+
     assert result.executed is True
     assert result.action == "create_task"
-    fake_client.execute.assert_called_once()
+    fake_client.execute_with_token.assert_called_once()

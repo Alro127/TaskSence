@@ -38,6 +38,28 @@ def count_tasks_exact(
     if is_personal:
         sql.append("AND (t.created_by = %s OR ta.user_id = %s)")
         params.extend([user_id, user_id])
+    else:
+        sql.append(
+            """
+            AND (
+                t.created_by = %s
+                OR ta.user_id = %s
+                OR EXISTS (
+                    SELECT 1 FROM project_members visible_pm
+                    WHERE visible_pm.project_id = p.id
+                      AND visible_pm.user_id = %s
+                      AND visible_pm.deleted_at IS NULL
+                )
+                OR EXISTS (
+                    SELECT 1 FROM workspace_members visible_wm
+                    WHERE visible_wm.workspace_id = p.workspace_id
+                      AND visible_wm.user_id = %s
+                      AND visible_wm.deleted_at IS NULL
+                )
+            )
+            """
+        )
+        params.extend([user_id, user_id, user_id, user_id])
 
     if query.strip():
         sql.append(

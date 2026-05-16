@@ -51,27 +51,10 @@ def resolve_project_by_name(project_name: str, user_id: int) -> int | None:
                     logger.info("[source-truth] found accessible project: %r id=%s", project_name, row["id"])
                     return int(row["id"])
 
-                # Fallback: check if project exists but user has no access
-                cur.execute(
-                    """
-                    SELECT p.id
-                    FROM projects p
-                    WHERE LOWER(p.name) ILIKE LOWER(%s)
-                    AND p.deleted_at IS NULL
-                    LIMIT 1
-                    """,
-                    (f"%{project_name}%",),
-                )
-                row = cast(dict[str, Any] | None, cur.fetchone())
-                if row:
-                    logger.warning("[source-truth] project exists but user has no access: %r (user_id=%s)", project_name, user_id)
-                    return None
-
-                logger.debug("[source-truth] project not found: %r", project_name)
+                logger.debug("[source-truth] no accessible project matched: %r", project_name)
                 return None
 
     except Exception as exc:
         logger.warning("[source-truth] resolve_project_by_name failed for %r: %s", project_name, exc)
         return None
-
 

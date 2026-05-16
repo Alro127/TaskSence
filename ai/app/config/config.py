@@ -132,7 +132,10 @@ def get_settings() -> Settings:
 		host=_env_str("HOST", "0.0.0.0"),
 		port=_env_int("PORT", 8000),
 		reload=_env_bool("RELOAD", True),
-		cors_origins=_env_csv("CORS_ORIGINS", "*"),
+		cors_origins=_env_csv(
+			"CORS_ORIGINS",
+			"http://localhost:3000,http://localhost:5173,https://tasksense.app",
+		),
 		llm_provider=_env_str("LLM_PROVIDER", "gemini").lower(),
 		openai_api_key=_env_secret_str("OPENAI_API_KEY", ""),
 		openai_model=_env_str("OPENAI_MODEL", "gpt-4o-mini"),
@@ -161,7 +164,7 @@ def get_settings() -> Settings:
 		),
 		jwt_secret=_env_str(
 			"SECURITY_JWT_SECRET",
-			_env_str("JWT_SECRET", "my-super-secret-key-which-is-very-long-123456"),
+			_env_str("JWT_SECRET", ""),
 		),
 		qdrant_host=_env_str("QDRANT_HOST", "http://localhost:6333"),
 		qdrant_collection_tasks=_env_str("QDRANT_COLLECTION_TASKS", "tasks"),

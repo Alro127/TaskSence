@@ -81,7 +81,7 @@ services:
     image: flyway/flyway:9-alpine
     container_name: tasksense_flyway
     command: >
-      -url=jdbc:postgresql://postgres:5432/taskdb
+      -url=jdbc:postgresql://tasksense-postgres:5432/taskdb
       -user=postgres
       -password=postgres
       -connectRetries=60
@@ -101,7 +101,7 @@ services:
       PGPASSWORD: postgres
     volumes:
       - ../../server/src/main/resources/db/seed:/seed
-    command: sh -c "sleep 5 && psql -h postgres -U postgres -d taskdb -f /seed/seed_data.sql || true"
+    command: sh -c "sleep 5 && psql -h tasksense-postgres -U postgres -d taskdb -f /seed/seed_data.sql || true"
     depends_on:
       tasksense-flyway:
         condition: service_completed_successfully
@@ -118,11 +118,12 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://tasksense-postgres:5432/taskdb?options=-c%20TimeZone=Asia/Ho_Chi_Minh
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_HOST: tasksense-redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_ELASTICSEARCH_URIS: http://tasksense-elasticsearch:9200
       SPRING_ELASTICSEARCH_USERNAME: ""
       SPRING_ELASTICSEARCH_PASSWORD: ""
+      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET:?SECURITY_JWT_SECRET is required}
 
       EMAIL_USERNAME: ${EMAIL_USERNAME:-}
       EMAIL_PASSWORD: ${EMAIL_PASSWORD:-}
@@ -153,7 +154,7 @@ services:
       tasksense-flyway:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health/status"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -196,6 +197,14 @@ services:
       REDIS_URL: redis://tasksense-redis:6379
       ELASTICSEARCH_HOST: tasksense-elasticsearch
       ELASTICSEARCH_PORT: 9200
+      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET:?SECURITY_JWT_SECRET is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,https://tasksense.app}
+      POSTGRES_HOST: tasksense-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: taskdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_SSLMODE: disable
     ports:
       - "8000:8000"
     networks:

@@ -82,7 +82,7 @@ server:
 
 security:
   jwt:
-    secret: my-super-secret-key-which-is-very-long-123456
+    secret: ${SECURITY_JWT_SECRET:}
     short-expiration: 360000000
     long-expiration: 604800000
   google:

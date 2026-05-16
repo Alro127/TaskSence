@@ -13,7 +13,7 @@ from app.service.source_truth.rows import _build_project_relation, _build_task_r
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-def _fetch_tasks_by_ids(ids: list[int]) -> dict[int, dict[str, Any]]:
+def _fetch_tasks_by_ids(ids: list[int], user_id: int) -> dict[int, dict[str, Any]]:
     if not ids:
         return {}
 
@@ -59,6 +59,25 @@ def _fetch_tasks_by_ids(ids: list[int]) -> dict[int, dict[str, Any]]:
         LEFT JOIN tags tg ON tg.id = tt.tag_id AND tg.deleted_at IS NULL
         WHERE t.deleted_at IS NULL
           AND t.id = ANY(%s)
+          AND (
+              t.created_by = %s
+              OR EXISTS (
+                  SELECT 1 FROM task_assignees visible_ta
+                  WHERE visible_ta.task_id = t.id AND visible_ta.user_id = %s
+              )
+              OR EXISTS (
+                  SELECT 1 FROM project_members visible_pm
+                  WHERE visible_pm.project_id = p.id
+                    AND visible_pm.user_id = %s
+                    AND visible_pm.deleted_at IS NULL
+              )
+              OR EXISTS (
+                  SELECT 1 FROM workspace_members visible_wm
+                  WHERE visible_wm.workspace_id = p.workspace_id
+                    AND visible_wm.user_id = %s
+                    AND visible_wm.deleted_at IS NULL
+              )
+          )
         GROUP BY
             t.id, t.title, t.description, t.status, t.priority,
             t.project_id, p.name, p.status, p.description, p.workspace_id,
@@ -69,7 +88,7 @@ def _fetch_tasks_by_ids(ids: list[int]) -> dict[int, dict[str, Any]]:
     try:
         with connect() as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (ids,))
+                cur.execute(query, (ids, user_id, user_id, user_id, user_id))
                 rows = as_dict_rows(cur.fetchall())
             return {
                 int(r["entityId"]): _normalize_task_row({**r, "relation": _build_task_relation(r)})
@@ -80,7 +99,7 @@ def _fetch_tasks_by_ids(ids: list[int]) -> dict[int, dict[str, Any]]:
         return {}
 
 
-def _fetch_projects_by_ids(ids: list[int]) -> dict[int, dict[str, Any]]:
+def _fetch_projects_by_ids(ids: list[int], user_id: int) -> dict[int, dict[str, Any]]:
     if not ids:
         return {}
 
@@ -113,6 +132,20 @@ def _fetch_projects_by_ids(ids: list[int]) -> dict[int, dict[str, Any]]:
         LEFT JOIN tasks t ON t.project_id = p.id AND t.deleted_at IS NULL
         WHERE p.deleted_at IS NULL
           AND p.id = ANY(%s)
+          AND (
+              EXISTS (
+                  SELECT 1 FROM project_members visible_pm
+                  WHERE visible_pm.project_id = p.id
+                    AND visible_pm.user_id = %s
+                    AND visible_pm.deleted_at IS NULL
+              )
+              OR EXISTS (
+                  SELECT 1 FROM workspace_members visible_wm
+                  WHERE visible_wm.workspace_id = p.workspace_id
+                    AND visible_wm.user_id = %s
+                    AND visible_wm.deleted_at IS NULL
+              )
+          )
         GROUP BY
             p.id, p.name, p.description, p.status,
             p.workspace_id, w.name, w.description,
@@ -122,7 +155,7 @@ def _fetch_projects_by_ids(ids: list[int]) -> dict[int, dict[str, Any]]:
     try:
         with connect() as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (ids,))
+                cur.execute(query, (ids, user_id, user_id))
                 rows = as_dict_rows(cur.fetchall())
             return {
                 int(r["entityId"]): _normalize_project_row({**r, "relation": _build_project_relation(r)})
@@ -133,7 +166,7 @@ def _fetch_projects_by_ids(ids: list[int]) -> dict[int, dict[str, Any]]:
         return {}
 
 
-def hydrate_documents_with_postgres(docs: list[Document]) -> list[Document]:
+def hydrate_documents_with_postgres(docs: list[Document], user_id: int) -> list[Document]:
     """Replace Qdrant payload with fresh PostgreSQL data when possible."""
     task_ids: list[int] = []
     project_ids: list[int] = []
@@ -147,8 +180,8 @@ def hydrate_documents_with_postgres(docs: list[Document]) -> list[Document]:
         elif doc["index"] == settings.qdrant_collection_projects:
             project_ids.append(entity_id)
 
-    task_map = _fetch_tasks_by_ids(task_ids)
-    project_map = _fetch_projects_by_ids(project_ids)
+    task_map = _fetch_tasks_by_ids(task_ids, user_id)
+    project_map = _fetch_projects_by_ids(project_ids, user_id)
 
     hydrated: list[Document] = []
     for doc in docs:
@@ -173,4 +206,3 @@ def hydrate_documents_with_postgres(docs: list[Document]) -> list[Document]:
         )
 
     return hydrated
-
