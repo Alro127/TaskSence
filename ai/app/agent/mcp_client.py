@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import time
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
@@ -39,24 +40,45 @@ class SpringBootMcpClient:
         return self._execute_streamable_http(action, arguments)
 
     def _execute_streamable_http(self, action: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        """Call an official MCP Streamable HTTP endpoint using JSON-RPC tool calls."""
+        """Call the Spring AI WebMVC SSE MCP endpoint using JSON-RPC tool calls."""
         headers = self._headers(accept="application/json, text/event-stream")
         logger.info("[agent-mcp] call official MCP tool=%s endpoint=%s", action, self.mcp_endpoint)
 
         with httpx.Client(timeout=self.timeout_seconds) as client:
-            self._initialize_session(client, headers)
+            with client.stream("GET", self.mcp_endpoint, headers=headers) as stream:
+                stream.raise_for_status()
+                lines = stream.iter_lines()
+                message_endpoint = self._read_sse_endpoint(lines)
 
-            response = client.post(
-                self.mcp_endpoint,
-                json=self._rpc_payload(
+                initialize_id = self._post_sse_message(
+                    client,
+                    message_endpoint,
+                    self._rpc_payload(
+                        "initialize",
+                        {
+                            "protocolVersion": _MCP_PROTOCOL_VERSION,
+                            "capabilities": {},
+                            "clientInfo": {"name": "tasksense-ai-service", "version": "1.0.0"},
+                        },
+                    ),
+                    headers,
+                )
+                self._read_sse_rpc_response(lines, initialize_id)
+
+                self._post_sse_message(
+                    client,
+                    message_endpoint,
+                    {"jsonrpc": "2.0", "method": "notifications/initialized"},
+                    headers,
+                )
+
+                call_payload = self._rpc_payload(
                     "tools/call",
                     {"name": action, "arguments": arguments},
-                ),
-                headers=headers,
-            )
-            response.raise_for_status()
+                )
+                call_id = self._post_sse_message(client, message_endpoint, call_payload, headers)
+                rpc = self._read_sse_rpc_response(lines, call_id)
 
-        rpc = self._decode_rpc_response(response)
         if "error" in rpc:
             raise RuntimeError(f"MCP tool call failed: {rpc['error']}")
         result = rpc.get("result")
@@ -78,14 +100,33 @@ class SpringBootMcpClient:
         headers = self._headers(accept="application/json, text/event-stream")
         try:
             with httpx.Client(timeout=self.timeout_seconds) as client:
-                self._initialize_session(client, headers)
-                response = client.post(
-                    self.mcp_endpoint,
-                    json=self._rpc_payload("tools/list", {}),
-                    headers=headers,
-                )
-                response.raise_for_status()
-            rpc = self._decode_rpc_response(response)
+                with client.stream("GET", self.mcp_endpoint, headers=headers) as stream:
+                    stream.raise_for_status()
+                    lines = stream.iter_lines()
+                    message_endpoint = self._read_sse_endpoint(lines)
+                    initialize_id = self._post_sse_message(
+                        client,
+                        message_endpoint,
+                        self._rpc_payload(
+                            "initialize",
+                            {
+                                "protocolVersion": _MCP_PROTOCOL_VERSION,
+                                "capabilities": {},
+                                "clientInfo": {"name": "tasksense-ai-service", "version": "1.0.0"},
+                            },
+                        ),
+                        headers,
+                    )
+                    self._read_sse_rpc_response(lines, initialize_id)
+                    self._post_sse_message(
+                        client,
+                        message_endpoint,
+                        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+                        headers,
+                    )
+                    list_payload = self._rpc_payload("tools/list", {})
+                    list_id = self._post_sse_message(client, message_endpoint, list_payload, headers)
+                    rpc = self._read_sse_rpc_response(lines, list_id)
             if "error" in rpc:
                 raise RuntimeError(f"MCP tool listing failed: {rpc['error']}")
             result = rpc.get("result")
@@ -95,30 +136,48 @@ class SpringBootMcpClient:
         finally:
             self.api_key = previous_api_key
 
-    def _initialize_session(self, client: httpx.Client, headers: dict[str, str]) -> None:
-        init_response = client.post(
-            self.mcp_endpoint,
-            json=self._rpc_payload(
-                "initialize",
-                {
-                    "protocolVersion": _MCP_PROTOCOL_VERSION,
-                    "capabilities": {},
-                    "clientInfo": {"name": "tasksense-ai-service", "version": "1.0.0"},
-                },
-            ),
-            headers=headers,
-        )
-        init_response.raise_for_status()
-        session_id = init_response.headers.get("Mcp-Session-Id") or init_response.headers.get("mcp-session-id")
-        if session_id:
-            headers["Mcp-Session-Id"] = session_id
+    def _read_sse_endpoint(self, lines: Any) -> str:
+        event = None
+        for line in lines:
+            if line.startswith("event:"):
+                event = line.removeprefix("event:").strip()
+                continue
+            if line.startswith("data:") and event == "endpoint":
+                endpoint = line.removeprefix("data:").strip()
+                return self._resolve_sse_message_endpoint(endpoint)
+        raise ValueError("MCP SSE endpoint event was not received")
 
-        # Some MCP servers expect the initialized notification before tool calls.
-        client.post(
-            self.mcp_endpoint,
-            json={"jsonrpc": "2.0", "method": "notifications/initialized"},
-            headers=headers,
-        )
+    def _resolve_sse_message_endpoint(self, endpoint: str) -> str:
+        if urlparse(endpoint).scheme:
+            return endpoint
+        base_path = self.mcp_endpoint.rsplit("/", 1)[0]
+        return f"{base_path}/{endpoint.lstrip('/')}"
+
+    def _post_sse_message(
+        self,
+        client: httpx.Client,
+        message_endpoint: str,
+        payload: dict[str, Any],
+        headers: dict[str, str],
+    ) -> str | None:
+        response = client.post(message_endpoint, json=payload, headers=headers)
+        response.raise_for_status()
+        rpc_id = payload.get("id")
+        return rpc_id if isinstance(rpc_id, str) else None
+
+    def _read_sse_rpc_response(self, lines: Any, expected_id: str | None) -> dict[str, Any]:
+        for line in lines:
+            if not line.startswith("data:"):
+                continue
+            data = line.removeprefix("data:").strip()
+            if not data:
+                continue
+            parsed = httpx.Response(200, content=data).json()
+            if not isinstance(parsed, dict):
+                continue
+            if expected_id is None or parsed.get("id") == expected_id:
+                return parsed
+        raise ValueError("MCP SSE response was not received")
 
     def _headers(self, accept: str = "application/json") -> dict[str, str]:
         headers = {"Content-Type": "application/json", "Accept": accept}

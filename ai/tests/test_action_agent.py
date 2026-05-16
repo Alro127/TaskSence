@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+from app.agent.mcp_client import SpringBootMcpClient
 from app.agent.orchestrator import run_action_agent
 
 
@@ -97,3 +98,11 @@ def test_run_action_agent_returns_confirmation_required_for_update():
     assert result.payload is not None
     assert result.payload["mcp"]["data"]["result"]["confirmationToken"] == "tok_123"
     assert fake_client.execute_with_token.call_args.kwargs["action"] == "update_task_natural"
+
+
+def test_mcp_client_resolves_sse_message_endpoint_under_api_context():
+    client = SpringBootMcpClient(endpoint="http://localhost:8080/api/v1/mcp")
+
+    endpoint = client._resolve_sse_message_endpoint("/mcp/message?sessionId=abc")
+
+    assert endpoint == "http://localhost:8080/api/v1/mcp/message?sessionId=abc"
