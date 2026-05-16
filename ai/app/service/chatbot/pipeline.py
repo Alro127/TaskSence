@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.agent import run_action_agent
+from app.agent import AgentActionResult, run_action_agent
 from app.chatbot.components import Document
 from app.chatbot.components.classifier import classify
 from app.chatbot.components.filter import filter_docs
@@ -75,10 +75,7 @@ def run_chatbot_pipeline(
             )
             action_reasoning = _extract_agent_reasoning(action_result.payload)
             if action_result.executed:
-                action_answer = (
-                    f"Da thuc thi hanh dong {action_result.action} qua MCP. "
-                    "Neu ban muon, minh co the truy van lai de kiem tra ket qua moi nhat."
-                )
+                action_answer = _action_success_message(action_result)
                 session_id = persist_chat_turn(
                     user_id=user_id,
                     query=query,
@@ -311,6 +308,50 @@ def _extract_agent_reasoning(payload: dict[str, Any] | None) -> list[str]:
     if isinstance(reasoning, list):
         return [str(item) for item in reasoning if str(item).strip()]
     return []
+
+
+def _action_success_message(action_result: AgentActionResult) -> str:
+    result = _extract_agent_result(action_result.payload)
+    if action_result.action == "create_task":
+        title = _field(result, "title")
+        return f"Minh da tao task {title} thanh cong." if title else "Minh da tao task thanh cong."
+    if action_result.action == "create_project":
+        name = _field(result, "name")
+        return f"Minh da tao project {name} thanh cong." if name else "Minh da tao project thanh cong."
+    if action_result.action == "create_workspace":
+        name = _field(result, "name")
+        return f"Minh da tao workspace {name} thanh cong." if name else "Minh da tao workspace thanh cong."
+    if action_result.action == "create_project_with_tasks":
+        project = result.get("project") if isinstance(result, dict) else None
+        name = _field(project, "name")
+        return f"Minh da tao project {name} va cac task ban dau thanh cong." if name else "Minh da tao project va cac task ban dau thanh cong."
+    if action_result.action == "create_workflow_from_project":
+        name = _field(result, "name")
+        return f"Minh da tao workflow {name} thanh cong." if name else "Minh da tao workflow thanh cong."
+    if action_result.action == "update_task_status":
+        title = _field(result, "title")
+        return f"Minh da cap nhat trang thai task {title} thanh cong." if title else "Minh da cap nhat trang thai task thanh cong."
+    return "Minh da thuc hien yeu cau thanh cong."
+
+
+def _extract_agent_result(payload: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    mcp = payload.get("mcp")
+    if not isinstance(mcp, dict):
+        return {}
+    data = mcp.get("data")
+    if not isinstance(data, dict):
+        return {}
+    result = data.get("result")
+    return result if isinstance(result, dict) else {}
+
+
+def _field(value: Any, key: str) -> str:
+    if not isinstance(value, dict):
+        return ""
+    field = value.get(key)
+    return str(field).strip() if field is not None else ""
 
 
 def _extract_agent_confirmation(payload: dict[str, Any] | None) -> dict[str, Any] | None:

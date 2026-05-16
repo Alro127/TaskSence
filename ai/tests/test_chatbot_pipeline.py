@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import cast
 
 from app.chatbot.components import Document
-from app.service.chatbot.pipeline import _dedupe_documents
+from app.agent import AgentActionResult
+from app.service.chatbot.pipeline import _action_success_message, _dedupe_documents
 
 
 def test_dedupe_documents_keeps_highest_score_per_entity():
@@ -18,3 +19,15 @@ def test_dedupe_documents_keeps_highest_score_per_entity():
     result = _dedupe_documents(cast(list[Document], docs))
 
     assert [doc["id"] for doc in result] == ["high", "project"]
+
+
+def test_action_success_message_is_user_friendly():
+    result = AgentActionResult(
+        executed=True,
+        action="create_project",
+        message="action executed via MCP",
+        payload={"mcp": {"data": {"result": {"name": "Website Redesign"}}}},
+    )
+
+    assert _action_success_message(result) == "Minh da tao project Website Redesign thanh cong."
+    assert "MCP" not in _action_success_message(result)
