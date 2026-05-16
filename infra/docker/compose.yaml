@@ -188,13 +188,13 @@ services:
     environment:
       PYTHONUNBUFFERED: 1
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
-      QDRANT_HOST: qdrant
+      QDRANT_HOST: http://tasksense-qdrant:6333
       QDRANT_PORT: 6333
       BACKEND_URL: http://tasksense-spring-api:8080/api/v1
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       REDIS_URL: redis://tasksense-redis:6379
-      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_HOST: tasksense-elasticsearch
       ELASTICSEARCH_PORT: 9200
     ports:
       - "8000:8000"
@@ -209,7 +209,7 @@ services:
       tasksense-elasticsearch:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5).read()"]
       interval: 30s
       timeout: 10s
       retries: 3

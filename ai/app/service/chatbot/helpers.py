@@ -28,14 +28,11 @@ def extract_project_context(query: str, user_id: int) -> int | None:
 
         llm = get_llm()
 
-        extraction_prompt = f"""Analyze this user query and extract the project name if mentioned.
-
-Query: \"{query}\"
-
-If the query mentions a project (e.g., \"dự án <name>\", \"project <name>\", \"trong dự án <name>\"), extract and return ONLY the project name.
-If no project is mentioned, return \"NONE\".
-
-Return format: Just the project name or \"NONE\", nothing else."""
+        extraction_prompt = (
+            "Extract a TaskSense project name from the query. "
+            "Return only the project name, or NONE if absent.\n"
+            f"Query: {query}"
+        )
 
         logger.info("[chatbot-service] extracting project name from query")
         response = llm.invoke(extraction_prompt)

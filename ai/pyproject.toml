@@ -25,6 +25,7 @@ dependencies = [
     "apscheduler>=3.10",
     "openai",
     "pyjwt>=2.12.1",
+    "redis>=5.0",
 ]
 
 [build-system]

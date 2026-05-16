@@ -10,9 +10,16 @@ from app.chatbot.components import Document
 from app.chatbot.components.classifier import classify
 from app.chatbot.components.filter import filter_docs
 from app.chatbot.components.generator import generate
+from app.chatbot.components.context_optimizer import retrieval_limit
 from app.chatbot.components.retriever import retrieve
 from app.chatbot.components.rewriter import rewrite
 from app.chatbot.components.sql_router import query_postgres_documents
+from app.service.ai_cache_service import (
+    build_chat_cache_key,
+    get_cached_chat_response,
+    is_cacheable_query,
+    set_cached_chat_response,
+)
 from app.service.chat_persistence_service import persist_chat_turn
 from app.service.chatbot.constants import _ACTION_PHRASES, _MSG_ERROR, _MSG_NO_DATA, _MSG_UNRELATED
 from app.service.chatbot.helpers import extract_project_context, get_conversation_history, looks_like_action_request
@@ -39,6 +46,23 @@ def run_chatbot_pipeline(
 
     is_new_session = session_id is None
     conversation_history = get_conversation_history(session_id)
+    cache_key = None
+
+    if not agent and is_cacheable_query(query):
+        cache_key = build_chat_cache_key(query=query, user_id=user_id, agent=False)
+        cached = get_cached_chat_response(cache_key)
+        if cached is not None:
+            session_id = persist_chat_turn(
+                user_id=user_id,
+                query=query,
+                answer=cached.answer,
+                context_docs=[],
+                sources=cached.sources,
+                session_id=session_id,
+                is_first_turn=is_new_session,
+                extra_context={"cacheHit": True},
+            )
+            return _response(cached.answer, cached.sources, session_id, cached.reasoning)
 
     try:
         should_try_action_agent = bool(agent) or looks_like_action_request(query, _ACTION_PHRASES)
@@ -104,7 +128,9 @@ def run_chatbot_pipeline(
                 session_id=session_id,
                 is_first_turn=is_new_session,
             )
-            return _response(_MSG_UNRELATED, [], session_id)
+            response = _response(_MSG_UNRELATED, [], session_id)
+            _store_cache_if_allowed(cache_key, response)
+            return response
 
         is_personal = bool(classification.get("is_personal", False))
         intent = str(classification.get("intent", "task_query"))
@@ -150,9 +176,12 @@ def run_chatbot_pipeline(
                 is_first_turn=is_new_session,
             )
             logger.info("[chatbot-service] chatbot response sent (count_query)")
-            return _response(answer, [], session_id)
+            response = _response(answer, [], session_id)
+            _store_cache_if_allowed(cache_key, response)
+            return response
 
-        logger.info("[chatbot-service] retrieving documents from SQL router and Qdrant (limit=%s)", requested_limit)
+        qdrant_limit = retrieval_limit(requested_limit, intent=intent)
+        logger.info("[chatbot-service] retrieving documents from SQL router and Qdrant (limit=%s)", qdrant_limit)
         raw_docs: list[Document] = []
 
         sql_docs = query_postgres_documents(
@@ -174,7 +203,7 @@ def run_chatbot_pipeline(
                 workspace_id=None,
                 project_id=project_id,
                 is_personal=is_personal,
-                requested_limit=requested_limit,
+                requested_limit=qdrant_limit,
             )
             raw_docs.extend(docs)
 
@@ -205,7 +234,9 @@ def run_chatbot_pipeline(
                 session_id=session_id,
                 is_first_turn=is_new_session,
             )
-            return _response(_MSG_NO_DATA, [], session_id)
+            response = _response(_MSG_NO_DATA, [], session_id)
+            _store_cache_if_allowed(cache_key, response)
+            return response
 
         hydrated_context = hydrate_documents_with_postgres(context)
         logger.info("[chatbot-service] hydrated context: %d documents enriched from postgres", len(hydrated_context))
@@ -224,7 +255,9 @@ def run_chatbot_pipeline(
             is_first_turn=is_new_session,
         )
         logger.info("[chatbot-service] chatbot response sent (sources=%d)", len(sources))
-        return _response(answer, sources, session_id)
+        response = _response(answer, sources, session_id)
+        _store_cache_if_allowed(cache_key, response)
+        return response
 
     except Exception as exc:
         logger.exception("[chatbot-service] unhandled error: %s", exc)
@@ -250,3 +283,9 @@ def _extract_agent_reasoning(payload: dict[str, Any] | None) -> list[str]:
     if isinstance(reasoning, list):
         return [str(item) for item in reasoning if str(item).strip()]
     return []
+
+
+def _store_cache_if_allowed(cache_key: str | None, response: dict[str, Any]) -> None:
+    if cache_key is None:
+        return
+    set_cached_chat_response(cache_key, response)
