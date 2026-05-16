@@ -67,7 +67,12 @@ def run_chatbot_pipeline(
     try:
         should_try_action_agent = bool(agent) or looks_like_action_request(query, _ACTION_PHRASES)
         if should_try_action_agent:
-            action_result = run_action_agent(query=query, user_id=user_id, auth_token=auth_token)
+            action_result = run_action_agent(
+                query=query,
+                user_id=user_id,
+                auth_token=auth_token,
+                conversation_history=conversation_history,
+            )
             action_reasoning = _extract_agent_reasoning(action_result.payload)
             if action_result.executed:
                 action_answer = (
@@ -97,6 +102,27 @@ def run_chatbot_pipeline(
                     session_id=session_id,
                     is_first_turn=is_new_session,
                     extra_context={"agentReasoning": action_reasoning, "agentAction": action_result.action},
+                )
+                return _response(action_answer, [], session_id, action_reasoning)
+
+            if action_result.action != "none" and action_result.payload is not None:
+                action_answer = action_result.message
+                extra_context: dict[str, Any] = {
+                    "agentReasoning": action_reasoning,
+                    "agentAction": action_result.action,
+                }
+                agent_confirmation = _extract_agent_confirmation(action_result.payload)
+                if agent_confirmation is not None:
+                    extra_context["agentConfirmation"] = agent_confirmation
+                session_id = persist_chat_turn(
+                    user_id=user_id,
+                    query=query,
+                    answer=action_answer,
+                    context_docs=[],
+                    sources=[],
+                    session_id=session_id,
+                    is_first_turn=is_new_session,
+                    extra_context=extra_context,
                 )
                 return _response(action_answer, [], session_id, action_reasoning)
 
@@ -285,6 +311,30 @@ def _extract_agent_reasoning(payload: dict[str, Any] | None) -> list[str]:
     if isinstance(reasoning, list):
         return [str(item) for item in reasoning if str(item).strip()]
     return []
+
+
+def _extract_agent_confirmation(payload: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(payload, dict):
+        return None
+    mcp = payload.get("mcp")
+    if not isinstance(mcp, dict):
+        return None
+    data = mcp.get("data")
+    if not isinstance(data, dict):
+        return None
+    result = data.get("result")
+    if not isinstance(result, dict):
+        return None
+    if str(result.get("status", "")).upper() != "CONFIRMATION_REQUIRED":
+        return None
+    token = result.get("confirmationToken")
+    return {
+        "required": True,
+        "token": str(token) if token else None,
+        "expiresAt": result.get("expiresAt"),
+        "action": result.get("action"),
+        "message": result.get("message"),
+    }
 
 
 def _dedupe_documents(docs: list[Document]) -> list[Document]:

@@ -1,4 +1,12 @@
-import { Bot, Sparkles, ArrowDown, ChevronDown, BrainCircuit } from "lucide-react";
+import {
+  ArrowDown,
+  Bot,
+  BrainCircuit,
+  CheckCircle2,
+  ChevronDown,
+  Clock3,
+  Sparkles,
+} from "lucide-react";
 import type { RefObject } from "react";
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
@@ -24,6 +32,7 @@ interface ChatConversationProps {
   onCreateSession: () => void;
   onSendSuggestion: (query: string) => void;
   onShowMore: (messageIndex: number) => void;
+  onConfirmAction: (token: string) => void;
   bottomRef: RefObject<HTMLDivElement | null>;
 }
 
@@ -35,6 +44,7 @@ export function ChatConversation({
   onCreateSession,
   onSendSuggestion,
   onShowMore,
+  onConfirmAction,
   bottomRef,
 }: ChatConversationProps) {
   const isEmpty = messages.length === 0;
@@ -212,17 +222,16 @@ export function ChatConversation({
                     )}
 
                     {message.role === "assistant" && message.reasoning && message.reasoning.length > 0 && (
-                      <div className="mt-2 w-full rounded-xl border border-[#d8d6d1] bg-white/80 p-3 text-xs text-[#444651] shadow-sm">
-                        <div className="mb-2 flex items-center gap-1.5 font-semibold uppercase tracking-wider text-[#233a87]">
-                          <BrainCircuit className="h-3.5 w-3.5" />
-                          AI reasoning
-                        </div>
-                        <ol className="ml-4 list-decimal space-y-1">
-                          {message.reasoning.map((step, stepIndex) => (
-                            <li key={`${index}-${stepIndex}`}>{step}</li>
-                          ))}
-                        </ol>
-                      </div>
+                      <ThinkingPanel reasoning={message.reasoning} messageIndex={index} />
+                    )}
+
+                    {message.role === "assistant" && message.confirmation && (
+                      <ConfirmationCard
+                        token={message.confirmation.token}
+                        expiresAt={message.confirmation.expiresAt}
+                        isSendLoading={isSendLoading}
+                        onConfirmAction={onConfirmAction}
+                      />
                     )}
 
                     {/* Pagination "Show More" button */}
@@ -268,6 +277,95 @@ export function ChatConversation({
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function ThinkingPanel({ reasoning, messageIndex }: { reasoning: string[]; messageIndex: number }) {
+  const [isOpen, setIsOpen] = useState(true);
+
+  return (
+    <div className="mt-2 w-full overflow-hidden rounded-2xl border border-[rgba(35,58,135,0.16)] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-[rgba(35,58,135,0.04)]"
+      >
+        <span className="flex items-center gap-2 text-xs font-semibold text-[#1a1c1b]">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[rgba(35,58,135,0.08)]">
+            <BrainCircuit className="h-3.5 w-3.5 text-[#233a87]" />
+          </span>
+          Thinking
+          <span className="rounded-full border border-[rgba(35,58,135,0.18)] bg-[rgba(35,58,135,0.06)] px-2 py-0.5 text-[10px] font-medium text-[#233a87]">
+            {reasoning.length} step{reasoning.length > 1 ? "s" : ""}
+          </span>
+        </span>
+        <ChevronDown className={`h-4 w-4 text-[#444651] transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {isOpen && (
+        <div className="border-t border-[rgba(197,197,211,0.28)] bg-[#faf9f7] px-3.5 py-3">
+          <ol className="space-y-2.5">
+            {reasoning.map((step, stepIndex) => (
+              <li key={`${messageIndex}-${stepIndex}`} className="grid grid-cols-[24px_1fr] gap-2 text-xs text-[#444651]">
+                <span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-[rgba(35,58,135,0.2)] bg-white text-[10px] font-semibold text-[#233a87]">
+                  {stepIndex + 1}
+                </span>
+                <span className="leading-relaxed">{step}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConfirmationCard({
+  token,
+  expiresAt,
+  isSendLoading,
+  onConfirmAction,
+}: {
+  token?: string;
+  expiresAt?: string;
+  isSendLoading: boolean;
+  onConfirmAction: (token: string) => void;
+}) {
+  return (
+    <div className="mt-2 w-full rounded-2xl border border-[rgba(100,51,0,0.2)] bg-[rgba(100,51,0,0.06)] p-3 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
+      <div className="mb-3 flex items-start gap-2.5">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#643300] shadow-sm">
+          <Clock3 className="h-4 w-4" />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-[#1a1c1b]">Confirmation required</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-[#444651]">
+            This action can change or delete data. Review it, then confirm if it is correct.
+          </p>
+          {expiresAt && (
+            <p className="mt-1 text-[11px] font-medium text-[#643300]">Expires at {expiresAt}</p>
+          )}
+        </div>
+      </div>
+
+      {!token && (
+        <div className="mb-3 rounded-xl border border-[rgba(100,51,0,0.2)] bg-white px-3 py-2 text-xs text-[#643300]">
+          Confirmation data is missing. Ask the agent to preview the action again.
+        </div>
+      )}
+
+      <button
+        type="button"
+        disabled={isSendLoading || !token}
+        onClick={() => {
+          if (token) onConfirmAction(token);
+        }}
+        className="inline-flex items-center gap-2 rounded-lg bg-[#233a87] px-3 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#1a2d6b] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Confirm action
+      </button>
     </div>
   );
 }

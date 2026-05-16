@@ -1,6 +1,7 @@
 package dev.alro127.tasksense.repository.jpa;
 
 import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
+import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 
 @Repository
 public interface WorkspaceRepository extends JpaRepository<WorkspaceEntity, Long> {
@@ -52,4 +54,34 @@ public interface WorkspaceRepository extends JpaRepository<WorkspaceEntity, Long
                 AND w.isPublic = true
             """)
     Page<WorkspaceEntity> findPublicWorkspacesByOwner(@Param("userId") Long userId, Pageable pageable);
+
+    @Query("""
+                SELECT DISTINCT w
+                FROM WorkspaceEntity w
+                JOIN WorkspaceMemberEntity wm ON wm.workspace = w
+                WHERE wm.user.id = :userId
+                AND wm.role IN :allowedRoles
+                AND (:name IS NULL OR LOWER(w.name) = LOWER(:name))
+                ORDER BY w.updatedAt DESC, w.id DESC
+            """)
+    List<WorkspaceEntity> findAuthorizedExactName(
+            @Param("userId") Long userId,
+            @Param("allowedRoles") Collection<WorkspaceRole> allowedRoles,
+            @Param("name") String name,
+            Pageable pageable);
+
+    @Query("""
+                SELECT DISTINCT w
+                FROM WorkspaceEntity w
+                JOIN WorkspaceMemberEntity wm ON wm.workspace = w
+                WHERE wm.user.id = :userId
+                AND wm.role IN :allowedRoles
+                AND (:name IS NULL OR LOWER(w.name) LIKE LOWER(CONCAT('%', :name, '%')))
+                ORDER BY w.updatedAt DESC, w.id DESC
+            """)
+    List<WorkspaceEntity> findAuthorizedNameLike(
+            @Param("userId") Long userId,
+            @Param("allowedRoles") Collection<WorkspaceRole> allowedRoles,
+            @Param("name") String name,
+            Pageable pageable);
 }

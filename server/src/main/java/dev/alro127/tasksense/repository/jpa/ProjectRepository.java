@@ -1,7 +1,9 @@
 package dev.alro127.tasksense.repository.jpa;
 
 import dev.alro127.tasksense.domain.entity.ProjectEntity;
+import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
 import dev.alro127.tasksense.domain.enums.ProjectStatus;
+import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +15,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -68,4 +71,68 @@ public interface ProjectRepository extends JpaRepository<ProjectEntity, Long> {
         GROUP BY p.workspace.id
     """)
     List<Object[]> countByWorkspaceIds(@Param("workspaceIds") List<Long> workspaceIds);
+
+    @Query("""
+        SELECT DISTINCT p
+        FROM ProjectEntity p
+        JOIN FETCH p.workspace w
+        WHERE (:projectName IS NULL OR LOWER(p.name) = LOWER(:projectName))
+        AND (:workspaceId IS NULL OR w.id = :workspaceId)
+        AND (:workspaceName IS NULL OR LOWER(w.name) = LOWER(:workspaceName))
+        AND (
+            EXISTS (
+                SELECT 1 FROM ProjectMemberEntity pm
+                WHERE pm.project = p
+                AND pm.user.id = :userId
+                AND pm.role IN :allowedProjectRoles
+            )
+            OR EXISTS (
+                SELECT 1 FROM WorkspaceMemberEntity wm
+                WHERE wm.workspace = w
+                AND wm.user.id = :userId
+                AND wm.role IN :allowedInheritedWorkspaceRoles
+            )
+        )
+        ORDER BY p.updatedAt DESC, p.id DESC
+    """)
+    List<ProjectEntity> findAuthorizedExactName(
+            @Param("userId") Long userId,
+            @Param("projectName") String projectName,
+            @Param("workspaceId") Long workspaceId,
+            @Param("workspaceName") String workspaceName,
+            @Param("allowedProjectRoles") Collection<ProjectMemberRole> allowedProjectRoles,
+            @Param("allowedInheritedWorkspaceRoles") Collection<WorkspaceRole> allowedInheritedWorkspaceRoles,
+            Pageable pageable);
+
+    @Query("""
+        SELECT DISTINCT p
+        FROM ProjectEntity p
+        JOIN FETCH p.workspace w
+        WHERE (:projectName IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :projectName, '%')))
+        AND (:workspaceId IS NULL OR w.id = :workspaceId)
+        AND (:workspaceName IS NULL OR LOWER(w.name) LIKE LOWER(CONCAT('%', :workspaceName, '%')))
+        AND (
+            EXISTS (
+                SELECT 1 FROM ProjectMemberEntity pm
+                WHERE pm.project = p
+                AND pm.user.id = :userId
+                AND pm.role IN :allowedProjectRoles
+            )
+            OR EXISTS (
+                SELECT 1 FROM WorkspaceMemberEntity wm
+                WHERE wm.workspace = w
+                AND wm.user.id = :userId
+                AND wm.role IN :allowedInheritedWorkspaceRoles
+            )
+        )
+        ORDER BY p.updatedAt DESC, p.id DESC
+    """)
+    List<ProjectEntity> findAuthorizedNameLike(
+            @Param("userId") Long userId,
+            @Param("projectName") String projectName,
+            @Param("workspaceId") Long workspaceId,
+            @Param("workspaceName") String workspaceName,
+            @Param("allowedProjectRoles") Collection<ProjectMemberRole> allowedProjectRoles,
+            @Param("allowedInheritedWorkspaceRoles") Collection<WorkspaceRole> allowedInheritedWorkspaceRoles,
+            Pageable pageable);
 }
