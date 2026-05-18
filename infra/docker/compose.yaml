@@ -1,0 +1,269 @@
+version: '3.9'
+
+networks:
+  tasksense_database_net:
+   name: tasksense_database_net
+   driver: bridge
+   internal: true
+   ipam:
+     config:
+       - subnet: 172.20.0.0/24
+  tasksense_net:
+    name: tasksense_net
+    driver: bridge
+    internal: false
+    ipam:
+      config:
+        - subnet: 172.20.1.0/24
+services:
+  tasksense-postgres:
+    image: postgres:16
+    container_name: tasksense_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: taskdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: UTC
+    ports:
+      - "5432:5432"
+    networks:
+      - tasksense_database_net
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  tasksense-redis:
+    image: redis:7-alpine
+    container_name: tasksense_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - tasksense_database_net
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  tasksense-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
+    container_name: tasksense_es
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    networks:
+      - tasksense_database_net
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tasksense-flyway:
+    image: flyway/flyway:9-alpine
+    container_name: tasksense_flyway
+    command: >
+      -url=jdbc:postgresql://tasksense-postgres:5432/taskdb
+      -user=postgres
+      -password=postgres
+      -connectRetries=60
+      migrate
+    volumes:
+      - ../../server/src/main/resources/db/migration:/flyway/sql
+    depends_on:
+      tasksense-postgres:
+        condition: service_healthy
+    networks:
+      - tasksense_database_net
+
+  tasksense-seed:
+    image: postgres:16-alpine
+    container_name: tasksense_seed
+    environment:
+      PGPASSWORD: postgres
+    volumes:
+      - ../../server/src/main/resources/db/seed:/seed
+    command: sh -c "sleep 5 && psql -h tasksense-postgres -U postgres -d taskdb -f /seed/seed_data.sql || true"
+    depends_on:
+      tasksense-flyway:
+        condition: service_completed_successfully
+    networks:
+      - tasksense_database_net
+
+  tasksense-spring-api:
+    build:
+      context: ../../server
+      dockerfile: Dockerfile
+    container_name: tasksense_spring_api
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://tasksense-postgres:5432/taskdb?options=-c%20TimeZone=Asia/Ho_Chi_Minh
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATA_REDIS_HOST: tasksense-redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_ELASTICSEARCH_URIS: http://tasksense-elasticsearch:9200
+      SPRING_ELASTICSEARCH_USERNAME: ""
+      SPRING_ELASTICSEARCH_PASSWORD: ""
+      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET:?SECURITY_JWT_SECRET is required}
+
+      EMAIL_USERNAME: ${EMAIL_USERNAME:-}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD:-}
+
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-http://localhost:5173}
+
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY:-local-access-key}
+      AWS_SECRET_KEY: ${AWS_SECRET_KEY:-local-secret-key}
+      AWS_BUCKET: ${AWS_BUCKET:-tasksense}
+      AWS_ENDPOINT: ${AWS_ENDPOINT:-localhost}
+
+      JAVA_OPTS: -Xms512m -Xmx1024m -XX:+UseG1GC
+    ports:
+      - "8080:8080"
+    networks:
+      - tasksense_net
+      - tasksense_database_net
+    depends_on:
+      tasksense-postgres:
+        condition: service_healthy
+      tasksense-redis:
+        condition: service_healthy
+      tasksense-elasticsearch:
+        condition: service_healthy
+      tasksense-flyway:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  tasksense-qdrant:
+    image: qdrant/qdrant:latest
+    container_name: tasksense_qdrant
+    restart: unless-stopped
+    environment:
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    networks:
+      - tasksense_net
+      - tasksense_database_net
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tasksense-ai:
+    build:
+      context: ../../ai
+      dockerfile: app/Dockerfile
+    container_name: tasksense_ai
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: 1
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      QDRANT_HOST: http://tasksense-qdrant:6333
+      QDRANT_PORT: 6333
+      BACKEND_URL: http://tasksense-spring-api:8080/api/v1
+      SPRING_MCP_ENDPOINT: http://tasksense-spring-api:8080/api/v1/mcp
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      REDIS_URL: redis://tasksense-redis:6379
+      ELASTICSEARCH_HOST: tasksense-elasticsearch
+      ELASTICSEARCH_PORT: 9200
+      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET:?SECURITY_JWT_SECRET is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,https://tasksense.app}
+      POSTGRES_HOST: tasksense-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: taskdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_SSLMODE: disable
+    ports:
+      - "8000:8000"
+    networks:
+      - tasksense_net
+      - tasksense_database_net
+    depends_on:
+      tasksense-spring-api:
+        condition: service_healthy
+      tasksense-redis:
+        condition: service_healthy
+      tasksense-elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5).read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  tasksense-nginx:
+    build:
+      context: ../../proxy
+      dockerfile: Dockerfile
+    container_name: tasksense_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - tasksense_net
+    depends_on:
+      - tasksense-spring-api
+      - tasksense-ai
+    volumes:
+      - nginx_config:/etc/nginx
+      - nginx_cert:/etc/nginx/ssl
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  nginx_cert:
+    name: tasksense_nginx_cert
+    driver: local
+  nginx_config:
+    name: tasksense_nginx_config
+    driver: local
+  postgres_data:
+    name: tasksense_pg_data
+    driver: local
+  redis_data:
+    name: tasksense_redis_data
+    driver: local
+  elasticsearch_data:
+    name: tasksense_es_data
+    driver: local
+  qdrant_data:
+    name: tasksense_qdrant_data
+    driver: local

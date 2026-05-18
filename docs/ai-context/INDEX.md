@@ -17,6 +17,8 @@ Agents must read in this order:
 
 | Run ID             | Date       | Summary                                                                                                                              | Linked Files                                                    |
 | ------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| RUN-2026-05-15-002 | 2026-05-15 | Split oversized AI source-truth, retriever, and SQL router files into focused modules and tightened AI Docker build context/runtime command. | ai source_truth/retriever/sql_router modules + Dockerfile/.dockerignore |
+| RUN-2026-05-15-001 | 2026-05-15 | Added backend health/Prometheus observability endpoints, custom wrapped health API, health metrics, and focused unit tests. | server health/metrics + docs context                            |
 | RUN-2026-05-12-001 | 2026-05-12 | Added Spring AI MCP facade, safer Agent Mode actions/JWT forwarding, deterministic RAG reranking, workflow MCP wrapper, and visible reasoning UI. | server MCP + ai agent/RAG + client agent UI                     |
 | RUN-2026-04-15-001 | 2026-04-15 | Refactored chatbot service into modular package and added end-to-end Agent Mode toggle with explicit FE->AI `agent` payload wiring. | ai chatbot service modules + agent page/api                     |
 | RUN-2026-04-14-003 | 2026-04-14 | Cleared all AI Python type diagnostics via uv + pyright, including `__getitem__` TupleRow overload errors.                         | ai typing-critical modules                                      |

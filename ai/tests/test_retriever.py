@@ -46,6 +46,9 @@ class TestTaskScopeFilter:
         dumped = result.model_dump() if result else {}
         assert dumped["must"][0]["key"] == "projectId"
         assert dumped["must"][0]["match"]["value"] == 22
+        visibility = dumped["must"][1]
+        keys = {item["key"] for item in visibility["should"]}
+        assert keys == {"createdById", "assignees[].id"}
 
     def test_workspace_used_when_no_project(self):
         result = _build_task_scope_filter(
@@ -57,15 +60,20 @@ class TestTaskScopeFilter:
         dumped = result.model_dump() if result else {}
         assert dumped["must"][0]["key"] == "workspaceId"
         assert dumped["must"][0]["match"]["value"] == 11
+        visibility = dumped["must"][1]
+        keys = {item["key"] for item in visibility["should"]}
+        assert keys == {"createdById", "assignees[].id"}
 
-    def test_none_when_no_scope(self):
+    def test_user_filter_when_no_scope(self):
         result = _build_task_scope_filter(
             user_id=7,
             workspace_id=None,
             project_id=None,
             is_personal=False,
         )
-        assert result is None
+        dumped = result.model_dump() if result else {}
+        keys = {item["key"] for item in dumped["should"]}
+        assert keys == {"createdById", "assignees[].id"}
 
 
 class TestTaskUserFilter:

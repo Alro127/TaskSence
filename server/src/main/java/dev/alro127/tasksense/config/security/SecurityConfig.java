@@ -2,6 +2,7 @@ package dev.alro127.tasksense.config.security;
 
 import dev.alro127.tasksense.security.middleware.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,6 +17,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -26,6 +28,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
+
+    @PostConstruct
+    void useInheritableSecurityContext() {
+        SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -41,8 +48,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/workflow-comments/*/reactions/*").permitAll()
                         .requestMatchers(new RegexRequestMatcher("^/workflows/\\d+/rating-summary$", "GET")).permitAll()
                         .requestMatchers(new RegexRequestMatcher("^/workflows/\\d+$", "GET")).permitAll()
-                        .requestMatchers("/auth/**", "/api-docs/**", "/swagger-ui/**","/actuator/health",
-                                        "/pings/**", "/ws/**", "/ws"
+                        .requestMatchers("/auth/**", "/api-docs/**", "/swagger-ui/**", "/actuator/health/**",
+                                        "/actuator/prometheus", "/actuator/metrics", "/health",
+                                        "/pings/**", "/ws/**", "/ws", "/mcp", "/mcp/**"
                                 ).permitAll()
                         .anyRequest().authenticated()
                 )

@@ -13,6 +13,10 @@ public class RedisKeys {
         return "reset:token:" + token;
     }
 
+    public static String agentConfirmationToken(String tokenHash) {
+        return "agent:confirmation:" + tokenHash;
+    }
+
     public static String unreadCount(Long userId) {
         return "notification:unread:" + userId;
     }

@@ -6,4 +6,11 @@ export interface ChatMessage {
   sources?: AIAgentSource[];
   pagination?: PaginationMetadata;
   reasoning?: string[];
+  confirmation?: AgentConfirmation;
+}
+
+export interface AgentConfirmation {
+  token?: string;
+  expiresAt?: string;
+  required: boolean;
 }

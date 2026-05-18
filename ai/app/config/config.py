@@ -76,7 +76,20 @@ class Settings:
 
 	chatbot_max_context_docs: int
 	chatbot_max_context_docs_for_list: int
+	chatbot_retrieval_top_k: int
+	chatbot_context_char_budget: int
+	chatbot_history_char_budget: int
 	enable_system_prompt: bool
+
+	redis_url: str
+	cache_enabled: bool
+	cache_read_enabled: bool
+	cache_write_enabled: bool
+	cache_ttl_seconds: int
+	cache_memory_ttl_seconds: int
+	cache_memory_max_items: int
+	cache_redis_prefix: str
+	cache_prompt_version: str
 
 	postgres_dsn: str
 	postgres_host: str
@@ -119,7 +132,10 @@ def get_settings() -> Settings:
 		host=_env_str("HOST", "0.0.0.0"),
 		port=_env_int("PORT", 8000),
 		reload=_env_bool("RELOAD", True),
-		cors_origins=_env_csv("CORS_ORIGINS", "*"),
+		cors_origins=_env_csv(
+			"CORS_ORIGINS",
+			"http://localhost:3000,http://localhost:5173,https://tasksense.app",
+		),
 		llm_provider=_env_str("LLM_PROVIDER", "gemini").lower(),
 		openai_api_key=_env_secret_str("OPENAI_API_KEY", ""),
 		openai_model=_env_str("OPENAI_MODEL", "gpt-4o-mini"),
@@ -148,7 +164,7 @@ def get_settings() -> Settings:
 		),
 		jwt_secret=_env_str(
 			"SECURITY_JWT_SECRET",
-			_env_str("JWT_SECRET", "my-super-secret-key-which-is-very-long-123456"),
+			_env_str("JWT_SECRET", ""),
 		),
 		qdrant_host=_env_str("QDRANT_HOST", "http://localhost:6333"),
 		qdrant_collection_tasks=_env_str("QDRANT_COLLECTION_TASKS", "tasks"),
@@ -158,7 +174,19 @@ def get_settings() -> Settings:
 		enable_sync=_env_bool("ENABLE_SYNC", True),
 		chatbot_max_context_docs=_env_int("CHATBOT_MAX_CONTEXT_DOCS", 3),
 		chatbot_max_context_docs_for_list=_env_int("CHATBOT_MAX_CONTEXT_DOCS_FOR_LIST", 10),
+		chatbot_retrieval_top_k=_env_int("CHATBOT_RETRIEVAL_TOP_K", 20),
+		chatbot_context_char_budget=_env_int("CHATBOT_CONTEXT_CHAR_BUDGET", 4_500),
+		chatbot_history_char_budget=_env_int("CHATBOT_HISTORY_CHAR_BUDGET", 1_200),
 		enable_system_prompt=_env_bool("ENABLE_SYSTEM_PROMPT", True),
+		redis_url=_env_str("REDIS_URL", ""),
+		cache_enabled=_env_bool("AI_CACHE_ENABLED", True),
+		cache_read_enabled=_env_bool("AI_CACHE_READ_ENABLED", True),
+		cache_write_enabled=_env_bool("AI_CACHE_WRITE_ENABLED", True),
+		cache_ttl_seconds=_env_int("AI_CACHE_TTL_SECONDS", 900),
+		cache_memory_ttl_seconds=_env_int("AI_CACHE_MEMORY_TTL_SECONDS", 120),
+		cache_memory_max_items=_env_int("AI_CACHE_MEMORY_MAX_ITEMS", 512),
+		cache_redis_prefix=_env_str("AI_CACHE_REDIS_PREFIX", "tasksense:ai"),
+		cache_prompt_version=_env_str("AI_CACHE_PROMPT_VERSION", "chat_rag_v2026_05_16"),
 		postgres_dsn=_env_str("POSTGRES_DSN", ""),
 		postgres_host=_env_str("POSTGRES_HOST", "localhost"),
 		postgres_port=_env_int("POSTGRES_PORT", 5432),
