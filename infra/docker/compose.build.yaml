@@ -1,0 +1,18 @@
+services:
+  tasksense-spring-api:
+    image: ${IMAGE_PREFIX:?IMAGE_PREFIX is required}-spring-api:${IMAGE_TAG:-latest}
+    build:
+      context: ../../server
+      dockerfile: Dockerfile
+
+  tasksense-ai:
+    image: ${IMAGE_PREFIX:?IMAGE_PREFIX is required}-ai:${IMAGE_TAG:-latest}
+    build:
+      context: ../../ai
+      dockerfile: app/Dockerfile
+
+  tasksense-client:
+    image: ${IMAGE_PREFIX:?IMAGE_PREFIX is required}-client:${IMAGE_TAG:-latest}
+    build:
+      context: ../../client
+      dockerfile: Dockerfile

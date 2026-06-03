@@ -92,6 +92,7 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
       - "9200:9200"
     networks:
@@ -116,7 +117,7 @@ services:
       - tasksense_net
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: qdrant
+    container_name: tasksense_qdrant
     restart: unless-stopped
 
     ports:
@@ -133,10 +134,46 @@ services:
       - tasksense_net
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      test: ["CMD-SHELL", "bash -lc ': >/dev/tcp/127.0.0.1/6333'"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tasksense_backend
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/taskdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      ELASTICSEARCH_URIS: http://elasticsearch:9200
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      EMAIL_USERNAME: ${EMAIL_USERNAME:-}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD:-}
+      AWS_REGION: ${AWS_REGION:-hcm}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY:-local-access-key}
+      AWS_SECRET_KEY: ${AWS_SECRET_KEY:-local-secret-key}
+      AWS_BUCKET: ${AWS_BUCKET:-tasksense}
+      AWS_ENDPOINT: ${AWS_ENDPOINT:-localhost}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    networks:
+      - tasksense_net
 
 volumes:
   postgres_data:

@@ -28,6 +28,36 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
 
     Optional<TaskEntity> findByIdAndProjectId(Long id, Long projectId);
 
+    @Query("""
+                SELECT DISTINCT t
+                FROM TaskEntity t
+                JOIN FETCH t.project p
+                JOIN FETCH p.workspace
+                JOIN FETCH t.createdBy
+                LEFT JOIN FETCH t.assignees
+                LEFT JOIN FETCH t.tags
+                LEFT JOIN FETCH t.sprint
+                WHERE p.id = :projectId
+                  AND LOWER(t.title) = LOWER(:title)
+                ORDER BY t.updatedAt DESC, t.id DESC
+            """)
+    List<TaskEntity> findByProjectIdAndTitleExact(@Param("projectId") Long projectId, @Param("title") String title, Pageable pageable);
+
+    @Query("""
+                SELECT DISTINCT t
+                FROM TaskEntity t
+                JOIN FETCH t.project p
+                JOIN FETCH p.workspace
+                JOIN FETCH t.createdBy
+                LEFT JOIN FETCH t.assignees
+                LEFT JOIN FETCH t.tags
+                LEFT JOIN FETCH t.sprint
+                WHERE p.id = :projectId
+                  AND LOWER(t.title) LIKE LOWER(CONCAT('%', :title, '%'))
+                ORDER BY t.updatedAt DESC, t.id DESC
+            """)
+    List<TaskEntity> findByProjectIdAndTitleLike(@Param("projectId") Long projectId, @Param("title") String title, Pageable pageable);
+
     List<TaskEntity> findAllByIdInAndProjectId(List<Long> ids, Long projectId);
 
     // Câu query bên dưới cần được optimize lại

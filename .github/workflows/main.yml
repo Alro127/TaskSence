@@ -1,0 +1,112 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    name: Build and push images
+    runs-on: self-hosted
+    outputs:
+      image-prefix: ${{ steps.image-meta.outputs.image-prefix }}
+      image-tag: ${{ steps.image-meta.outputs.image-tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve image names
+        id: image-meta
+        shell: bash
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          repo="${GITHUB_REPOSITORY#*/}"
+          repo="${repo,,}"
+          image_prefix="ghcr.io/${owner}/${repo}"
+          image_tag="${GITHUB_SHA}"
+
+          echo "IMAGE_PREFIX=${image_prefix}" >> "${GITHUB_ENV}"
+          echo "IMAGE_TAG=${image_tag}" >> "${GITHUB_ENV}"
+          echo "image-prefix=${image_prefix}" >> "${GITHUB_OUTPUT}"
+          echo "image-tag=${image_tag}" >> "${GITHUB_OUTPUT}"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build images with Docker Compose
+        run: |
+          docker compose \
+            -f infra/docker/compose.yaml \
+            -f infra/docker/compose.build.yaml \
+            build tasksense-spring-api tasksense-ai tasksense-nginx
+
+      - name: Push images with Docker Compose
+        run: |
+          docker compose \
+            -f infra/docker/compose.yaml \
+            -f infra/docker/compose.build.yaml \
+            push tasksense-spring-api tasksense-ai tasksense-nginx
+
+  deploy:
+    name: Deploy
+    runs-on: self-hosted
+    needs: build-and-push
+    environment: production
+    env:
+      IMAGE_PREFIX: ${{ needs.build-and-push.outputs.image-prefix }}
+      IMAGE_TAG: ${{ needs.build-and-push.outputs.image-tag }}
+      SECURITY_JWT_SECRET: ${{ secrets.SECURITY_JWT_SECRET }}
+      EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+      EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      GOOGLE_REDIRECT_URL: ${{ vars.GOOGLE_REDIRECT_URL }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      AWS_BUCKET: ${{ vars.AWS_BUCKET }}
+      AWS_ENDPOINT: ${{ vars.AWS_ENDPOINT }}
+      LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
+      QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CORS_ORIGINS: ${{ vars.CORS_ORIGINS }}
+      NGINX_SERVER_NAME: ${{ vars.NGINX_SERVER_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull images with Docker Compose
+        run: |
+          docker compose \
+            -f infra/docker/compose.yaml \
+            -f infra/docker/compose.build.yaml \
+            pull tasksense-spring-api tasksense-ai tasksense-nginx
+
+      - name: Deploy with Docker Compose
+        run: |
+          docker compose \
+            -f infra/docker/compose.yaml \
+            -f infra/docker/compose.build.yaml \
+            up -d --remove-orphans

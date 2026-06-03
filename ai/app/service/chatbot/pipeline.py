@@ -5,14 +5,21 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.agent import run_action_agent
+from app.agent import AgentActionResult, run_action_agent
 from app.chatbot.components import Document
 from app.chatbot.components.classifier import classify
 from app.chatbot.components.filter import filter_docs
 from app.chatbot.components.generator import generate
+from app.chatbot.components.context_optimizer import retrieval_limit
 from app.chatbot.components.retriever import retrieve
 from app.chatbot.components.rewriter import rewrite
 from app.chatbot.components.sql_router import query_postgres_documents
+from app.service.ai_cache_service import (
+    build_chat_cache_key,
+    get_cached_chat_response,
+    is_cacheable_query,
+    set_cached_chat_response,
+)
 from app.service.chat_persistence_service import persist_chat_turn
 from app.service.chatbot.constants import _ACTION_PHRASES, _MSG_ERROR, _MSG_NO_DATA, _MSG_UNRELATED
 from app.service.chatbot.helpers import extract_project_context, get_conversation_history, looks_like_action_request
@@ -39,17 +46,36 @@ def run_chatbot_pipeline(
 
     is_new_session = session_id is None
     conversation_history = get_conversation_history(session_id)
+    cache_key = None
+
+    if not agent and is_cacheable_query(query):
+        cache_key = build_chat_cache_key(query=query, user_id=user_id, agent=False)
+        cached = get_cached_chat_response(cache_key)
+        if cached is not None:
+            session_id = persist_chat_turn(
+                user_id=user_id,
+                query=query,
+                answer=cached.answer,
+                context_docs=[],
+                sources=cached.sources,
+                session_id=session_id,
+                is_first_turn=is_new_session,
+                extra_context={"cacheHit": True},
+            )
+            return _response(cached.answer, cached.sources, session_id, cached.reasoning)
 
     try:
         should_try_action_agent = bool(agent) or looks_like_action_request(query, _ACTION_PHRASES)
         if should_try_action_agent:
-            action_result = run_action_agent(query=query, user_id=user_id, auth_token=auth_token)
+            action_result = run_action_agent(
+                query=query,
+                user_id=user_id,
+                auth_token=auth_token,
+                conversation_history=conversation_history,
+            )
             action_reasoning = _extract_agent_reasoning(action_result.payload)
             if action_result.executed:
-                action_answer = (
-                    f"Da thuc thi hanh dong {action_result.action} qua MCP. "
-                    "Neu ban muon, minh co the truy van lai de kiem tra ket qua moi nhat."
-                )
+                action_answer = _action_success_message(action_result)
                 session_id = persist_chat_turn(
                     user_id=user_id,
                     query=query,
@@ -73,6 +99,27 @@ def run_chatbot_pipeline(
                     session_id=session_id,
                     is_first_turn=is_new_session,
                     extra_context={"agentReasoning": action_reasoning, "agentAction": action_result.action},
+                )
+                return _response(action_answer, [], session_id, action_reasoning)
+
+            if action_result.action != "none" and action_result.payload is not None:
+                action_answer = action_result.message
+                extra_context: dict[str, Any] = {
+                    "agentReasoning": action_reasoning,
+                    "agentAction": action_result.action,
+                }
+                agent_confirmation = _extract_agent_confirmation(action_result.payload)
+                if agent_confirmation is not None:
+                    extra_context["agentConfirmation"] = agent_confirmation
+                session_id = persist_chat_turn(
+                    user_id=user_id,
+                    query=query,
+                    answer=action_answer,
+                    context_docs=[],
+                    sources=[],
+                    session_id=session_id,
+                    is_first_turn=is_new_session,
+                    extra_context=extra_context,
                 )
                 return _response(action_answer, [], session_id, action_reasoning)
 
@@ -104,7 +151,9 @@ def run_chatbot_pipeline(
                 session_id=session_id,
                 is_first_turn=is_new_session,
             )
-            return _response(_MSG_UNRELATED, [], session_id)
+            response = _response(_MSG_UNRELATED, [], session_id)
+            _store_cache_if_allowed(cache_key, response)
+            return response
 
         is_personal = bool(classification.get("is_personal", False))
         intent = str(classification.get("intent", "task_query"))
@@ -150,9 +199,12 @@ def run_chatbot_pipeline(
                 is_first_turn=is_new_session,
             )
             logger.info("[chatbot-service] chatbot response sent (count_query)")
-            return _response(answer, [], session_id)
+            response = _response(answer, [], session_id)
+            _store_cache_if_allowed(cache_key, response)
+            return response
 
-        logger.info("[chatbot-service] retrieving documents from SQL router and Qdrant (limit=%s)", requested_limit)
+        qdrant_limit = retrieval_limit(requested_limit, intent=intent)
+        logger.info("[chatbot-service] retrieving documents from SQL router and Qdrant (limit=%s)", qdrant_limit)
         raw_docs: list[Document] = []
 
         sql_docs = query_postgres_documents(
@@ -174,9 +226,11 @@ def run_chatbot_pipeline(
                 workspace_id=None,
                 project_id=project_id,
                 is_personal=is_personal,
-                requested_limit=requested_limit,
+                requested_limit=qdrant_limit,
             )
             raw_docs.extend(docs)
+
+        raw_docs = _dedupe_documents(raw_docs)
 
         logger.info("[chatbot-service] raw docs retrieved: %d (before filtering)", len(raw_docs))
         filter_result = filter_docs(
@@ -205,9 +259,11 @@ def run_chatbot_pipeline(
                 session_id=session_id,
                 is_first_turn=is_new_session,
             )
-            return _response(_MSG_NO_DATA, [], session_id)
+            response = _response(_MSG_NO_DATA, [], session_id)
+            _store_cache_if_allowed(cache_key, response)
+            return response
 
-        hydrated_context = hydrate_documents_with_postgres(context)
+        hydrated_context = hydrate_documents_with_postgres(context, user_id=user_id)
         logger.info("[chatbot-service] hydrated context: %d documents enriched from postgres", len(hydrated_context))
         answer = generate(query, hydrated_context, conversation_history=conversation_history)
         sources = [
@@ -224,7 +280,9 @@ def run_chatbot_pipeline(
             is_first_turn=is_new_session,
         )
         logger.info("[chatbot-service] chatbot response sent (sources=%d)", len(sources))
-        return _response(answer, sources, session_id)
+        response = _response(answer, sources, session_id)
+        _store_cache_if_allowed(cache_key, response)
+        return response
 
     except Exception as exc:
         logger.exception("[chatbot-service] unhandled error: %s", exc)
@@ -250,3 +308,89 @@ def _extract_agent_reasoning(payload: dict[str, Any] | None) -> list[str]:
     if isinstance(reasoning, list):
         return [str(item) for item in reasoning if str(item).strip()]
     return []
+
+
+def _action_success_message(action_result: AgentActionResult) -> str:
+    result = _extract_agent_result(action_result.payload)
+    if action_result.action == "create_task":
+        title = _field(result, "title")
+        return f"Minh da tao task {title} thanh cong." if title else "Minh da tao task thanh cong."
+    if action_result.action == "create_project":
+        name = _field(result, "name")
+        return f"Minh da tao project {name} thanh cong." if name else "Minh da tao project thanh cong."
+    if action_result.action == "create_workspace":
+        name = _field(result, "name")
+        return f"Minh da tao workspace {name} thanh cong." if name else "Minh da tao workspace thanh cong."
+    if action_result.action == "create_project_with_tasks":
+        project = result.get("project") if isinstance(result, dict) else None
+        name = _field(project, "name")
+        return f"Minh da tao project {name} va cac task ban dau thanh cong." if name else "Minh da tao project va cac task ban dau thanh cong."
+    if action_result.action == "create_workflow_from_project":
+        name = _field(result, "name")
+        return f"Minh da tao workflow {name} thanh cong." if name else "Minh da tao workflow thanh cong."
+    if action_result.action == "update_task_status":
+        title = _field(result, "title")
+        return f"Minh da cap nhat trang thai task {title} thanh cong." if title else "Minh da cap nhat trang thai task thanh cong."
+    return "Minh da thuc hien yeu cau thanh cong."
+
+
+def _extract_agent_result(payload: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    mcp = payload.get("mcp")
+    if not isinstance(mcp, dict):
+        return {}
+    data = mcp.get("data")
+    if not isinstance(data, dict):
+        return {}
+    result = data.get("result")
+    return result if isinstance(result, dict) else {}
+
+
+def _field(value: Any, key: str) -> str:
+    if not isinstance(value, dict):
+        return ""
+    field = value.get(key)
+    return str(field).strip() if field is not None else ""
+
+
+def _extract_agent_confirmation(payload: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(payload, dict):
+        return None
+    mcp = payload.get("mcp")
+    if not isinstance(mcp, dict):
+        return None
+    data = mcp.get("data")
+    if not isinstance(data, dict):
+        return None
+    result = data.get("result")
+    if not isinstance(result, dict):
+        return None
+    if str(result.get("status", "")).upper() != "CONFIRMATION_REQUIRED":
+        return None
+    token = result.get("confirmationToken")
+    return {
+        "required": True,
+        "token": str(token) if token else None,
+        "expiresAt": result.get("expiresAt"),
+        "action": result.get("action"),
+        "message": result.get("message"),
+    }
+
+
+def _dedupe_documents(docs: list[Document]) -> list[Document]:
+    """Keep the highest-scoring document for each source entity."""
+    deduped: dict[tuple[str, Any], Document] = {}
+    for doc in docs:
+        entity_id = doc["source"].get("entityId", doc["id"])
+        key = (doc["index"], entity_id)
+        existing = deduped.get(key)
+        if existing is None or doc["score"] > existing["score"]:
+            deduped[key] = doc
+    return sorted(deduped.values(), key=lambda d: d["score"], reverse=True)
+
+
+def _store_cache_if_allowed(cache_key: str | None, response: dict[str, Any]) -> None:
+    if cache_key is None:
+        return
+    set_cached_chat_response(cache_key, response)

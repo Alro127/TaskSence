@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import type { ApiResponse, PageResponse } from "@/types/api";
+import { apiBaseUrl } from "@/config/config";
 
 // ─── Response types ───────────────────────────────────────────────────────────
 export interface DashboardSummary {
@@ -55,7 +56,7 @@ export interface DeadlineItem {
 export const dashboardApi = createApi({
   reducerPath: "dashboardApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:8080/api/v1",
+    baseUrl: apiBaseUrl,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.accessToken;
       if (token) headers.set("Authorization", `Bearer ${token}`);

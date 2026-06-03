@@ -11,7 +11,44 @@ import type { AIAgentSource } from "@/types/api";
 import { getApiErrorMessage } from "@/lib/utils";
 import { toast } from "sonner";
 import { ChatComposer, ChatConversation, SessionSidebar } from "../components";
-import type { ChatMessage } from "../components";
+import type { ChatMessage, AgentConfirmation } from "../components";
+
+const CONFIRMATION_TOKEN_PATTERNS = [
+  /token xac nhan:\s*`?([A-Za-z0-9_-]+)`?/i,
+  /confirmationToken\s*[:=]\s*["`']?([A-Za-z0-9_-]+)["`']?/i,
+  /confirmation token\s*[:=]\s*["`']?([A-Za-z0-9_-]+)["`']?/i,
+];
+const CONFIRMATION_EXPIRES_PATTERNS = [
+  /het han luc ([^)]+)\)/i,
+  /expiresAt\s*[:=]\s*["`']?([^"`'\n,)]+)["`']?/i,
+  /expires at\s+([^\n.)]+)/i,
+];
+
+function extractConfirmation(content: string): AgentConfirmation | undefined {
+  const isRequired = /CONFIRMATION_REQUIRED|confirmation required|confirm before|xac nhan|xác nhận/i.test(content);
+  const token = CONFIRMATION_TOKEN_PATTERNS.map((pattern) => content.match(pattern)?.[1]).find(Boolean);
+  if (!isRequired && !token) return undefined;
+
+  return {
+    token,
+    required: true,
+    expiresAt: CONFIRMATION_EXPIRES_PATTERNS.map((pattern) => content.match(pattern)?.[1]).find(Boolean),
+  };
+}
+
+function extractConfirmationFromContext(context: unknown): AgentConfirmation | undefined {
+  if (!context || typeof context !== "object" || !("agentConfirmation" in context)) return undefined;
+  const confirmation = (context as Record<string, unknown>).agentConfirmation;
+  if (!confirmation || typeof confirmation !== "object") return undefined;
+  const payload = confirmation as Record<string, unknown>;
+  if (payload.required !== true) return undefined;
+
+  return {
+    required: true,
+    token: typeof payload.token === "string" ? payload.token : undefined,
+    expiresAt: typeof payload.expiresAt === "string" ? payload.expiresAt : undefined,
+  };
+}
 
 export function AgentChatPage() {
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
@@ -84,6 +121,8 @@ export function AgentChatPage() {
             message.reasoning = ctx.agentReasoning.map(String);
           }
         }
+
+        message.confirmation = extractConfirmationFromContext(m.context) ?? extractConfirmation(m.content);
       }
 
       return message;
@@ -169,6 +208,10 @@ export function AgentChatPage() {
     }
   };
 
+  const handleConfirmAction = async (token: string) => {
+    await handleSend(`Tôi xác nhận thực hiện hành động này với confirmationToken ${token}`);
+  };
+
   const handleTextareaChange = (value: string, textarea: HTMLTextAreaElement) => {
     setInput(value);
     textarea.style.height = "auto";
@@ -216,6 +259,7 @@ export function AgentChatPage() {
           onCreateSession={handleCreateSession}
           onSendSuggestion={handleSend}
           onShowMore={handleShowMore}
+          onConfirmAction={handleConfirmAction}
           bottomRef={bottomRef}
         />
 

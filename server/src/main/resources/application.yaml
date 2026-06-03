@@ -54,15 +54,14 @@ spring:
   ai:
     mcp:
       server:
-        protocol: STREAMABLE
         type: SYNC
         name: tasksense-mcp-server
         version: 1.0.0
         instructions: TaskSense MCP server for task and project execution tools
         annotation-scanner:
           enabled: true
-        streamable-http:
-          mcp-endpoint: /mcp
+        sse-endpoint: /mcp
+        sse-message-endpoint: /mcp/message
 
 aws:
   region: ${AWS_REGION:}
@@ -79,10 +78,11 @@ server:
     - http://localhost:3000
     - http://localhost:5173
     - https://tasksense.app
+    - http://localhost
 
 security:
   jwt:
-    secret: my-super-secret-key-which-is-very-long-123456
+    secret: ${SECURITY_JWT_SECRET:}
     short-expiration: 360000000
     long-expiration: 604800000
   google:
@@ -109,3 +109,16 @@ springdoc:
     filter: true
     path: /swagger-ui
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
