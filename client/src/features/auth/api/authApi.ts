@@ -9,13 +9,12 @@ import type {
   GoogleLoginRequest,
   TokenRequest,
 } from "@/types/api";
-
-const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+import { apiBaseUrl } from "@/config/config";
 
 export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: fetchBaseQuery({
-    baseUrl,
+    baseUrl: apiBaseUrl,
   }),
   endpoints: (builder) => ({
     login: builder.mutation<ApiResponse<AuthResponse>, AuthRequest>({

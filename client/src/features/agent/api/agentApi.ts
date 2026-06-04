@@ -9,14 +9,12 @@ import type {
   PageResponse,
 } from "@/types/api";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-
-const baseUrl =
-  import.meta.env.VITE_API_AGENT_BASE_URL || "http://localhost:8000";
+import { agentBaseUrl } from "@/config/config";
 
 export const agentApi = createApi({
   reducerPath: "agentApi",
   baseQuery: fetchBaseQuery({
-    baseUrl,
+    baseUrl: agentBaseUrl,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.accessToken;
       if (token) {
@@ -29,7 +27,7 @@ export const agentApi = createApi({
   endpoints: (builder) => ({
     initSession: builder.mutation<ApiResponse<AISessionDetail>, InitAISessionRequest>({
       query: (body) => ({
-        url: "/api/v1/ai/sessions",
+        url: "/ai/sessions",
         method: "POST",
         body,
       }),
@@ -37,7 +35,7 @@ export const agentApi = createApi({
     }),
     getSessions: builder.query<ApiResponse<PageResponse<AISession>>, { page?: number; size?: number } | void>({
       query: (params) => ({
-        url: "/api/v1/sessions/",
+        url: "/sessions/",
         params: {
           page: params?.page ?? 0,
           size: params?.size ?? 20,
@@ -47,7 +45,7 @@ export const agentApi = createApi({
     }),
     getSessionDetail: builder.query<ApiResponse<AISessionDetail>, number>({
       query: (sessionId) => ({
-        url: `/api/v1/sessions/${sessionId}`,
+        url: `/sessions/${sessionId}`,
       }),
       providesTags: (_result, _error, sessionId) => [{ type: "AgentSession", id: sessionId }],
     }),
@@ -56,14 +54,14 @@ export const agentApi = createApi({
       { sessionId: number; page?: number; size?: number }
     >({
       query: ({ sessionId, page = 0, size = 20 }) => ({
-        url: `/api/v1/sessions/${sessionId}/messages`,
+        url: `/sessions/${sessionId}/messages`,
         params: { page, size },
       }),
       providesTags: (_result, _error, arg) => [{ type: "AgentMessage", id: arg.sessionId }],
     }),
     deleteSession: builder.mutation<ApiResponse<{ session_id: number }>, number>({
       query: (sessionId) => ({
-        url: `/api/v1/sessions/${sessionId}`,
+        url: `/sessions/${sessionId}`,
         method: "DELETE",
       }),
       invalidatesTags: (_result, _error, sessionId) => [
@@ -76,7 +74,7 @@ export const agentApi = createApi({
       { sessionId: number; query: string; agent?: boolean }
     >({
       query: ({ sessionId, query, agent = false }) => ({
-        url: `/api/v1/ai/chat/${sessionId}`,
+        url: `/ai/chat/${sessionId}`,
         method: "POST",
         body: { query, agent },
       }),

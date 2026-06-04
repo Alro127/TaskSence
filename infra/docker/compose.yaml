@@ -22,11 +22,9 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: taskdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       TZ: UTC
-    ports:
-      - "5432:5432"
     networks:
       - tasksense_database_net
     volumes:
@@ -41,8 +39,6 @@ services:
     image: redis:7-alpine
     container_name: tasksense_redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     networks:
       - tasksense_database_net
     volumes:
@@ -65,17 +61,16 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
-    ports:
-      - "9200:9200"
     networks:
       - tasksense_database_net
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200/cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 20
+      start_period: 40s
 
   tasksense-flyway:
     image: flyway/flyway:9-alpine
@@ -139,8 +134,6 @@ services:
       AWS_ENDPOINT: ${AWS_ENDPOINT:-localhost}
 
       JAVA_OPTS: -Xms512m -Xmx1024m -XX:+UseG1GC
-    ports:
-      - "8080:8080"
     networks:
       - tasksense_net
       - tasksense_database_net
@@ -166,9 +159,6 @@ services:
     restart: unless-stopped
     environment:
       QDRANT_API_KEY: ${QDRANT_API_KEY:-}
-    ports:
-      - "6333:6333"
-      - "6334:6334"
     networks:
       - tasksense_net
       - tasksense_database_net
@@ -189,12 +179,20 @@ services:
     environment:
       PYTHONUNBUFFERED: 1
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_EMBEDDING_PROVIDER: ${LLM_EMBEDDING_PROVIDER:-openrouter}
       QDRANT_HOST: http://tasksense-qdrant:6333
       QDRANT_PORT: 6333
+      QDRANT_COLLECTION_TASKS: tasks
+      QDRANT_COLLECTION_PROJECTS: projects
+      QDRANT_VECTOR_SIZE: 3072
       BACKEND_URL: http://tasksense-spring-api:8080/api/v1
       SPRING_MCP_ENDPOINT: http://tasksense-spring-api:8080/api/v1/mcp
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: gpt-4.1
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_EMBEDDING_MODEL: nvidia/llama-nemotron-embed-vl-1b-v2:free
+      OPENROUTER_MODEL: nvidia/nemotron-3-super-120b-a12b:free
       REDIS_URL: redis://tasksense-redis:6379
       ELASTICSEARCH_HOST: tasksense-elasticsearch
       ELASTICSEARCH_PORT: 9200
@@ -203,11 +201,12 @@ services:
       POSTGRES_HOST: tasksense-postgres
       POSTGRES_PORT: 5432
       POSTGRES_DB: taskdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_SSLMODE: disable
-    ports:
-      - "8000:8000"
+      SYNC_INTERVAL_MINUTES: 10
+      SYNC_BATCH_SIZE: 50
+      ENABLE_SYNC: ${ENABLE_SYNC:-True}
     networks:
       - tasksense_net
       - tasksense_database_net
@@ -225,6 +224,20 @@ services:
       retries: 3
       start_period: 30s
 
+  tasksense-client:
+    build:
+      context: ../../client
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost/api/core/v1
+        VITE_API_AGENT_BASE_URL: http://localhost/api/chat/v1
+        VITE_WS_URL: ws://localhost/api/core/v1/ws
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+    container_name: tasksense_client
+    restart: unless-stopped
+    networks:
+      - tasksense_net
+
   tasksense-nginx:
     build:
       context: ../../proxy
@@ -233,27 +246,18 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"
     networks:
       - tasksense_net
     depends_on:
       - tasksense-spring-api
       - tasksense-ai
+      - tasksense-client
     volumes:
-      - nginx_config:/etc/nginx
       - nginx_cert:/etc/nginx/ssl
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 volumes:
   nginx_cert:
     name: tasksense_nginx_cert
-    driver: local
-  nginx_config:
-    name: tasksense_nginx_config
     driver: local
   postgres_data:
     name: tasksense_pg_data

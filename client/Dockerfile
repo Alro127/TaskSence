@@ -10,6 +10,16 @@ RUN npm ci
 # Build stage
 FROM dependencies AS build
 
+ARG VITE_API_BASE_URL=http://localhost/api/core/v1
+ARG VITE_API_AGENT_BASE_URL=http://localhost/api/chat/v1
+ARG VITE_WS_URL=ws://localhost/api/core/v1/ws
+ARG VITE_GOOGLE_CLIENT_ID=
+
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL} \
+	VITE_API_AGENT_BASE_URL=${VITE_API_AGENT_BASE_URL} \
+	VITE_WS_URL=${VITE_WS_URL} \
+	VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+
 COPY . .
 
 RUN npm run build

@@ -120,14 +120,15 @@ class SiliconFlowEmbeddings(OpenRouterEmbeddings):
     
 
 def get_embedding() -> Embeddings:
-    if "openai" == settings.llm_provider:
+    provider = settings.llm_embedding_provider
+    if "openai" == provider:
         if not settings.openai_api_key or not settings.openai_api_key.get_secret_value():
             raise ValueError("OPENAI_API_KEY is required for embedding sync")
         return OpenAIEmbeddings(
             model=settings.openai_model,
             api_key=settings.openai_api_key
         )
-    if "openrouter" == settings.llm_provider:
+    if "openrouter" == provider:
         if not settings.openrouter_api_key or not settings.openrouter_api_key.get_secret_value():
             raise ValueError("OPENROUTER_API_KEY is required for embedding sync")
 
@@ -136,7 +137,7 @@ def get_embedding() -> Embeddings:
             api_key=settings.openrouter_api_key,
             base_url=settings.openrouter_base_url,
         )
-    if "siliconflow" == settings.llm_provider:
+    if "siliconflow" == provider:
         if not settings.siliconflow_api_key or not settings.siliconflow_api_key.get_secret_value():
             raise ValueError("SILICONFLOW_API_KEY is required for embedding sync")
 
@@ -145,7 +146,7 @@ def get_embedding() -> Embeddings:
             api_key=settings.siliconflow_api_key,
             base_url=settings.siliconflow_base_url,
         )
-    elif "gemini" == settings.llm_provider:
+    elif "gemini" == provider:
         if not settings.gemini_api_key or not settings.gemini_api_key.get_secret_value():
             raise ValueError("GEMINI_API_KEY is required for embedding sync")
         return GoogleGenerativeAIEmbeddings(
