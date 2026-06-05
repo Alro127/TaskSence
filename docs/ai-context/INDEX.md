@@ -17,6 +17,8 @@ Agents must read in this order:
 
 | Run ID             | Date       | Summary                                                                                                                              | Linked Files                                                    |
 | ------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| RUN-2026-06-05-002 | 2026-06-05 | Moved deployment KT into existing `docs/` folder and expanded it for a learner without deployment/Kubernetes background.              | docs/TASKSENSE_DEPLOYMENT_KT.md                                 |
+| RUN-2026-06-05-001 | 2026-06-05 | Created deployment KT covering TaskSense server setup, Docker Compose deployment, Kubernetes mapping, K8s rollout plan, and infra improvement priorities. | docs/TASKSENSE_DEPLOYMENT_KT.md                                 |
 | RUN-2026-05-15-002 | 2026-05-15 | Split oversized AI source-truth, retriever, and SQL router files into focused modules and tightened AI Docker build context/runtime command. | ai source_truth/retriever/sql_router modules + Dockerfile/.dockerignore |
 | RUN-2026-05-15-001 | 2026-05-15 | Added backend health/Prometheus observability endpoints, custom wrapped health API, health metrics, and focused unit tests. | server health/metrics + docs context                            |
 | RUN-2026-05-12-001 | 2026-05-12 | Added Spring AI MCP facade, safer Agent Mode actions/JWT forwarding, deterministic RAG reranking, workflow MCP wrapper, and visible reasoning UI. | server MCP + ai agent/RAG + client agent UI                     |
