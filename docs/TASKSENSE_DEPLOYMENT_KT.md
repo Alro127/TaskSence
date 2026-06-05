@@ -238,7 +238,7 @@ Browser ws://<host>/api/core/v1/ws
 | File | Ý nghĩa |
 | --- | --- |
 | `infra/docker/compose.yaml` | Compose chính cho full stack: Postgres, Redis, Elasticsearch, Flyway, seed, Spring, Qdrant, AI, client, Nginx |
-| `infra/docker/compose.build.yaml` | Override image name/tag cho build/push GHCR |
+| `infra/docker/compose.build.yaml` | Override image name/tag cho build/push GHCR; hiện chỉ khai báo image cho Spring API, AI và client |
 | `server/compose.yaml` | Local backend/dev infra compose, không phải baseline production chính |
 | `server/Dockerfile` | Multi-stage build Java 21, package jar bằng Maven, runtime JRE |
 | `client/Dockerfile` | Build Vite static bundle bằng Node 20, serve trên port `5173` |
@@ -246,6 +246,52 @@ Browser ws://<host>/api/core/v1/ws
 | `proxy/nginx.conf` | Reverse proxy routing `/api/core/v1` và `/api/chat/v1` |
 | `.env.example` | Template env root, có một số biến cũ cần điều chỉnh khi dùng production |
 | `.github/workflows/main.yml` | CI/CD hiện tại bằng self-hosted runner + GHCR + Docker Compose |
+
+### 3.1. Source of truth trong `infra/docker`
+
+Khi deploy full stack, ưu tiên đọc `infra/docker/compose.yaml` trước. File này là source of truth cho topology hiện tại.
+
+Networks đang khai báo:
+
+| Network | Internal? | Dùng cho | Ý nghĩa vận hành |
+| --- | --- | --- | --- |
+| `tasksense_database_net` | Có | Postgres, Redis, Elasticsearch, Flyway, seed, Spring, Qdrant, AI | Mạng nội bộ cho database/cache/search/vector; không public ra ngoài |
+| `tasksense_net` | Không | Spring, Qdrant, AI, client, Nginx | Mạng app/proxy; Nginx dùng mạng này để gọi app |
+
+Volumes đang khai báo:
+
+| Volume | Container path | Dùng bởi | Ghi chú |
+| --- | --- | --- | --- |
+| `tasksense_pg_data` | `/var/lib/postgresql/data` | Postgres | Dữ liệu database chính |
+| `tasksense_redis_data` | `/data` | Redis | Redis append-only persistence |
+| `tasksense_es_data` | `/usr/share/elasticsearch/data` | Elasticsearch | Search index data |
+| `tasksense_qdrant_data` | `/qdrant/storage` | Qdrant | Vector data cho AI/RAG |
+| `tasksense_nginx_cert` | `/etc/nginx/ssl` | Nginx | Chỗ để cert nếu mở rộng TLS trong Nginx |
+
+Services trong `infra/docker/compose.yaml`:
+
+| Service | Build/image hiện tại | Network | Public port? | Healthcheck |
+| --- | --- | --- | --- | --- |
+| `tasksense-postgres` | `postgres:16` | database | Không | `pg_isready` |
+| `tasksense-redis` | `redis:7-alpine` | database | Không | `redis-cli ping` |
+| `tasksense-elasticsearch` | `docker.elastic.co/elasticsearch/elasticsearch:9.0.0` | database | Không | `_cluster/health` |
+| `tasksense-flyway` | `flyway/flyway:9-alpine` | database | Không | One-shot job, chờ Postgres healthy |
+| `tasksense-seed` | `postgres:16-alpine` | database | Không | One-shot seed, phụ thuộc Flyway |
+| `tasksense-spring-api` | build từ `server/Dockerfile` | app + database | Không | `http://localhost:8080/api/v1/health` |
+| `tasksense-qdrant` | `qdrant/qdrant:latest` | app + database | Không | `http://localhost:6333/health` |
+| `tasksense-ai` | build từ `ai/app/Dockerfile` | app + database | Không | `http://localhost:8000/health` |
+| `tasksense-client` | build từ `client/Dockerfile` | app | Không | Chưa có healthcheck trong compose |
+| `tasksense-nginx` | build từ `proxy/Dockerfile` | app | `80:80` | Chưa có healthcheck trong compose |
+
+Image registry override trong `infra/docker/compose.build.yaml` hiện chỉ có:
+
+```text
+tasksense-spring-api -> ${IMAGE_PREFIX}-spring-api:${IMAGE_TAG}
+tasksense-ai         -> ${IMAGE_PREFIX}-ai:${IMAGE_TAG}
+tasksense-client     -> ${IMAGE_PREFIX}-client:${IMAGE_TAG}
+```
+
+Vì vậy khi dùng `compose.build.yaml`, chỉ nên kỳ vọng 3 image này được push/pull qua registry. Nginx hiện vẫn build từ `proxy/Dockerfile` trong compose chính, trừ khi sau này bổ sung thêm `tasksense-nginx.image` vào override.
 
 ## 4. Cấu hình runtime cần biết
 
@@ -294,7 +340,7 @@ Các biến môi trường quan trọng cho Spring:
 | `VITE_WS_URL` | WebSocket URL | `ws://<domain>/api/core/v1/ws` hoặc `wss://<domain>/api/core/v1/ws` |
 | `VITE_GOOGLE_CLIENT_ID` | Google client id browser-side | Public OAuth client id |
 
-Lưu ý: `.env.example` root hiện có `VITE_AI_API_BASE_URL`, nhưng code/Dockerfile hiện tại dùng `VITE_API_AGENT_BASE_URL`. Khi deploy, dùng `VITE_API_AGENT_BASE_URL`.
+Lưu ý: frontend dùng `VITE_API_AGENT_BASE_URL` cho AI API. `.env.example` hiện đã được chuẩn hóa theo tên biến này.
 
 Vì Vite inject biến tại build time, thay đổi các biến `VITE_*` cần rebuild image frontend.
 
@@ -405,32 +451,262 @@ Tạo `.env` ở root repo trên server:
 cp .env.example .env
 ```
 
-Sau đó sửa tối thiểu các biến sau:
+File `.env.example` đã được chuẩn hóa theo `infra/docker/compose.yaml`. Sau khi copy sang `.env`, chuẩn bị đủ các nhóm bên dưới.
+
+#### 5.2.1. Env bắt buộc cho mọi deployment
 
 ```bash
 SECURITY_JWT_SECRET=<long-random-secret>
 
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=<strong-db-password>
+POSTGRES_PASSWORD=postgres
 POSTGRES_DB=taskdb
+```
 
+| Biến | Dùng bởi | Vì sao quan trọng |
+| --- | --- | --- |
+| `SECURITY_JWT_SECRET` | Spring API + AI | Hai service cùng validate JWT. Nếu lệch nhau, auth/AI request có thể fail |
+| `POSTGRES_USER` | Postgres, Flyway, Spring, AI, seed | User DB dùng xuyên suốt stack |
+| `POSTGRES_PASSWORD` | Postgres, Flyway, Spring, AI, seed | Với compose hiện tại phải giữ `postgres`, vì Flyway/seed/Spring đang hardcode password này |
+| `POSTGRES_DB` | Postgres, Flyway, Spring, AI, seed | Tên database. Default hiện là `taskdb` |
+
+Lưu ý quan trọng: theo yêu cầu không chỉnh Docker Compose file, `infra/docker/compose.yaml` hiện vẫn hardcode `postgres` cho Flyway, seed và Spring datasource. Vì vậy nếu chạy trực tiếp compose hiện tại, hãy giữ:
+
+```bash
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=taskdb
+```
+
+Nếu muốn dùng password mạnh ở production, cần tạo compose override hoặc một bước chỉnh infra riêng để Postgres/Flyway/seed/Spring/AI cùng dùng chung credential. Không chỉ đổi `.env`, vì như vậy Postgres đổi password nhưng Spring/Flyway vẫn dùng `postgres` và deployment sẽ fail.
+
+#### 5.2.2. Env cho domain public và frontend build
+
+Với domain thật, ví dụ `https://tasksense.example.com`, chuẩn bị:
+
+```bash
+VITE_API_BASE_URL=https://tasksense.example.com/api/core/v1
+VITE_API_AGENT_BASE_URL=https://tasksense.example.com/api/chat/v1
+VITE_WS_URL=wss://tasksense.example.com/api/core/v1/ws
+VITE_GOOGLE_CLIENT_ID=<google-client-id>
+
+GOOGLE_REDIRECT_URL=https://tasksense.example.com
+CORS_ORIGINS=https://tasksense.example.com
+```
+
+| Biến | Dùng bởi | Ghi chú |
+| --- | --- | --- |
+| `VITE_API_BASE_URL` | Frontend build | Browser gọi Spring API qua Nginx |
+| `VITE_API_AGENT_BASE_URL` | Frontend build | Browser gọi AI API qua Nginx |
+| `VITE_WS_URL` | Frontend build | Browser mở notification WebSocket |
+| `VITE_GOOGLE_CLIENT_ID` | Frontend build | Public Google OAuth client id |
+| `GOOGLE_REDIRECT_URL` | Spring API | Redirect URL server-side cho Google OAuth |
+| `CORS_ORIGINS` | AI service | Origin frontend được phép gọi AI |
+
+Vì Vite inject `VITE_*` tại build time, đổi các biến này phải rebuild `tasksense-client`.
+
+Theo yêu cầu không chỉnh Docker Compose file, `infra/docker/compose.yaml` hiện vẫn hardcode các build args localhost:
+
+```yaml
+VITE_API_BASE_URL: http://localhost/api/core/v1
+VITE_API_AGENT_BASE_URL: http://localhost/api/chat/v1
+VITE_WS_URL: ws://localhost/api/core/v1/ws
+```
+
+Local test qua `http://localhost` có thể dùng default. Production HTTPS phải dùng `https://...` và `wss://...`.
+
+Với CI hiện tại, workflow truyền `VITE_*` bằng `docker compose build --build-arg ... tasksense-client`, nên không cần sửa compose để build image frontend đúng domain. Nếu build thủ công trên server, dùng cùng build args hoặc tạo compose override riêng.
+
+#### 5.2.3. Env cho Google OAuth
+
+Nếu bật login Google:
+
+```bash
 GOOGLE_CLIENT_ID=<google-client-id>
 GOOGLE_CLIENT_SECRET=<google-client-secret>
-GOOGLE_REDIRECT_URL=https://<domain>
+GOOGLE_REDIRECT_URL=https://tasksense.example.com
+VITE_GOOGLE_CLIENT_ID=<google-client-id>
+```
 
-EMAIL_USERNAME=<smtp-user>
-EMAIL_PASSWORD=<smtp-password-or-app-password>
+Checklist trên Google Cloud Console:
 
+- Authorized JavaScript origins có `https://tasksense.example.com`.
+- Authorized redirect URIs khớp flow backend/frontend hiện tại.
+- `VITE_GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_ID` cùng client id nếu dùng cùng OAuth app.
+
+Nếu không dùng Google OAuth ngay, vẫn có thể để trống nhưng các nút login Google sẽ không hoạt động đúng.
+
+#### 5.2.4. Env cho email
+
+Các flow register, OTP, forgot password, invite email cần SMTP:
+
+```bash
+EMAIL_USERNAME=<smtp-user-or-gmail-address>
+EMAIL_PASSWORD=<smtp-password-or-gmail-app-password>
+```
+
+Code Spring hiện cấu hình Gmail SMTP:
+
+```text
+host=smtp.gmail.com
+port=587
+starttls=true
+```
+
+Nếu dùng Gmail, nên dùng App Password, không dùng password đăng nhập chính.
+
+#### 5.2.5. Env cho S3/object storage
+
+Upload avatar/document dùng presigned URL từ Spring:
+
+```bash
 AWS_REGION=<region>
 AWS_ACCESS_KEY=<access-key>
 AWS_SECRET_KEY=<secret-key>
 AWS_BUCKET=<bucket>
 AWS_ENDPOINT=<s3-endpoint-host>
+```
+
+Ví dụ AWS S3:
+
+```bash
+AWS_REGION=ap-southeast-1
+AWS_BUCKET=tasksense-prod
+AWS_ENDPOINT=s3.ap-southeast-1.amazonaws.com
+```
+
+Nếu dùng S3-compatible storage như MinIO/R2, `AWS_ENDPOINT` phải là endpoint tương thích của provider đó. Không thêm `https://` nếu code/provider hiện kỳ vọng host; kiểm tra lại bằng upload avatar/document sau deploy.
+
+#### 5.2.6. Env cho AI/LLM/RAG
+
+AI service cần provider cho chat và embedding:
+
+```bash
+LLM_PROVIDER=openai
+LLM_EMBEDDING_PROVIDER=openrouter
+
+OPENAI_API_KEY=<openai-key>
+OPENROUTER_API_KEY=<openrouter-key-if-used-for-embedding>
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+SILICONFLOW_API_KEY=
+
+QDRANT_API_KEY=
+ENABLE_SYNC=True
+```
+
+Theo `infra/docker/compose.yaml` hiện tại:
+
+| Biến | Default trong infra | Ghi chú |
+| --- | --- | --- |
+| `LLM_PROVIDER` | `openai` | Provider chat |
+| `LLM_EMBEDDING_PROVIDER` | `openrouter` | Provider embedding |
+| `OPENAI_MODEL` | `gpt-4.1` | Đang hardcode trong compose |
+| `OPENROUTER_EMBEDDING_MODEL` | `nvidia/llama-nemotron-embed-vl-1b-v2:free` | Đang hardcode trong compose |
+| `OPENROUTER_MODEL` | `nvidia/nemotron-3-super-120b-a12b:free` | Đang hardcode trong compose |
+| `QDRANT_HOST` | `http://tasksense-qdrant:6333` | Internal service URL |
+| `ENABLE_SYNC` | `True` | Bật scheduler sync dữ liệu vào Qdrant |
+
+Nếu `LLM_EMBEDDING_PROVIDER=openrouter`, cần `OPENROUTER_API_KEY`. Nếu không có embedding key, AI RAG/sync có thể degraded hoặc fail tùy flow.
+
+Lưu ý theo compose hiện tại: `tasksense-ai` đang truyền `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, nhưng chưa truyền `GEMINI_API_KEY` và `SILICONFLOW_API_KEY` vào container. Nếu muốn dùng `LLM_PROVIDER=gemini` hoặc `LLM_PROVIDER=siliconflow`, cần compose override hoặc một thay đổi infra riêng để map hai secret này vào AI container. Không chỉ thêm vào `.env`.
+
+#### 5.2.7. Env cho registry/GHCR deployment
+
+Chỉ cần khi dùng thêm `infra/docker/compose.build.yaml`:
+
+```bash
+IMAGE_PREFIX=ghcr.io/<owner>/<repo>
+IMAGE_TAG=<git-sha-or-release-version>
+```
+
+Ví dụ:
+
+```bash
+IMAGE_PREFIX=ghcr.io/acme/tasksense
+IMAGE_TAG=2026-06-05-a1b2c3d
+```
+
+`compose.build.yaml` hiện map:
+
+```text
+tasksense-spring-api -> ${IMAGE_PREFIX}-spring-api:${IMAGE_TAG}
+tasksense-ai         -> ${IMAGE_PREFIX}-ai:${IMAGE_TAG}
+tasksense-client     -> ${IMAGE_PREFIX}-client:${IMAGE_TAG}
+```
+
+#### 5.2.8. Full `.env` mẫu cho production
+
+Mẫu này dùng domain `tasksense.example.com`; thay bằng domain thật:
+
+```bash
+SECURITY_JWT_SECRET=<long-random-secret>
+
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=taskdb
+
+VITE_API_BASE_URL=https://tasksense.example.com/api/core/v1
+VITE_API_AGENT_BASE_URL=https://tasksense.example.com/api/chat/v1
+VITE_WS_URL=wss://tasksense.example.com/api/core/v1/ws
+VITE_GOOGLE_CLIENT_ID=<google-client-id>
+
+GOOGLE_CLIENT_ID=<google-client-id>
+GOOGLE_CLIENT_SECRET=<google-client-secret>
+GOOGLE_REDIRECT_URL=https://tasksense.example.com
+
+EMAIL_USERNAME=<smtp-user>
+EMAIL_PASSWORD=<smtp-password-or-app-password>
+
+AWS_REGION=ap-southeast-1
+AWS_ACCESS_KEY=<access-key>
+AWS_SECRET_KEY=<secret-key>
+AWS_BUCKET=tasksense-prod
+AWS_ENDPOINT=s3.ap-southeast-1.amazonaws.com
+
+CORS_ORIGINS=https://tasksense.example.com
 
 LLM_PROVIDER=openai
-OPENAI_API_KEY=<provider-key>
-OPENROUTER_API_KEY=<provider-key-if-used-for-embedding>
-CORS_ORIGINS=https://<domain>
+LLM_EMBEDDING_PROVIDER=openrouter
+OPENAI_API_KEY=<openai-key>
+OPENROUTER_API_KEY=<openrouter-key>
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+SILICONFLOW_API_KEY=
+
+QDRANT_API_KEY=
+ENABLE_SYNC=True
+
+IMAGE_PREFIX=ghcr.io/<owner>/<repo>
+IMAGE_TAG=<git-sha-or-release-version>
+```
+
+#### 5.2.9. Kiểm tra env trước khi deploy
+
+Trước khi chạy `docker compose up`, kiểm tra:
+
+```bash
+docker compose -f infra/docker/compose.yaml config
+```
+
+Lệnh này render compose sau khi áp dụng `.env`. Dùng để bắt lỗi thiếu `SECURITY_JWT_SECRET`, sai syntax YAML, hoặc biến env chưa được thay.
+
+Checklist:
+
+```text
+[ ] SECURITY_JWT_SECRET không còn là default
+[ ] Nếu chạy base compose trực tiếp: POSTGRES_PASSWORD vẫn là postgres để khớp Flyway/seed/Spring hardcode
+[ ] Nếu production cần password mạnh: đã có compose override hoặc infra change riêng cho toàn bộ DB consumers
+[ ] VITE_API_BASE_URL là domain public đúng
+[ ] VITE_API_AGENT_BASE_URL là domain public đúng
+[ ] VITE_WS_URL dùng wss nếu frontend chạy HTTPS
+[ ] GOOGLE_REDIRECT_URL đúng domain public
+[ ] CORS_ORIGINS đúng origin frontend, không dư localhost ở production nếu không cần
+[ ] EMAIL_USERNAME/EMAIL_PASSWORD đã test SMTP
+[ ] AWS_* đã test upload avatar/document
+[ ] OPENAI_API_KEY hoặc provider key tương ứng đã có
+[ ] OPENROUTER_API_KEY đã có nếu dùng openrouter embedding
+[ ] IMAGE_PREFIX/IMAGE_TAG đã set nếu dùng compose.build.yaml
 ```
 
 Giải thích các nhóm env:
@@ -447,17 +723,6 @@ Giải thích các nhóm env:
 | S3/AWS | Avatar/document upload presign lỗi |
 | Frontend `VITE_*` | Browser gọi sai API URL, WebSocket không connect |
 
-Nếu build frontend qua compose, truyền đúng build args trong `infra/docker/compose.yaml` hoặc override file:
-
-```yaml
-build:
-  args:
-    VITE_API_BASE_URL: https://<domain>/api/core/v1
-    VITE_API_AGENT_BASE_URL: https://<domain>/api/chat/v1
-    VITE_WS_URL: wss://<domain>/api/core/v1/ws
-    VITE_GOOGLE_CLIENT_ID: <google-client-id>
-```
-
 ### 5.3. Build và chạy toàn bộ stack trên server
 
 Từ root repo:
@@ -473,7 +738,8 @@ Kết quả mong đợi:
 - `tasksense-postgres`, `tasksense-redis`, `tasksense-elasticsearch`, `tasksense-qdrant` chạy trước.
 - `tasksense-flyway` chạy xong rồi exit thành công.
 - `tasksense-seed` có thể chạy xong rồi exit; production nên tách seed khỏi auto-run.
-- `tasksense-spring-api`, `tasksense-ai`, `tasksense-client`, `tasksense-nginx` ở trạng thái running/healthy.
+- `tasksense-spring-api`, `tasksense-ai` ở trạng thái running/healthy.
+- `tasksense-client`, `tasksense-nginx` ở trạng thái running; hiện compose chưa khai báo healthcheck cho hai service này.
 
 Theo dõi startup:
 
@@ -526,7 +792,7 @@ Nếu verify fail, đọc theo bảng này:
 
 ### 5.4. Deploy bằng image registry/GHCR
 
-Repo đã có `infra/docker/compose.build.yaml` để đặt image:
+Repo đã có `infra/docker/compose.build.yaml` để đặt image cho `tasksense-spring-api`, `tasksense-ai`, `tasksense-client`.
 
 ```bash
 export IMAGE_PREFIX=ghcr.io/<owner>/<repo>
@@ -535,12 +801,12 @@ export IMAGE_TAG=<git-sha-or-version>
 docker compose \
   -f infra/docker/compose.yaml \
   -f infra/docker/compose.build.yaml \
-  build tasksense-spring-api tasksense-ai tasksense-client tasksense-nginx
+  build tasksense-spring-api tasksense-ai tasksense-client
 
 docker compose \
   -f infra/docker/compose.yaml \
   -f infra/docker/compose.build.yaml \
-  push tasksense-spring-api tasksense-ai tasksense-client tasksense-nginx
+  push tasksense-spring-api tasksense-ai tasksense-client
 ```
 
 Trên server:
@@ -554,7 +820,7 @@ export IMAGE_TAG=<git-sha-or-version>
 docker compose \
   -f infra/docker/compose.yaml \
   -f infra/docker/compose.build.yaml \
-  pull tasksense-spring-api tasksense-ai tasksense-client tasksense-nginx
+  pull tasksense-spring-api tasksense-ai tasksense-client
 
 docker compose \
   -f infra/docker/compose.yaml \
@@ -562,7 +828,58 @@ docker compose \
   up -d --remove-orphans
 ```
 
-Rủi ro CI/CD hiện tại: `.github/workflows/main.yml` đang build/push/pull `tasksense-spring-api`, `tasksense-ai`, `tasksense-nginx` nhưng chưa include `tasksense-client`. Nếu deploy qua override image, client có thể bị thiếu image mới hoặc phải build local trên server. Nên thêm `tasksense-client` vào cả bước build, push, pull.
+`.github/workflows/main.yml` hiện build/push/pull đúng 3 service có image override:
+
+```text
+tasksense-spring-api
+tasksense-ai
+tasksense-client
+```
+
+Nginx không đi qua registry ở cấu hình hiện tại. Nếu muốn Nginx cũng đi qua registry, cần thêm `tasksense-nginx.image` vào `infra/docker/compose.build.yaml`, rồi mới thêm `tasksense-nginx` vào workflow build/push/pull.
+
+GitHub Actions cần chuẩn bị các `secrets` và `vars` sau.
+
+Secrets:
+
+```text
+SECURITY_JWT_SECRET
+POSTGRES_PASSWORD
+EMAIL_USERNAME
+EMAIL_PASSWORD
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+AWS_ACCESS_KEY
+AWS_SECRET_KEY
+QDRANT_API_KEY
+OPENAI_API_KEY
+ANTHROPIC_API_KEY
+OPENROUTER_API_KEY
+GEMINI_API_KEY
+SILICONFLOW_API_KEY
+```
+
+Vars:
+
+```text
+POSTGRES_USER
+POSTGRES_DB
+GOOGLE_REDIRECT_URL
+VITE_API_BASE_URL
+VITE_API_AGENT_BASE_URL
+VITE_WS_URL
+VITE_GOOGLE_CLIENT_ID
+AWS_REGION
+AWS_BUCKET
+AWS_ENDPOINT
+LLM_PROVIDER
+LLM_EMBEDDING_PROVIDER
+CORS_ORIGINS
+ENABLE_SYNC
+NGINX_SERVER_NAME
+```
+
+`VITE_*` phải có ở build job vì frontend image được build trong CI. Nếu thiếu hoặc để localhost, image frontend production sẽ gọi sai API dù deploy server đúng.
 
 Giải thích flow GHCR cho người mới:
 
@@ -663,8 +980,8 @@ wss://<domain>/api/core/v1/ws     -> spring-api Service, WebSocket enabled
 
 ### Phase 0: Chuẩn hóa trước khi viết manifest
 
-1. Sửa CI để build/push đủ 4 image app: `tasksense-spring-api`, `tasksense-ai`, `tasksense-client`, `tasksense-nginx` hoặc bỏ image Nginx nếu chuyển sang Ingress.
-2. Chuẩn hóa `.env.example`: thay `VITE_AI_API_BASE_URL` bằng `VITE_API_AGENT_BASE_URL`; bổ sung `VITE_WS_URL`.
+1. Giữ CI khớp `infra/docker/compose.build.yaml`: build/push/pull đủ 3 image đang có override (`tasksense-spring-api`, `tasksense-ai`, `tasksense-client`). Nếu muốn Nginx cũng đi qua registry, bổ sung `tasksense-nginx.image` trước rồi mới build/push/pull 4 image.
+2. Khi đổi domain, cập nhật `VITE_API_BASE_URL`, `VITE_API_AGENT_BASE_URL`, `VITE_WS_URL`, `GOOGLE_REDIRECT_URL`, `CORS_ORIGINS` trong `.env` trước khi build frontend.
 3. Quyết định production data layer:
    - Khuyến nghị: managed Postgres, managed Redis, managed Elasticsearch/OpenSearch, managed Qdrant/Qdrant StatefulSet riêng.
    - Nếu tự host trong cluster: dùng StatefulSet + PVC + backup policy.
@@ -770,8 +1087,8 @@ Sau khi có metrics thật, bật HPA cho Spring và AI theo CPU/memory hoặc c
 
 ### P0 - Cần làm trước production
 
-- Sửa GitHub Actions để build/push/pull `tasksense-client`.
-- Chuẩn hóa env names frontend: `VITE_API_BASE_URL`, `VITE_API_AGENT_BASE_URL`, `VITE_WS_URL`, `VITE_GOOGLE_CLIENT_ID`.
+- Quyết định rõ `tasksense-nginx` sẽ tiếp tục build local hay có image override riêng; hiện CI và `compose.build.yaml` đang khớp ở 3 image app: Spring, AI, client.
+- Khi deploy domain thật, kiểm tra env frontend: `VITE_API_BASE_URL`, `VITE_API_AGENT_BASE_URL`, `VITE_WS_URL`, `VITE_GOOGLE_CLIENT_ID`.
 - Không dùng default `postgres/postgres` và `SECURITY_JWT_SECRET=change-me...` ở production.
 - Tắt hoặc tách `tasksense-seed` khỏi production compose.
 - Thêm HTTPS/TLS cho Nginx hoặc chuyển sang cloud load balancer/Ingress.
@@ -840,7 +1157,7 @@ export IMAGE_TAG=<previous-good-sha>
 docker compose \
   -f infra/docker/compose.yaml \
   -f infra/docker/compose.build.yaml \
-  pull tasksense-spring-api tasksense-ai tasksense-client tasksense-nginx
+  pull tasksense-spring-api tasksense-ai tasksense-client
 
 docker compose \
   -f infra/docker/compose.yaml \

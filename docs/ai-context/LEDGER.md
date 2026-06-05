@@ -16,7 +16,7 @@
 ## Last Updated
 
 - Date: 2026-06-05
-- Source: Run context sync (RUN-2026-06-05-002)
+- Source: Run context sync (RUN-2026-06-05-004)
 
 ## Durable Decisions
 
@@ -36,6 +36,8 @@
 | 2026-05-15 | Backend Observability | Use Spring Actuator plus Micrometer Prometheus for scrape metrics, and keep the custom `/api/v1/health` API wrapped in `ApiResponse`. | Gives Prometheus/Grafana standard endpoints while preserving frontend/API response conventions for custom controllers. |
 | 2026-05-15 | AI Maintainability | Keep `app.service.source_truth_service` as a compatibility facade while new source-truth code lives under `app.service.source_truth.*`. | Allows incremental module splits without breaking existing chatbot, embedding, or helper imports. |
 | 2026-06-05 | Deployment Documentation | Use `docs/TASKSENSE_DEPLOYMENT_KT.md` as the current KT reference for server setup, Docker Compose deploy, Kubernetes mapping, and deployment improvement planning. | Captures the actual repo topology across client, Spring API, AI service, Nginx, Compose, and CI/CD in one operator-focused document, with beginner-friendly explanations for KT. |
+| 2026-06-05 | Infra Source of Truth | Treat `infra/docker/compose.yaml` and `infra/docker/compose.build.yaml` as the source of truth for deployment KT commands and topology. | Prevents docs from drifting from actual service names, image override behavior, network layout, volume names, and healthcheck coverage. |
+| 2026-06-05 | Deployment Env | Use `.env.example` as the complete deploy env template and document current compose limitations; GitHub Actions passes frontend build args without modifying Docker Compose. | Keeps operator docs and CI deploy aligned while respecting the requirement not to edit `infra/docker/compose.yaml`. |
 
 ## Durable Constraints
 

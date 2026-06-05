@@ -18,6 +18,12 @@ jobs:
   build-and-push:
     name: Build and push images
     runs-on: self-hosted
+    env:
+      SECURITY_JWT_SECRET: ${{ secrets.SECURITY_JWT_SECRET }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_API_AGENT_BASE_URL: ${{ vars.VITE_API_AGENT_BASE_URL }}
+      VITE_WS_URL: ${{ vars.VITE_WS_URL }}
+      VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
     outputs:
       image-prefix: ${{ steps.image-meta.outputs.image-prefix }}
       image-tag: ${{ steps.image-meta.outputs.image-tag }}
@@ -52,14 +58,24 @@ jobs:
           docker compose \
             -f infra/docker/compose.yaml \
             -f infra/docker/compose.build.yaml \
-            build tasksense-spring-api tasksense-ai tasksense-nginx
+            build tasksense-spring-api tasksense-ai
+
+          docker compose \
+            -f infra/docker/compose.yaml \
+            -f infra/docker/compose.build.yaml \
+            build \
+            --build-arg VITE_API_BASE_URL="${VITE_API_BASE_URL}" \
+            --build-arg VITE_API_AGENT_BASE_URL="${VITE_API_AGENT_BASE_URL}" \
+            --build-arg VITE_WS_URL="${VITE_WS_URL}" \
+            --build-arg VITE_GOOGLE_CLIENT_ID="${VITE_GOOGLE_CLIENT_ID}" \
+            tasksense-client
 
       - name: Push images with Docker Compose
         run: |
           docker compose \
             -f infra/docker/compose.yaml \
             -f infra/docker/compose.build.yaml \
-            push tasksense-spring-api tasksense-ai tasksense-nginx
+            push tasksense-spring-api tasksense-ai tasksense-client
 
   deploy:
     name: Deploy
@@ -70,21 +86,33 @@ jobs:
       IMAGE_PREFIX: ${{ needs.build-and-push.outputs.image-prefix }}
       IMAGE_TAG: ${{ needs.build-and-push.outputs.image-tag }}
       SECURITY_JWT_SECRET: ${{ secrets.SECURITY_JWT_SECRET }}
+      POSTGRES_USER: ${{ vars.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ vars.POSTGRES_DB }}
       EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
       EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       GOOGLE_REDIRECT_URL: ${{ vars.GOOGLE_REDIRECT_URL }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_API_AGENT_BASE_URL: ${{ vars.VITE_API_AGENT_BASE_URL }}
+      VITE_WS_URL: ${{ vars.VITE_WS_URL }}
+      VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
       AWS_REGION: ${{ vars.AWS_REGION }}
       AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
       AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
       AWS_BUCKET: ${{ vars.AWS_BUCKET }}
       AWS_ENDPOINT: ${{ vars.AWS_ENDPOINT }}
       LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
+      LLM_EMBEDDING_PROVIDER: ${{ vars.LLM_EMBEDDING_PROVIDER }}
       QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      SILICONFLOW_API_KEY: ${{ secrets.SILICONFLOW_API_KEY }}
       CORS_ORIGINS: ${{ vars.CORS_ORIGINS }}
+      ENABLE_SYNC: ${{ vars.ENABLE_SYNC }}
       NGINX_SERVER_NAME: ${{ vars.NGINX_SERVER_NAME }}
     steps:
       - name: Checkout
@@ -102,7 +130,7 @@ jobs:
           docker compose \
             -f infra/docker/compose.yaml \
             -f infra/docker/compose.build.yaml \
-            pull tasksense-spring-api tasksense-ai tasksense-nginx
+            pull tasksense-spring-api tasksense-ai tasksense-client
 
       - name: Deploy with Docker Compose
         run: |
