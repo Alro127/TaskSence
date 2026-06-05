@@ -12,6 +12,10 @@ import type {
   WorkflowRatingResponse,
   WorkflowRatingSummaryResponse,
   WorkflowStatus,
+  WorkflowGuidanceDto,
+  UpdateWorkflowGuidanceRequest,
+  Project,
+  CreateProjectFromWorkflowRequest,
 } from "@/types/api";
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
@@ -400,6 +404,50 @@ export const workflowApi = createApi({
         }
       },
     }),
+
+    generateGuidance: builder.mutation<ApiResponse<WorkflowGuidanceDto>, { workflowId: number }>({
+      query: ({ workflowId }) => ({
+        url: `/workflows/${workflowId}/guidance/generate`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, { workflowId }) => [{ type: "Workflow", id: workflowId }],
+    }),
+
+    updateGuidance: builder.mutation<
+      ApiResponse<WorkflowGuidanceDto>,
+      { workflowId: number; body: UpdateWorkflowGuidanceRequest }
+    >({
+      query: ({ workflowId, body }) => ({
+        url: `/workflows/${workflowId}/guidance`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { workflowId }) => [{ type: "Workflow", id: workflowId }],
+    }),
+
+    getGuidanceByProject: builder.query<ApiResponse<WorkflowGuidanceDto>, { projectId: number }>({
+      query: ({ projectId }) => ({
+        url: `/projects/${projectId}/guidance`,
+      }),
+    }),
+
+    getGuidanceByWorkflow: builder.query<ApiResponse<WorkflowGuidanceDto>, { workflowId: number }>({
+      query: ({ workflowId }) => ({
+        url: `/workflows/${workflowId}/guidance`,
+      }),
+      providesTags: (_result, _error, { workflowId }) => [{ type: "Workflow", id: workflowId }],
+    }),
+
+    createProjectFromWorkflow: builder.mutation<
+      ApiResponse<Project>,
+      { workflowId: number; body: CreateProjectFromWorkflowRequest }
+    >({
+      query: ({ workflowId, body }) => ({
+        url: `/workflows/${workflowId}/projects`,
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -414,4 +462,9 @@ export const {
   useUpsertWorkflowRatingMutation,
   useGetWorkflowRatingSummaryQuery,
   useToggleWorkflowFavoriteMutation,
+  useGenerateGuidanceMutation,
+  useUpdateGuidanceMutation,
+  useGetGuidanceByProjectQuery,
+  useGetGuidanceByWorkflowQuery,
+  useCreateProjectFromWorkflowMutation,
 } = workflowApi;

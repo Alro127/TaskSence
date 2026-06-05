@@ -1,0 +1,146 @@
+import { useEffect, useState, useLayoutEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, X, ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
+import { useGuidance } from "../context/GuidanceContext";
+import { capabilityRegistry } from "../utils/CapabilityRegistry";
+import { Button } from "@/components/ui/button";
+
+export function GuidanceOverlay() {
+  const { isVisible, currentStep, currentStepIndex, activeGuidance, nextStep, prevStep, dismiss } = useGuidance();
+  const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const [targetFound, setTargetFound] = useState(false);
+
+  // Re-calculate target position when registry changes or step changes
+  useLayoutEffect(() => {
+    if (!isVisible || !currentStep) {
+      setTargetRect(null);
+      setTargetFound(false);
+      return;
+    }
+
+    const updatePosition = () => {
+      const element = capabilityRegistry.getTarget(currentStep.uiTarget);
+      if (element) {
+        setTargetRect(element.getBoundingClientRect());
+        setTargetFound(true);
+      } else {
+        setTargetRect(null);
+        setTargetFound(false);
+      }
+    };
+
+    updatePosition();
+    return capabilityRegistry.subscribe(updatePosition);
+  }, [isVisible, currentStep, currentStepIndex]);
+
+  if (!isVisible || !activeGuidance) return null;
+
+  // Render high-level summary if index is -1
+  if (currentStepIndex === -1) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-lg bg-white rounded-2xl p-8 shadow-2xl border border-slate-200"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-emerald-50 rounded-lg">
+              <Sparkles className="h-6 w-6 text-emerald-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">Project Onboarding</h2>
+          </div>
+
+          <div className="space-y-6">
+            <p className="text-slate-600 leading-relaxed">
+              {activeGuidance.summary.overview}
+            </p>
+
+            {activeGuidance.summary.bestPractices.length > 0 && (
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-600 mb-3">Best Practices</h3>
+                <ul className="space-y-2">
+                  {activeGuidance.summary.bestPractices.map((bp, i) => (
+                    <li key={i} className="flex gap-2 text-sm text-slate-700">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                      {bp}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-8 flex gap-3">
+            <Button onClick={nextStep} className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+              Start Interactive Tour
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+            <Button variant="ghost" onClick={dismiss} className="text-slate-400 hover:text-slate-600">
+              Skip
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Render tooltip anchored to target
+  return (
+    <div className="fixed inset-0 z-[60] pointer-events-none">
+      <AnimatePresence>
+        {targetRect && targetFound && (
+          <>
+            {/* Highlight box around target */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute border-2 border-emerald-500 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]"
+              style={{
+                top: targetRect.top - 4,
+                left: targetRect.left - 4,
+                width: targetRect.width + 8,
+                height: targetRect.height + 8,
+              }}
+            />
+
+            {/* Tooltip */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute bg-white rounded-xl shadow-xl border border-slate-200 p-5 w-72 pointer-events-auto"
+              style={{
+                top: targetRect.bottom + 16,
+                left: Math.max(16, Math.min(window.innerWidth - 304, targetRect.left + (targetRect.width / 2) - 144)),
+              }}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">
+                  Step {currentStepIndex + 1} of {activeGuidance.interactiveSteps.length}
+                </span>
+                <button onClick={dismiss} className="text-slate-400 hover:text-slate-600 transition-colors">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <h3 className="font-bold text-slate-900 mb-2">{currentStep.title}</h3>
+              <p className="text-sm text-slate-600 mb-4">{currentStep.description}</p>
+              
+              <div className="flex gap-2">
+                <Button size="sm" onClick={nextStep} className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+                  {currentStepIndex === activeGuidance.interactiveSteps.length - 1 ? "Finish" : "Next"}
+                </Button>
+                {currentStepIndex > 0 && (
+                  <Button size="sm" variant="outline" onClick={prevStep}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

@@ -45,6 +45,10 @@ public class ProjectEntity {
     @Column(name = "end_date")
     private LocalDate endDate;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_workflow_id")
+    private WorkflowEntity sourceWorkflow;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;

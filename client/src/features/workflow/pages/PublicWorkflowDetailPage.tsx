@@ -13,8 +13,12 @@ import {
   useGetWorkflowDetailQuery,
   useGetWorkflowRatingSummaryQuery,
   useUpsertWorkflowRatingMutation,
+  useGenerateGuidanceMutation,
+  useGetGuidanceByWorkflowQuery,
+  useCreateProjectFromWorkflowMutation,
 } from "../api/workflowApi";
 import { PublicWorkflowReviewsTab, PublicWorkflowStepsTab, RatingDialog } from "../components";
+import { Sparkles, LayoutPanelTop, CheckCircle2 } from "lucide-react";
 
 function deriveEstimatedMinutes(stepCount: number): number {
   const safeCount = Math.max(1, stepCount);
@@ -42,6 +46,12 @@ export function PublicWorkflowDetailPage() {
   } = useGetWorkflowDetailQuery({ workflowId }, { skip: Number.isNaN(workflowId) });
   const workflow = workflowData?.data;
 
+  const { data: guidanceData, isLoading: isGuidanceLoading } = useGetGuidanceByWorkflowQuery(
+    { workflowId },
+    { skip: Number.isNaN(workflowId) }
+  );
+  const guidance = guidanceData?.data;
+
   const {
     data: ratingSummaryData,
     isLoading: isSummaryLoading,
@@ -52,6 +62,8 @@ export function PublicWorkflowDetailPage() {
   const [createWorkflowDraftFromProject, { isLoading: isCloning }] =
     useCreateWorkflowDraftFromProjectMutation();
   const [upsertWorkflowRating, { isLoading: isSubmittingRating }] = useUpsertWorkflowRatingMutation();
+  const [generateGuidance, { isLoading: isGeneratingGuidance }] = useGenerateGuidanceMutation();
+  const [createProjectFromWorkflow, { isLoading: isCreatingProject }] = useCreateProjectFromWorkflowMutation();
 
   const isOwner = useMemo(() => {
     if (!workflow || !currentUserId) {
@@ -63,6 +75,39 @@ export function PublicWorkflowDetailPage() {
   const handleRequireAuth = () => {
     toast.error("Please sign in to continue.");
     navigate("/auth/login");
+  };
+
+  const handleGenerateGuidance = async () => {
+    if (!workflow) return;
+    try {
+      await generateGuidance({ workflowId: workflow.id }).unwrap();
+      toast.success("AI Guidance generated successfully!");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to generate AI guidance."));
+    }
+  };
+
+  const handleCreateProject = async () => {
+    if (!workflow) return;
+    if (!isAuthenticated) {
+      handleRequireAuth();
+      return;
+    }
+
+    try {
+      const response = await createProjectFromWorkflow({
+        workflowId: workflow.id,
+        body: {
+          name: `${workflow.name} Project`,
+          description: workflow.description || undefined,
+        }
+      }).unwrap();
+      toast.success("Project created successfully from template!");
+      // Navigate to the new project detail page
+      navigate(`/workspaces/${response.data.workspaceId}/projects/${response.data.id}`);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to create project from template."));
+    }
   };
 
   const handleCloneDraft = async () => {
@@ -225,6 +270,7 @@ export function PublicWorkflowDetailPage() {
               estimatedMinutes={estimatedMinutes}
               progressPercent={progressPercent}
               activeStepIndex={currentStepIndex}
+              guidance={guidance}
             />
           ) : (
             <PublicWorkflowReviewsTab workflowId={workflow.id} />
@@ -254,7 +300,18 @@ export function PublicWorkflowDetailPage() {
 
             <div className="mt-5 space-y-2">
               <Button
+                className="w-full bg-[#006a61] text-white hover:opacity-90"
+                disabled={isCreatingProject}
+                onClick={() => void handleCreateProject()}
+              >
+                {isCreatingProject && <Loader2 className="h-4 w-4 animate-spin" />}
+                <LayoutPanelTop className="h-4 w-4" />
+                Use this Template
+              </Button>
+
+              <Button
                 className="w-full bg-[#233a87] text-white hover:opacity-90"
+                variant="secondary"
                 disabled={isCloning}
                 onClick={() => void handleCloneDraft()}
               >
@@ -262,6 +319,7 @@ export function PublicWorkflowDetailPage() {
                 <CopyPlus className="h-4 w-4" />
                 Clone as Draft
               </Button>
+              
               <Button
                 variant="outline"
                 className="w-full"
@@ -278,6 +336,40 @@ export function PublicWorkflowDetailPage() {
               {isOwner && <p className="text-xs text-[#ba1a1a]">You cannot rate your own workflow.</p>}
             </div>
           </div>
+
+          {workflow.status === "PUBLIC" && (
+            <div className="ghost-border rounded-xl bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#444651]">AI Guidance</h2>
+                {guidance ? (
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-[#006a61]">
+                    <CheckCircle2 className="h-3 w-3" /> READY
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold text-[#ba1a1a]">NONE</span>
+                )}
+              </div>
+              
+              <p className="mt-2 text-xs text-[#444651]">
+                {guidance 
+                  ? "This template includes interactive AI-powered onboarding guidance."
+                  : "No AI guidance generated yet for this template."}
+              </p>
+
+              {isOwner && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 w-full gap-2 border-[#233a87] text-[#233a87] hover:bg-[rgba(35,58,135,0.04)]"
+                  disabled={isGeneratingGuidance || isGuidanceLoading}
+                  onClick={() => void handleGenerateGuidance()}
+                >
+                  {isGeneratingGuidance ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                  {guidance ? "Regenerate Guidance" : "Generate Guidance"}
+                </Button>
+              )}
+            </div>
+          )}
 
           <div className="rounded-xl bg-[#f4f3f1] p-5">
             <h3 className="text-xs font-bold uppercase tracking-widest text-[#444651]">Workflow metadata</h3>

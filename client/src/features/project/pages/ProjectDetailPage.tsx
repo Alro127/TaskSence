@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -51,8 +51,10 @@ import { useGetMembersQuery, useUpdateMemberRoleMutation, useLeaveProjectMutatio
 import { useGetJoinRequestsQuery, useReviewJoinRequestMutation, useCancelJoinRequestMutation } from "../api/projectJoinRequestApi";
 import { useGetTasksByProjectQuery } from "@/features/task/api/taskApi";
 import { ProjectAnalyticsTab } from "@/features/analytics/components/ProjectAnalyticsTab";
-import { useCreateWorkflowDraftFromProjectMutation } from "@/features/workflow/api/workflowApi";
+import { useCreateWorkflowDraftFromProjectMutation, useGetGuidanceByProjectQuery } from "@/features/workflow/api/workflowApi";
 import { CreateWorkflowDraftCard } from "@/features/workflow/components";
+import { useGuidance } from "@/features/guidance/context/GuidanceContext";
+import { GuidanceTarget } from "@/features/guidance/components/GuidanceTarget";
 import {
   DeleteProjectDialog,
   EditProjectModal,
@@ -409,6 +411,22 @@ export function ProjectDetailPage() {
   const [leaveProject, { isLoading: isLeavingProject }] = useLeaveProjectMutation();
   const [createWorkflowDraftFromProject, { isLoading: isCreatingWorkflowDraft }] =
     useCreateWorkflowDraftFromProjectMutation();
+
+  const { startGuidance } = useGuidance();
+  const { data: guidanceData } = useGetGuidanceByProjectQuery(
+    { projectId },
+    { skip: skipMemberOnlyQueries }
+  );
+
+  useEffect(() => {
+    if (guidanceData?.data && project) {
+      // Small delay to ensure targets have mounted
+      const timer = setTimeout(() => {
+        startGuidance(guidanceData.data);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [guidanceData, project, startGuidance]);
 
   const handleLeaveProject = async () => {
     try {
@@ -953,15 +971,17 @@ export function ProjectDetailPage() {
                     Manage tasks with List and Kanban views, filters, and more.
                   </p>
                 </div>
-                <Button
-                  onClick={() =>
-                    navigate(`/workspaces/${workspaceId}/projects/${projectId}/tasks`)
-                  }
-                >
-                  <ListTodo className="mr-2 h-4 w-4" />
-                  Open Task Board
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                <GuidanceTarget capability="CREATE_TASK">
+                  <Button
+                    onClick={() =>
+                      navigate(`/workspaces/${workspaceId}/projects/${projectId}/tasks`)
+                    }
+                  >
+                    <ListTodo className="mr-2 h-4 w-4" />
+                    Open Task Board
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </GuidanceTarget>
               </div>
             </>
           )}

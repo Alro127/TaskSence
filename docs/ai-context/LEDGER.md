@@ -4,7 +4,9 @@
 
 - Product: TaskSense monorepo
 - Frontend: React + TypeScript + RTK Query
+- Frontend Guidance: Interactive Guidance Engine using `CapabilityRegistry` for semantic UI mapping.
 - Backend: Spring Boot + Java 21
+- Backend AI: Python service for structured guidance generation.
 - API response conventions: ApiResponse and PageResponse
 - Key references:
   - client/DESIGN_SYSTEM.md
