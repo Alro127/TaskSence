@@ -2,19 +2,17 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import type { ApiResponse, UserSkill, UserSkillRequest } from "@/types/api";
 import type { PageResponse } from "@/types/api";
+import { apiBaseUrl } from "@/config/config";
 
 export interface SkillsPageParams {
   page?: number;
   size?: number;
 }
 
-const baseUrl =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
-
 export const userSkillApi = createApi({
   reducerPath: "userSkillApi",
   baseQuery: fetchBaseQuery({
-    baseUrl,
+    baseUrl: apiBaseUrl,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.accessToken;
       if (token) {

@@ -8,14 +8,12 @@ import type {
   CreateBulkWorkspaceInviteRequest,
   BulkInviteResult,
 } from "@/types/api";
-
-const baseUrl =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+import { apiBaseUrl } from "@/config/config";
 
 export const workspaceInviteApi = createApi({
   reducerPath: "workspaceInviteApi",
   baseQuery: fetchBaseQuery({
-    baseUrl,
+    baseUrl: apiBaseUrl,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.accessToken;
       if (token) {

@@ -51,8 +51,10 @@ class Settings:
 	cors_origins: list[str]
 
 	llm_provider: str
+	llm_embedding_provider: str
 	openai_api_key: SecretStr
 	openai_model: str
+	openai_embedding_model: str
 	gemini_api_key: SecretStr
 	gemini_model: str
 	gemini_embedding_model: str
@@ -137,8 +139,10 @@ def get_settings() -> Settings:
 			"http://localhost:3000,http://localhost:5173,https://tasksense.app",
 		),
 		llm_provider=_env_str("LLM_PROVIDER", "gemini").lower(),
+		llm_embedding_provider=_env_str("LLM_EMBEDDING_PROVIDER", "openrouter").lower(),
 		openai_api_key=_env_secret_str("OPENAI_API_KEY", ""),
 		openai_model=_env_str("OPENAI_MODEL", "gpt-4o-mini"),
+		openai_embedding_model=_env_str("OPENAI_MODEL", "gpt-4o-mini"),
 		gemini_api_key=_env_secret_str("GEMINI_API_KEY", ""),
 		gemini_model=_env_str("GEMINI_MODEL", "gemini-2.5-flash"),
 		gemini_embedding_model=_env_str(

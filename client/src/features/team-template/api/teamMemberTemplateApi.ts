@@ -8,16 +8,14 @@ import type {
   AddTeamMemberResultItem,
   UserSummaryResponse,
 } from "@/types/api";
+import { apiBaseUrl } from "@/config/config";
 
 export type { UserSummaryResponse };
-
-const baseUrl =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
 
 export const teamMemberTemplateApi = createApi({
   reducerPath: "teamMemberTemplateApi",
   baseQuery: fetchBaseQuery({
-    baseUrl,
+    baseUrl: apiBaseUrl,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.accessToken;
       if (token) {
