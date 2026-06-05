@@ -65,6 +65,7 @@ import {
   ROLE_LABEL,
   SprintManagementTab,
   ProjectTagsTab,
+  ProjectGuidanceCard,
 } from "../components";
 import {
   Pagination,
@@ -377,6 +378,7 @@ export function ProjectDetailPage() {
   const canManageTags =
     hasProjectPermission("MANAGE_TAG", "CREATE_TAG", "UPDATE_TAG", "DELETE_TAG");
   const canCreateWorkflowDraft = hasProjectPermission("VIEW_TASKS");
+  const isProjectOwner = currentUserMember?.role === "MANAGER";
 
   const { data: joinRequestsData, isLoading: isJoinRequestsLoading } =
     useGetJoinRequestsQuery(
@@ -890,15 +892,22 @@ export function ProjectDetailPage() {
               </div>
             </div>
 
-            {canCreateWorkflowDraft && (
-              <div className="xl:col-span-4 xl:sticky xl:top-24 h-fit">
+            <div className="xl:col-span-4 xl:sticky xl:top-24 h-fit space-y-6">
+              {isProjectOwner && guidanceData?.data && (
+                <ProjectGuidanceCard
+                  guidance={guidanceData.data}
+                  onStartGuidance={() => startGuidance(guidanceData.data)}
+                />
+              )}
+
+              {canCreateWorkflowDraft && (
                 <CreateWorkflowDraftCard
                   onCreateDraft={() => setIsCreateWorkflowDialogOpen(true)}
                   onViewWorkflows={() => navigate("/workflows")}
                   disabled={isCreatingWorkflowDraft}
                 />
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </TabsContent>
 
