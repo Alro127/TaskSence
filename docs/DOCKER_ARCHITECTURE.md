@@ -1,387 +1,234 @@
-# TaskSense Docker Architecture & Flow Diagrams
+# TaskSense Docker Architecture
 
-## 1. System Architecture Overview
+This document describes the current Docker architecture using
+`infra/docker/compose.yaml` and `proxy/nginx.conf`.
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│                     INTERNET / CLIENT BROWSER                  │
-└────────────────────────────────────────────────────────────────┘
-                                ▲
-                                │ HTTP/HTTPS (Port 80/443)
-                                ▼
-┌────────────────────────────────────────────────────────────────┐
-│                   NGINX REVERSE PROXY                          │
-│              docker: tasksense_nginx (Alpine)                  │
-├────────────────────────────────────────────────────────────────┤
-│  • Listens on: 0.0.0.0:80, 0.0.0.0:443                        │
-│  • Volume: ./proxy/nginx.conf:/etc/nginx/nginx.conf:ro        │
-│  • Network: tasksense_net                                     │
-│  • Health: /health endpoint                                   │
-└────────────────────────────────────────────────────────────────┘
-                 │              │              │
-         ┌───────┴──────┬───────┴──────┬───────┴──────┐
-         │              │              │              │
-         ▼              ▼              ▼              ▼
-    /api/v1/*      /chat/*      /ai/*           /
-         │              │              │              │
-         ▼              ▼              ▼              ▼
-    ┌────────┐   ┌────────┐   ┌────────┐     ┌──────────┐
-    │ SPRING │   │   AI   │   │   AI   │     │ FRONTEND │
-    │ BOOT   │   │SERVICE │   │SERVICE │     │  REACT   │
-    │ (8080) │   │ (8000) │   │ (8000) │     │ (5173)   │
-    └────────┘   └────────┘   └────────┘     └──────────┘
-         │
-         ├─► PostgreSQL (5432)
-         ├─► Redis (6379)
-         ├─► Elasticsearch (9200)
-         └─► Qdrant (6333)
-```
+## Source Of Truth
 
-## 2. Container Startup Sequence
+| Area | File |
+| --- | --- |
+| Runtime orchestration | `infra/docker/compose.yaml` |
+| Registry image override | `infra/docker/compose.build.yaml` |
+| Nginx image | `proxy/Dockerfile` |
+| Nginx routing | `proxy/nginx.conf` |
+| Environment template | `.env.example` |
 
-```
-Start Request
-     │
-     ▼
-┌─────────────────────────┐
-│   tasksense_postgres    │ ◄─── Starts first
-│   (PostgreSQL 16)       │      (no dependencies)
-│   Status: Running       │
-│   Health: Checking...   │
-└─────────────────────────┘
-     │ (healthy)
-     ▼
-┌─────────────────────────┐
-│   task_redis            │
-│   (Redis 7)             │ ◄─── Start after DB
-│   Status: Running       │
-└─────────────────────────┘
-     │ (healthy)
-     ▼
-┌─────────────────────────┐
-│   tasksense_es          │
-│   (Elasticsearch 9)     │ ◄─── Start in parallel
-│   Status: Running       │
-└─────────────────────────┘
-     │ (healthy)
-     ▼
-┌─────────────────────────┐
-│   task_flyway           │
-│   (DB Migrations)       │ ◄─── Migrations after DB ready
-│   Status: Completed     │
-└─────────────────────────┘
-     │ (completed)
-     ├───────────────────┐
-     ▼                   ▼
-┌──────────────┐   ┌──────────────┐
-│ task_seed    │   │ tasksense_qt │
-│ (Seed Data)  │   │ drant        │
-│ Status: Done │   │ (Vector DB)  │
-└──────────────┘   └──────────────┘
-     │                   │
-     └───────────┬───────┘
-                 ▼
-         ┌─────────────────────────┐
-         │   tasksense_spring      │
-         │   (Spring Boot)         │ ◄─── Wait for DB
-         │   Port: 8080            │      Redis, ES
-         │   Health: Checking...   │
-         └─────────────────────────┘
-                 │ (healthy)
-                 ├────────────────────┐
-                 ▼                    ▼
-         ┌─────────────────┐  ┌─────────────────┐
-         │ tasksense_ai    │  │ tasksense_nginx │
-         │ (AI Service)    │  │ (Proxy)         │
-         │ Port: 8000      │  │ Port: 80/443    │
-         │ Status: Running │  │ Status: Ready   │
-         └─────────────────┘  └─────────────────┘
-                 │                    │
-                 └─────────┬──────────┘
-                           ▼
-                    ┌─────────────────┐
-                    │ tasksense_pgad- │
-                    │ min (pgAdmin)   │
-                    │ Port: 5050      │
-                    │ Status: Running │
-                    └─────────────────┘
+`proxy/nginx.conf` is copied into the Nginx image by `proxy/Dockerfile`. It is
+not bind-mounted from compose. The current compose file mounts only the
+`nginx_cert` volume at `/etc/nginx/ssl`.
+
+## High-Level Architecture
+
+```text
+Browser / API client
+        |
+        | http://localhost:80
+        v
++-------------------------------+
+| tasksense-nginx               |
+| container: tasksense_nginx    |
+| listens: 80                   |
++-------------------------------+
+    |                 |                    |
+    | /               | /api/core/v1       | /api/chat/v1
+    v                 v                    v
++-----------+   +-------------------+   +--------------+
+| Frontend  |   | Spring API        |   | AI Service   |
+| 5173      |   | 8080 /api/v1      |   | 8000 /api/v1 |
++-----------+   +-------------------+   +--------------+
+                    |      |      |             |
+                    v      v      v             v
+              PostgreSQL Redis Elasticsearch  Qdrant
+              5432       6379  9200           6333
 ```
 
-## 3. Request Flow Diagram
+## Nginx Public Routes
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│              Browser Request to http://localhost/            │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-                 ┌──────────────────────┐
-                 │  Nginx Listener:80   │
-                 │  (tasksense_nginx)   │
-                 └──────────────────────┘
-                            │
-                ┌───────────┼───────────┐
-                │           │           │
-                ▼           ▼           ▼
-    ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-    │ Location: /      │  │Location: /api/v1 │  │Location: /ai/    │
-    │ Proxy: frontend  │  │ Proxy: spring    │  │Proxy: ai         │
-    │       :5173      │  │      :8080       │  │      :8000       │
-    └──────────────────┘  └──────────────────┘  └──────────────────┘
-            │                      │                      │
-            ▼                      ▼                      ▼
-    React App Loaded       API Response              AI Response
-            │                      │                      │
-            ▼                      ▼                      ▼
-    Fetches /api/v1 ──► Spring Backend ────────► Returns Data
-            │              (Controllers,
-            │               Services,
-            │               Repositories)
-            │                      │
-            └──────────────────────┼──────────────────┐
-                                   │                  │
-            ┌──────────────────────┼──────────────────┐
-            │                      │                  │
-            ▼                      ▼                  ▼
-        PostgreSQL             Redis              Elasticsearch
-        (Persisted)         (Cached Data)      (Search Index)
+The current `proxy/nginx.conf` has one HTTP server:
+
+```text
+listen 80;
+server_name localhost;
 ```
 
-## 4. Network Topology
+Configured public routes:
 
-```
-┌─────────────────────────────────────────────────────────┐
-│           Docker Network: tasksense_net                 │
-│           (bridge driver, IP range: 172.18.0.0/16)     │
-│                                                         │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐ │
-│  │ postgres │  │  redis   │  │elastics.│  │qdrant  │ │
-│  │:5432    │  │ :6379   │  │:9200    │  │:6333  │ │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └───┬────┘ │
-│       │              │             │           │      │
-│  ┌────┴──────────────┴─────────────┴───────────┴──┐   │
-│  │                                                 │   │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐   │   │
-│  │  │ spring   │  │    ai    │  │ frontend │   │   │
-│  │  │:8080    │  │ :8000   │  │ :5173   │   │   │
-│  │  └────┬─────┘  └────┬─────┘  └────┬─────┘   │   │
-│  │       │              │             │         │   │
-│  │  ┌────┴──────────────┴─────────────┴────┐   │   │
-│  │  │      nginx (reverse proxy)           │   │   │
-│  │  │          :80, :443                   │   │   │
-│  │  └──────────────────────────────────────┘   │   │
-│  │                                               │   │
-│  └───────────────────────────────────────────────┘   │
-│                                                       │
-│ All services can reach each other via:               │
-│ • Service name (e.g., spring:8080)                   │
-│ • Container name (e.g., tasksense_spring)            │
-│                                                       │
-└─────────────────────────────────────────────────────────┘
+| Public path | Upstream | Internal target |
+| --- | --- | --- |
+| `/` | `client_backend` | `tasksense-client:5173` |
+| `/api/core/v1` | `core_backend` | `tasksense-spring-api:8080/api/v1` |
+| `/api/core/v1/*` | `core_backend` | `tasksense-spring-api:8080/api/v1/*` |
+| `/api/chat/v1` | `ai_backend` | `tasksense-ai:8000/api/v1` |
+| `/api/chat/v1/*` | `ai_backend` | `tasksense-ai:8000/api/v1/*` |
 
-Host Ports Exposed:
-┌────────────────────────────────────────────────┐
-│ Port  │ Service          │ Protocol            │
-├────────────────────────────────────────────────┤
-│ 80    │ nginx            │ HTTP                │
-│ 443   │ nginx            │ HTTPS (optional)    │
-│ 5050  │ pgAdmin          │ HTTP (GUI)          │
-│ 5173  │ frontend (dev)   │ HTTP + WebSocket    │
-│ 5432  │ PostgreSQL       │ TCP                 │
-│ 6333  │ Qdrant           │ HTTP                │
-│ 6334  │ Qdrant (gRPC)    │ gRPC                │
-│ 6379  │ Redis            │ TCP                 │
-│ 8000  │ AI Service       │ HTTP                │
-│ 8080  │ Spring Backend   │ HTTP                │
-│ 9200  │ Elasticsearch    │ HTTP                │
-└────────────────────────────────────────────────┘
+Not configured in the current Nginx file:
+
+```text
+/api/v1/*
+/chat/*
+/ai/*
+/health
+HTTPS listener on 443
 ```
 
-## 5. Data Persistence & Volumes
+The AI service has an internal `/health` endpoint, but Nginx does not expose it
+as `/health`.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│              Docker Volumes (Named)                     │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  postgres_data                                          │
-│  ├─ Mount: /var/lib/postgresql/data                   │
-│  ├─ Service: PostgreSQL                                │
-│  └─ Contents: Database tables, indices                 │
-│                                                         │
-│  redis_data                                             │
-│  ├─ Mount: /data                                        │
-│  ├─ Service: Redis                                      │
-│  └─ Contents: RDB snapshots, AOF log                    │
-│                                                         │
-│  elasticsearch_data                                     │
-│  ├─ Mount: /usr/share/elasticsearch/data              │
-│  ├─ Service: Elasticsearch                             │
-│  └─ Contents: Search indices, shards                    │
-│                                                         │
-│  qdrant_data                                            │
-│  ├─ Mount: /qdrant/storage                            │
-│  ├─ Service: Qdrant                                    │
-│  └─ Contents: Vector collections                       │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+## Request Flow
 
-┌─────────────────────────────────────────────────────────┐
-│         Bind Mounts (from local filesystem)             │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│ nginx.conf                                              │
-│ ├─ Local: ./proxy/nginx.conf                           │
-│ ├─ Container: /etc/nginx/nginx.conf:ro                │
-│ └─ Read-only: True (immutable)                         │
-│                                                         │
-│ Database Migrations                                     │
-│ ├─ Local: ./server/src/main/resources/db/migration    │
-│ ├─ Container: /flyway/sql                             │
-│ └─ Used by: Flyway migrations                         │
-│                                                         │
-│ Seed Data                                               │
-│ ├─ Local: ./server/src/main/resources/db/seed         │
-│ ├─ Container: /seed                                    │
-│ └─ Used by: Seed data loading                         │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+```text
+GET http://localhost/
+  -> tasksense-nginx
+  -> tasksense-client:5173
+
+GET http://localhost/api/core/v1/health
+  -> tasksense-nginx
+  -> tasksense-spring-api:8080/api/v1/health
+
+GET http://localhost/api/chat/v1/...
+  -> tasksense-nginx
+  -> tasksense-ai:8000/api/v1/...
 ```
 
-## 6. Service Dependencies
+Nginx also sets CORS headers and WebSocket upgrade headers on the Spring and AI
+API route blocks.
 
-```
-                   ┌─────────────────┐
-                   │  tasksense_nginx │
-                   │  (No depends)    │
-                   └────────┬─────────┘
-                            │ depends_on
-                ┌───────────┼───────────┐
-                │           │           │
-                ▼           ▼           ▼
-            ┌────────┐  ┌──────────┐  ┌──────────┐
-            │ spring │  │ frontend │  │    ai    │
-            └───┬────┘  └──────────┘  └─────┬────┘
-                │ depends_on                 │
-                ├─────────────────────────────┤
-                │                             │
-        ┌───────┴────────────────────┬────────┴─────┐
-        │                            │              │
-        ▼                            ▼              ▼
-    ┌────────────┐          ┌─────────────┐  ┌──────────┐
-    │ postgres   │          │ elasticsearch│  │ qdrant   │
-    │ (healthy)  │          │ (healthy)    │  │ (no dep) │
-    └────────────┘          └─────────────┘  └──────────┘
-        │                            │
-        └─────────┬──────────────────┘
-                  ▼
-            ┌──────────┐
-            │  redis   │
-            │(healthy) │
-            └──────────┘
+## Networks
+
+```text
+tasksense_net
+  - tasksense-spring-api
+  - tasksense-ai
+  - tasksense-client
+  - tasksense-nginx
+  - tasksense-qdrant
+
+tasksense_database_net (internal)
+  - tasksense-postgres
+  - tasksense-redis
+  - tasksense-elasticsearch
+  - tasksense-flyway
+  - tasksense-seed
+  - tasksense-spring-api
+  - tasksense-ai
+  - tasksense-qdrant
 ```
 
-## 7. Environment Configuration Flow
+`tasksense_database_net` is internal, so database services are not exposed
+directly to the host by the current compose file. Access them through
+`docker compose exec` when operating locally.
 
-```
-┌─────────────────────────────────────────────────────┐
-│            .env (Local Environment)                 │
-├─────────────────────────────────────────────────────┤
-│ GOOGLE_CLIENT_ID=xxx                                │
-│ OPENAI_API_KEY=xxx                                  │
-│ EMAIL_USERNAME=xxx                                  │
-│ ...                                                 │
-└────────────────┬────────────────────────────────────┘
-                 │ docker-compose reads
-                 ▼
-    ┌──────────────────────────────────┐
-    │ docker-compose.yaml              │
-    │ ├─ services:                     │
-    │ │  ├─ spring:                    │
-    │ │  │  └─ environment: ${VAR}     │
-    │ │  ├─ ai:                        │
-    │ │  │  └─ environment: ${VAR}     │
-    │ │  └─ frontend:                  │
-    │ │     └─ environment: ${VAR}     │
-    │ └─ volumes:                      │
-    │    └─ nginx.conf:/etc/nginx...   │
-    └────────┬─────────────────────────┘
-             │ passes to
-             ▼
-    ┌──────────────────────────────────┐
-    │  Container Environment           │
-    │  ├─ Spring: SPRING_* vars        │
-    │  ├─ AI: OPENAI_API_KEY, etc.     │
-    │  └─ Frontend: VITE_* vars        │
-    └──────────────────────────────────┘
+## Startup Dependencies
+
+```text
+tasksense-postgres
+  -> tasksense-flyway
+      -> tasksense-seed
+
+tasksense-postgres
+tasksense-redis
+tasksense-elasticsearch
+tasksense-flyway
+  -> tasksense-spring-api
+
+tasksense-spring-api
+tasksense-redis
+tasksense-elasticsearch
+  -> tasksense-ai
+
+tasksense-spring-api
+tasksense-ai
+tasksense-client
+  -> tasksense-nginx
 ```
 
-## 8. Health Check Status
+`tasksense-client` has no explicit dependency. Nginx depends on it by service
+name and proxies `/` to `tasksense-client:5173`.
 
+## Container Names And Services
+
+| Compose service | Container name | Role |
+| --- | --- | --- |
+| `tasksense-postgres` | `tasksense_postgres` | PostgreSQL |
+| `tasksense-redis` | `tasksense_redis` | Redis |
+| `tasksense-elasticsearch` | `tasksense_es` | Elasticsearch |
+| `tasksense-flyway` | `tasksense_flyway` | DB migrations |
+| `tasksense-seed` | `tasksense_seed` | Seed data |
+| `tasksense-spring-api` | `tasksense_spring_api` | Spring Boot API |
+| `tasksense-qdrant` | `tasksense_qdrant` | Vector database |
+| `tasksense-ai` | `tasksense_ai` | AI API |
+| `tasksense-client` | `tasksense_client` | React/Vite frontend |
+| `tasksense-nginx` | `tasksense_nginx` | Reverse proxy |
+
+## Ports
+
+| Service | Internal port | Host port | Notes |
+| --- | --- | --- | --- |
+| Nginx | 80 | 80 | Only public host port in current compose |
+| Spring API | 8080 | none | Public through `/api/core/v1` |
+| AI Service | 8000 | none | Public through `/api/chat/v1` |
+| Frontend | 5173 | none | Public through `/` |
+| PostgreSQL | 5432 | none | Internal only |
+| Redis | 6379 | none | Internal only |
+| Elasticsearch | 9200 | none | Internal only |
+| Qdrant | 6333 | none | Internal only |
+
+## Volumes
+
+| Volume | Mounted at | Service |
+| --- | --- | --- |
+| `tasksense_nginx_cert` | `/etc/nginx/ssl` | `tasksense-nginx` |
+| `tasksense_pg_data` | `/var/lib/postgresql/data` | `tasksense-postgres` |
+| `tasksense_redis_data` | `/data` | `tasksense-redis` |
+| `tasksense_es_data` | `/usr/share/elasticsearch/data` | `tasksense-elasticsearch` |
+| `tasksense_qdrant_data` | `/qdrant/storage` | `tasksense-qdrant` |
+
+Bind mounts:
+
+| Host path | Container path | Used by |
+| --- | --- | --- |
+| `server/src/main/resources/db/migration` | `/flyway/sql` | `tasksense-flyway` |
+| `server/src/main/resources/db/seed` | `/seed` | `tasksense-seed` |
+
+## Health Checks
+
+| Service | Check |
+| --- | --- |
+| `tasksense-postgres` | `pg_isready -U postgres` |
+| `tasksense-redis` | `redis-cli ping` |
+| `tasksense-elasticsearch` | `curl -fsS http://localhost:9200/_cluster/health` |
+| `tasksense-spring-api` | `curl -f http://localhost:8080/api/v1/health` |
+| `tasksense-qdrant` | `curl -f http://localhost:6333/health` |
+| `tasksense-ai` | Python request to `http://localhost:8000/health` |
+
+The current compose file does not define a health check for `tasksense-nginx`
+or `tasksense-client`. To verify Nginx manually:
+
+```bash
+docker compose -f infra/docker/compose.yaml exec tasksense-nginx nginx -t
+curl -I http://localhost
 ```
-All containers run health checks:
 
-Spring Backend:
-└─ Test: curl -f http://localhost:8080/api/v1/health/status
-   Interval: 30s | Timeout: 10s | Retries: 3 | Start Period: 40s
+## Kubernetes Mapping
 
-AI Service:
-└─ Test: curl -f http://localhost:8000/health
-   Interval: 30s | Timeout: 10s | Retries: 3 | Start Period: 30s
+| Docker Compose concept | Kubernetes equivalent |
+| --- | --- |
+| Compose service | Deployment or Job |
+| Container name | Pod container name |
+| `depends_on: condition: service_healthy` | init containers, startup probes, readiness probes |
+| Named volume | PersistentVolumeClaim |
+| `tasksense_net` service DNS | Kubernetes Service DNS |
+| `tasksense-nginx` reverse proxy | Ingress Controller or standalone Nginx Deployment |
+| `.env` | ConfigMap plus Secret |
+| Flyway one-shot service | Kubernetes Job |
+| Seed one-shot service | Kubernetes Job |
 
-Nginx:
-└─ Test: wget --spider http://localhost/health
-   Interval: 30s | Timeout: 10s | Retries: 3
+For Kubernetes, expose the app through an Ingress with these path mappings:
 
-Frontend:
-└─ Test: curl -f http://localhost:5173
-   Interval: 30s | Timeout: 10s | Retries: 3 | Start Period: 30s
-
-PostgreSQL:
-└─ Test: pg_isready -U postgres
-   Interval: 5s | Timeout: 5s | Retries: 5
-
-Redis:
-└─ Test: redis-cli ping
-   Interval: 5s | Timeout: 5s | Retries: 5
-
-Elasticsearch:
-└─ Test: curl -s http://localhost:9200/_cluster/health
-   Interval: 10s | Timeout: 5s | Retries: 5
-
-Qdrant:
-└─ Test: curl -f http://localhost:6333/health
-   Interval: 10s | Timeout: 5s | Retries: 5
+```text
+/                 -> frontend Service
+/api/core/v1      -> spring-api Service, rewritten to /api/v1
+/api/core/v1/*    -> spring-api Service, rewritten to /api/v1/*
+/api/chat/v1      -> ai Service, rewritten to /api/v1
+/api/chat/v1/*    -> ai Service, rewritten to /api/v1/*
 ```
-
-## 9. Logging & Monitoring
-
-```
-┌─────────────────────────────────────────────┐
-│      Container Logs (docker logs)           │
-├─────────────────────────────────────────────┤
-│                                             │
-│  docker-compose logs -f                     │
-│  ├─ All services                            │
-│  └─ Follow mode (tail -f)                   │
-│                                             │
-│  docker-compose logs -f spring              │
-│  ├─ Spring Backend only                     │
-│  └─ Real-time monitoring                    │
-│                                             │
-│  docker-compose logs --tail 100 ai          │
-│  ├─ Last 100 lines of AI service            │
-│  └─ Historical view                         │
-│                                             │
-│  docker stats                               │
-│  ├─ Real-time resource usage                │
-│  │  └─ CPU%, Memory%, I/O                   │
-│  └─ All running containers                  │
-│                                             │
-└─────────────────────────────────────────────┘
-```
-
----
-
-**These diagrams represent the complete TaskSense Docker infrastructure.**
-Use them as reference when troubleshooting or explaining the system architecture.

@@ -1,359 +1,165 @@
-# TaskSense Docker & Nginx Setup Summary
+# TaskSense Docker Summary
 
-## What Was Set Up
+This summary reflects the current repo state:
 
-### 📦 Docker Infrastructure
+- Runtime compose file: `infra/docker/compose.yaml`
+- Optional image tagging override: `infra/docker/compose.build.yaml`
+- Nginx config: `proxy/nginx.conf`
+- Environment template: `.env.example`
 
-I've created a complete Docker and nginx configuration for TaskSense with the following components:
+No root `docker-compose.yaml` or `docker-startup.sh` is used by the current
+Docker docs.
 
-#### **1. Dockerfiles Created**
+## Services
 
-| File | Purpose | Technology |
-|------|---------|-----------|
-| `server/Dockerfile` | Spring Boot backend | Java 21, Maven, multi-stage build |
-| `client/Dockerfile` | React frontend | Node 20, Vite, production optimized |
-| `ai/app/Dockerfile` | AI service | Python 3.13, FastAPI (already existed) |
-| `proxy/Dockerfile` | Nginx proxy | nginx:alpine, lightweight |
+| Service | Container | Purpose |
+| --- | --- | --- |
+| `tasksense-nginx` | `tasksense_nginx` | Public reverse proxy on host port 80 |
+| `tasksense-client` | `tasksense_client` | React/Vite frontend on internal port 5173 |
+| `tasksense-spring-api` | `tasksense_spring_api` | Spring Boot API on internal port 8080 |
+| `tasksense-ai` | `tasksense_ai` | AI API on internal port 8000 |
+| `tasksense-postgres` | `tasksense_postgres` | PostgreSQL database |
+| `tasksense-redis` | `tasksense_redis` | Redis cache |
+| `tasksense-elasticsearch` | `tasksense_es` | Search engine |
+| `tasksense-qdrant` | `tasksense_qdrant` | Vector database |
+| `tasksense-flyway` | `tasksense_flyway` | Database migrations |
+| `tasksense-seed` | `tasksense_seed` | Seed data loader |
 
-#### **2. Configuration Files**
+## Nginx Routing
 
-| File | Purpose |
-|------|---------|
-| `proxy/nginx.conf` | Complete nginx routing and configuration |
-| `docker-compose.yaml` | Orchestration for all services |
-| `.env.example` | Environment variables template |
+`proxy/nginx.conf` is the source of truth. It is copied into the image by
+`proxy/Dockerfile`.
 
-#### **3. Service Architecture**
-
-```
-                    ┌─── PostgreSQL (5432)
-                    │
-        ┌───────────┼─── Redis (6379)
-        │           │
-    ┌───┴───────────┼─── Elasticsearch (9200)
-    │               │
-    │               └─── Qdrant (6333)
-    │
-    │     ┌─────────────────────────┐
-    │     │  Nginx Proxy (80/443)   │
-    │     ├─────────────────────────┤
-    │  ┌──┤ /          → Frontend    │
-    │  │  │ /api/v1/*  → Spring      │
-    │  │  │ /chat/*    → AI Service  │
-    │  │  └─────────────────────────┘
-    │  │
-    ├──┴─ Spring Backend (8080)
-    ├──── AI Service (8000)
-    └──── Frontend (5173)
+```text
+http://localhost/                 -> tasksense-client:5173
+http://localhost/api/core/v1      -> tasksense-spring-api:8080/api/v1
+http://localhost/api/core/v1/*    -> tasksense-spring-api:8080/api/v1/*
+http://localhost/api/chat/v1      -> tasksense-ai:8000/api/v1
+http://localhost/api/chat/v1/*    -> tasksense-ai:8000/api/v1/*
 ```
 
-### 📋 Services Included
+Not configured in the current Nginx file:
 
-**Infrastructure Services:**
-- PostgreSQL 16 (database)
-- Redis 7 (caching)
-- Elasticsearch 9 (search)
-- Qdrant (vector database)
-- pgAdmin 4 (database UI)
-- Flyway (migrations)
-
-**Application Services:**
-- Spring Boot (Java 21) - API Backend
-- FastAPI (Python) - AI Service
-- React + Vite - Frontend
-- Nginx - Proxy & Load Balancer
-
-### 📝 Documentation Created
-
-1. **DOCKER_SETUP.md** (Comprehensive Guide)
-   - Architecture overview
-   - Quick start guide
-   - Service details
-   - Production deployment
-   - Troubleshooting
-
-2. **DOCKER_COMMANDS.md** (Quick Reference)
-   - Common docker-compose commands
-   - Service management
-   - Health checks
-   - Debugging commands
-
-3. **docker-startup.sh** (Automated Setup)
-   - Checks Docker installation
-   - Validates port availability
-   - Sets up environment
-   - Builds and starts services
-   - Verifies all services are healthy
-
-### ⚙️ Configuration Details
-
-#### **Nginx Routing** (`proxy/nginx.conf`)
-
-Routes requests to appropriate services:
-```
-/api/v1/*  ──► Spring Backend (8080)
-/chat/*    ──► AI Service (8000)
-/ai/*      ──► AI Service (8000)
-/          ──► Frontend (5173)
-/health    ──► Health check
+```text
+/api/v1/*
+/chat/*
+/ai/*
+/health
+HTTPS listener on 443
 ```
 
-Features:
-- WebSocket support (for Vite HMR)
-- CORS headers for cross-origin requests
-- Gzip compression
-- HTTPS/SSL ready (commented for production setup)
-- Health checks
-- Request timeouts configured
+The AI service has an internal `/health` endpoint, but the current Nginx config
+does not route it publicly.
 
-#### **Docker Compose** (`docker-compose.yaml`)
-
-- All services on same network: `tasksense_net`
-- Health checks for all critical services
-- Volume persistence for databases
-- Environment variable injection
-- Dependency ordering (services wait for dependencies)
-- Resource limits (configurable)
-- Non-root user execution (security)
-
-#### **Environment Configuration** (`.env.example`)
-
-Required variables to configure:
-```bash
-# OAuth & Authentication
-GOOGLE_CLIENT_ID
-GOOGLE_CLIENT_SECRET
-
-# Email Service
-EMAIL_USERNAME
-EMAIL_PASSWORD
-
-# AI/LLM Services
-OPENAI_API_KEY (or ANTHROPIC_API_KEY)
-LLM_PROVIDER
-
-# Frontend URLs
-VITE_API_BASE_URL
-VITE_AI_API_BASE_URL
-
-# Optional: AWS, Elasticsearch credentials
-```
-
-### 🚀 Quick Start
-
-#### **Option 1: Automated Setup (Recommended)**
+## Quick Start
 
 ```bash
-# Make script executable
-chmod +x docker-startup.sh
-
-# Run the setup script
-./docker-startup.sh
-```
-
-The script will:
-- ✓ Check Docker is installed
-- ✓ Verify ports are available
-- ✓ Create .env file from template
-- ✓ Build all Docker images
-- ✓ Start all services
-- ✓ Wait for services to be healthy
-- ✓ Test all endpoints
-- ✓ Show access URLs
-
-#### **Option 2: Manual Setup**
-
-```bash
-# 1. Copy and configure environment
 cp .env.example .env
-# Edit .env with your credentials
+# Edit .env with real secrets and provider keys.
 
-# 2. Build all images
-docker-compose build
-
-# 3. Start services
-docker-compose up -d
-
-# 4. Monitor startup
-docker-compose logs -f
-
-# 5. Verify services
-docker-compose ps
+docker compose -f infra/docker/compose.yaml build
+docker compose -f infra/docker/compose.yaml up -d
+docker compose -f infra/docker/compose.yaml ps
 ```
 
-### 🔗 Access Points After Startup
-
-| Service | URL | Notes |
-|---------|-----|-------|
-| Frontend | http://localhost | React app |
-| Backend API | http://localhost/api/v1 | Spring Boot |
-| AI Service | http://localhost/ai | FastAPI |
-| pgAdmin | http://localhost:5050 | admin@admin.com / admin |
-| Elasticsearch | http://localhost:9200 | Search engine |
-| Qdrant | http://localhost:6333 | Vector DB |
-
-### 📊 Health Check Endpoints
+View logs:
 
 ```bash
-# Nginx proxy
-curl http://localhost/health
+docker compose -f infra/docker/compose.yaml logs -f
+docker compose -f infra/docker/compose.yaml logs -f tasksense-spring-api
+docker compose -f infra/docker/compose.yaml logs -f tasksense-ai
+docker compose -f infra/docker/compose.yaml logs -f tasksense-nginx
+```
 
-# Spring backend
-curl http://localhost/api/v1/health/status
+Stop services:
 
-# AI service
-curl http://localhost/ai/health
+```bash
+docker compose -f infra/docker/compose.yaml down
+```
 
-# Elasticsearch
-curl http://localhost:9200/_cluster/health
+Clean reset:
+
+```bash
+docker compose -f infra/docker/compose.yaml down -v
+docker compose -f infra/docker/compose.yaml up -d --build
+```
+
+## Access Points
+
+| Area | URL |
+| --- | --- |
+| Frontend | `http://localhost/` |
+| Spring API through Nginx | `http://localhost/api/core/v1` |
+| AI API through Nginx | `http://localhost/api/chat/v1` |
+
+The current compose file only publishes host port `80`. PostgreSQL, Redis,
+Elasticsearch, Qdrant, Spring, AI, and frontend ports are internal container
+ports.
+
+## Verification
+
+```bash
+# Frontend / Nginx
+curl -I http://localhost
+
+# Spring health through Nginx
+curl http://localhost/api/core/v1/health
+
+# AI proxy route through Nginx
+curl -i http://localhost/api/chat/v1
+
+# AI internal health
+docker compose -f infra/docker/compose.yaml exec tasksense-ai \
+  python -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8000/health').read().decode())"
 
 # Database
-docker-compose exec postgres psql -U postgres -c "SELECT 1"
+docker compose -f infra/docker/compose.yaml exec tasksense-postgres \
+  psql -U postgres -d taskdb -c "SELECT 1;"
 
 # Redis
-docker-compose exec redis redis-cli ping
+docker compose -f infra/docker/compose.yaml exec tasksense-redis redis-cli ping
 ```
 
-### 🔐 Default Credentials
+## Environment Notes
 
-**PostgreSQL:**
-- User: `postgres`
-- Password: `postgres`
-- Database: `taskdb`
+Copy `.env.example` to `.env`, then configure:
 
-**pgAdmin:**
-- Email: `admin@admin.com`
-- Password: `admin`
+- `SECURITY_JWT_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URL`
+- `EMAIL_USERNAME`
+- `EMAIL_PASSWORD`
+- LLM provider keys such as `OPENAI_API_KEY`, `OPENROUTER_API_KEY`,
+  `GEMINI_API_KEY`, or `SILICONFLOW_API_KEY`
+- Frontend build URLs:
+  - `VITE_API_BASE_URL=http://localhost/api/core/v1`
+  - `VITE_API_AGENT_BASE_URL=http://localhost/api/chat/v1`
+  - `VITE_WS_URL=ws://localhost/api/core/v1/ws`
 
-### 📚 File Structure
+Important: `infra/docker/compose.yaml` still hardcodes PostgreSQL credentials in
+Flyway, seed, and Spring datasource. Keep `POSTGRES_PASSWORD=postgres` unless a
+compose override or infra change is added.
 
-```
-TaskSense/
-├── docker-compose.yaml      # Main orchestration
-├── docker-startup.sh        # Automated setup script
-├── .env.example             # Environment template
-├── DOCKER_SETUP.md          # Complete guide
-├── DOCKER_COMMANDS.md       # Quick reference
-├── README.md                # Project overview
-│
-├── server/
-│   ├── Dockerfile           # Spring Boot container
-│   ├── pom.xml
-│   ├── compose.yaml         # Original local dev compose
-│   └── src/
-│
-├── ai/
-│   ├── app/
-│   │   ├── Dockerfile       # AI service container
-│   │   └── main.py
-│   └── ...
-│
-├── client/
-│   ├── Dockerfile           # Frontend container
-│   ├── package.json
-│   └── src/
-│
-└── proxy/
-    ├── Dockerfile           # Nginx container
-    ├── nginx.conf           # Nginx configuration
-    └── README.md
-```
+## Production Image Build
 
-### 💡 Key Features Implemented
+Use `infra/docker/compose.build.yaml` when images need registry tags:
 
-✓ **Multi-Stage Builds** - Optimized image sizes
-✓ **Health Checks** - All services monitored
-✓ **Volume Persistence** - Data survives container restarts
-✓ **Service Dependencies** - Correct startup order
-✓ **Environment Injection** - Easy configuration
-✓ **Networking** - All services on same bridge network
-✓ **Non-Root Users** - Security best practice
-✓ **CORS & WebSocket** - Frontend compatibility
-✓ **SSL/HTTPS Ready** - Commented configuration for production
-✓ **Resource Limits** - Configurable CPU/memory
-
-### 🔧 Common Tasks
-
-**View logs:**
 ```bash
-docker-compose logs -f spring      # Spring Backend
-docker-compose logs -f ai          # AI Service
-docker-compose logs -f nginx       # Nginx Proxy
+IMAGE_PREFIX=ghcr.io/acme/tasksense IMAGE_TAG=2026-06-05 \
+  docker compose \
+    -f infra/docker/compose.yaml \
+    -f infra/docker/compose.build.yaml \
+    build
 ```
 
-**Rebuild after code changes:**
-```bash
-docker-compose build spring && docker-compose up -d spring
-```
+For production frontend URLs, pass Vite build args during `tasksense-client`
+build or use a compose override. Vite reads these values at build time, not
+container startup time.
 
-**Database operations:**
-```bash
-docker-compose exec postgres psql -U postgres -d taskdb
-```
+## Related Docs
 
-**Stop all services:**
-```bash
-docker-compose down
-```
-
-**Clean reset:**
-```bash
-docker-compose down -v
-docker system prune -a
-docker-compose build --no-cache
-docker-compose up -d
-```
-
-### 📖 Next Steps
-
-1. **Configure Environment:**
-   - Edit `.env` with your credentials (Google OAuth, Email, LLM keys)
-
-2. **Start Services:**
-   - Run `./docker-startup.sh` or `docker-compose up -d`
-
-3. **Verify Setup:**
-   - Open http://localhost in browser
-   - Check all services with `docker-compose ps`
-
-4. **Access Logs:**
-   - Monitor: `docker-compose logs -f`
-
-5. **Database Management:**
-   - GUI: http://localhost:5050 (pgAdmin)
-   - CLI: `docker-compose exec postgres psql -U postgres -d taskdb`
-
-### 🆘 Troubleshooting
-
-**Ports in use:**
-```bash
-lsof -i :8080          # Find what's using port
-docker-compose down    # Stop containers
-```
-
-**Services not starting:**
-```bash
-docker-compose logs spring        # Check error logs
-docker-compose build --no-cache   # Rebuild
-docker-compose up -d              # Restart
-```
-
-**Database issues:**
-```bash
-docker-compose down -v            # Remove volumes
-docker-compose up -d              # Fresh database
-```
-
-### 📞 Support Resources
-
-- **Docker**: https://docs.docker.com/
-- **Docker Compose**: https://docs.docker.com/compose/
-- **Nginx**: https://nginx.org/en/docs/
-- **Spring Boot**: https://spring.io/projects/spring-boot
-- **FastAPI**: https://fastapi.tiangolo.com/
-- **React/Vite**: https://vitejs.dev/
-
----
-
-**Last Updated**: May 13, 2026
-**Status**: ✓ Ready for Production Setup
+- `docs/DOCKER_SETUP.md`
+- `docs/DOCKER_COMMANDS.md`
+- `docs/DOCKER_ARCHITECTURE.md`
+- `docs/TASKSENSE_DEPLOYMENT_KT.md`

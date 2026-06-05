@@ -1,475 +1,327 @@
-# Docker & Nginx Configuration Guide
+# TaskSense Docker Setup
 
-## Overview
-
-This guide documents the Docker and nginx setup for TaskSense, a monorepo containing:
-- **Spring Boot Backend** (Java 21, Port 8080)
-- **AI Service** (Python FastAPI, Port 8000)
-- **React Frontend** (Vite, Port 5173)
-- **Nginx Proxy** (Port 80/443)
-- **Supporting Services**: PostgreSQL, Redis, Elasticsearch, Qdrant
+This guide documents how to run TaskSense with the current Docker
+infrastructure. It is aligned with `infra/docker/compose.yaml` and
+`proxy/nginx.conf`.
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Nginx Proxy (80/443)                  │
-│  ┌──────────────┬──────────────┬──────────────────────────┐ │
-│  │              │              │                          │ │
-│  ▼              ▼              ▼                          ▼ │
-│ /api/v1  ─────► Spring       /ai/  ──────► AI Service   /  ──► Frontend
-│               Backend           (8000)      (5173)
-│               (8080)
-└─────────────────────────────────────────────────────────────┘
-         ▼              ▼              ▼              ▼
-      Redis       PostgreSQL    Elasticsearch      Qdrant
-      (6379)      (5432)        (9200)            (6333)
-```
+```text
+Host browser/client
+  |
+  | http://localhost:80
+  v
+tasksense-nginx
+  |-- /                 -> tasksense-client:5173
+  |-- /api/core/v1      -> tasksense-spring-api:8080/api/v1
+  |-- /api/core/v1/*    -> tasksense-spring-api:8080/api/v1/*
+  |-- /api/chat/v1      -> tasksense-ai:8000/api/v1
+  |-- /api/chat/v1/*    -> tasksense-ai:8000/api/v1/*
 
-## File Structure
-
-```
-TaskSense/
-├── docker-compose.yaml          # Main orchestration file
-├── .env.example                 # Environment variables template
-│
-├── server/
-│   ├── Dockerfile              # Spring Boot multi-stage build
-│   ├── pom.xml
-│   └── src/
-│
-├── ai/
-│   └── app/
-│       ├── Dockerfile          # AI Service (Python)
-│       └── main.py
-│
-├── client/
-│   ├── Dockerfile              # Frontend (React/Vite)
-│   ├── package.json
-│   └── src/
-│
-└── proxy/
-    ├── Dockerfile              # Nginx container
-    └── nginx.conf              # Nginx routing configuration
+tasksense-spring-api -> PostgreSQL, Redis, Elasticsearch
+tasksense-ai         -> Spring API, Redis, Elasticsearch, Qdrant, PostgreSQL
 ```
 
-## Quick Start
+Current Nginx does not define `/health`, `/api/v1`, `/ai`, `/chat`, or HTTPS
+`443` as public routes.
 
-### 1. Setup Environment Variables
+## Files
+
+| File | Purpose |
+| --- | --- |
+| `infra/docker/compose.yaml` | Runtime compose stack |
+| `infra/docker/compose.build.yaml` | Optional image names for registry builds |
+| `.env.example` | Deployment environment template |
+| `proxy/nginx.conf` | Nginx route source of truth |
+| `proxy/Dockerfile` | Builds Nginx image and copies `nginx.conf` |
+| `server/Dockerfile` | Spring Boot image |
+| `ai/app/Dockerfile` | AI service image |
+| `client/Dockerfile` | Frontend image |
+
+## Environment Preparation
+
+Create the deploy environment file:
 
 ```bash
-# Copy the example to .env
 cp .env.example .env
-
-# Edit .env with your actual values
-vim .env
 ```
 
-Required variables:
-- `GOOGLE_CLIENT_ID` & `GOOGLE_CLIENT_SECRET` - for OAuth
-- `EMAIL_USERNAME` & `EMAIL_PASSWORD` - for email notifications
-- `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` - for AI service
-- Optional: AWS, Elasticsearch credentials
-
-### 2. Build and Start All Services
+Set at minimum:
 
 ```bash
-# Build all images
-docker-compose build
+SECURITY_JWT_SECRET=change-me-to-a-long-random-secret
 
-# Start all services
-docker-compose up -d
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URL=http://localhost
 
-# View logs
-docker-compose logs -f
+EMAIL_USERNAME=your-email@gmail.com
+EMAIL_PASSWORD=your-email-app-password
 
-# View specific service logs
-docker-compose logs -f spring
-docker-compose logs -f ai
-docker-compose logs -f nginx
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+
+VITE_API_BASE_URL=http://localhost/api/core/v1
+VITE_API_AGENT_BASE_URL=http://localhost/api/chat/v1
+VITE_WS_URL=ws://localhost/api/core/v1/ws
+VITE_GOOGLE_CLIENT_ID=your-google-client-id
 ```
 
-### 3. Verify Services
+Provider-specific keys supported by the template:
 
 ```bash
-# Check all services are running
-docker-compose ps
-
-# Test endpoints
-curl http://localhost/health                    # Nginx health
-curl http://localhost/api/v1/health/status      # Spring health
-curl http://localhost/ai/health                 # AI service health
-curl http://localhost                           # Frontend
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+OPENROUTER_API_KEY=
+GEMINI_API_KEY=
+SILICONFLOW_API_KEY=
 ```
 
-### 4. Stop Services
+Important current limitation: `infra/docker/compose.yaml` hardcodes PostgreSQL
+credentials for Flyway, seed, and Spring datasource. Keep:
 
 ```bash
-# Stop all services
-docker-compose down
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=taskdb
+```
 
-# Stop and remove volumes (careful!)
-docker-compose down -v
+Change those only after adding a compose override or infra change that updates
+all DB consumers consistently.
+
+## Build And Start
+
+```bash
+docker compose --env-file .env -f infra/docker/compose.yaml config --quiet
+docker compose --env-file .env -f infra/docker/compose.yaml build
+docker compose --env-file .env -f infra/docker/compose.yaml up -d
+docker compose --env-file .env -f infra/docker/compose.yaml ps
+```
+
+Follow logs:
+
+```bash
+docker compose --env-file .env -f infra/docker/compose.yaml logs -f
+```
+
+Stop:
+
+```bash
+docker compose --env-file .env -f infra/docker/compose.yaml down
+```
+
+Clean reset:
+
+```bash
+docker compose --env-file .env -f infra/docker/compose.yaml down -v
+docker compose --env-file .env -f infra/docker/compose.yaml up -d --build
+```
+
+## Verify Runtime
+
+```bash
+# Frontend and Nginx
+curl -I http://localhost
+
+# Spring health through Nginx
+curl http://localhost/api/core/v1/health
+
+# AI API route through Nginx
+curl -i http://localhost/api/chat/v1
+
+# AI internal health. Nginx does not expose /health.
+docker compose --env-file .env -f infra/docker/compose.yaml exec tasksense-ai \
+  python -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8000/health').read().decode())"
+
+# Nginx syntax
+docker compose --env-file .env -f infra/docker/compose.yaml exec tasksense-nginx nginx -t
+
+# Database
+docker compose --env-file .env -f infra/docker/compose.yaml exec tasksense-postgres \
+  psql -U postgres -d taskdb -c "SELECT 1;"
+
+# Redis
+docker compose --env-file .env -f infra/docker/compose.yaml exec tasksense-redis redis-cli ping
 ```
 
 ## Service Details
 
-### Spring Boot Backend
+### Spring API
 
-**Dockerfile**: `server/Dockerfile`
-
-- **Java Version**: 21 (Eclipse Temurin)
-- **Build**: Multi-stage Maven build
-- **Port**: 8080
-- **Context Path**: `/api/v1`
-- **Health Endpoint**: `/api/v1/health/status`
-
-**Environment Variables**:
-```bash
-SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/taskdb
-SPRING_DATASOURCE_USERNAME=postgres
-SPRING_DATASOURCE_PASSWORD=postgres
-SPRING_DATA_REDIS_HOST=redis
-SPRING_DATA_REDIS_PORT=6379
-SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
-```
+| Item | Value |
+| --- | --- |
+| Service | `tasksense-spring-api` |
+| Container | `tasksense_spring_api` |
+| Internal port | `8080` |
+| Internal context path | `/api/v1` |
+| Public Nginx path | `/api/core/v1` |
+| Health | `/api/v1/health` internally, `/api/core/v1/health` publicly |
 
 ### AI Service
 
-**Dockerfile**: `ai/app/Dockerfile`
-
-- **Python Version**: 3.13
-- **Framework**: FastAPI with Uvicorn
-- **Port**: 8000
-- **Health Endpoint**: `/health`
-- **Main Routes**: `/chat/`, `/embeddings/`, `/models/`
-
-**Environment Variables**:
-```bash
-LLM_PROVIDER=openai
-OPENAI_API_KEY=sk-...
-QDRANT_HOST=qdrant
-QDRANT_PORT=6333
-BACKEND_URL=http://spring:8080/api/v1
-REDIS_URL=redis://redis:6379
-```
+| Item | Value |
+| --- | --- |
+| Service | `tasksense-ai` |
+| Container | `tasksense_ai` |
+| Internal port | `8000` |
+| Internal API prefix | `/api/v1` |
+| Public Nginx path | `/api/chat/v1` |
+| Health | `/health` internally only |
 
 ### Frontend
 
-**Dockerfile**: `client/Dockerfile`
+| Item | Value |
+| --- | --- |
+| Service | `tasksense-client` |
+| Container | `tasksense_client` |
+| Internal port | `5173` |
+| Public Nginx path | `/` |
 
-- **Node Version**: 20
-- **Framework**: React 19 + Vite
-- **Port**: 5173 (dev) / production build served via `serve`
-- **Health Endpoint**: `/`
+Vite variables are build-time values. If `VITE_API_BASE_URL`,
+`VITE_API_AGENT_BASE_URL`, `VITE_WS_URL`, or `VITE_GOOGLE_CLIENT_ID` changes,
+rebuild `tasksense-client`.
 
-**Environment Variables**:
-```bash
-VITE_API_BASE_URL=http://localhost:8080/api/v1
-VITE_AI_API_BASE_URL=http://localhost:8080/ai
-```
+### Nginx
 
-### Nginx Proxy
+| Item | Value |
+| --- | --- |
+| Service | `tasksense-nginx` |
+| Container | `tasksense_nginx` |
+| Host port | `80` |
+| Config source | `proxy/nginx.conf` copied into image |
 
-**Dockerfile**: `proxy/Dockerfile`
-**Config**: `proxy/nginx.conf`
-
-- **Port**: 80 (HTTP), 443 (HTTPS ready)
-- **Image**: nginx:alpine
-
-**Routing**:
-```
-/api/v1/*  ──► Spring Backend (8080)
-/chat/     ──► AI Service (8000)
-/ai/*      ──► AI Service (8000)
-/          ──► Frontend (5173)
-/health    ──► Health check endpoint
-```
-
-**Features**:
-- Automatic WebSocket upgrade for Vite HMR
-- CORS headers for cross-origin requests
-- Gzip compression
-- Rate limiting ready
-- HTTPS/SSL configuration commented (uncomment for production)
-
-### Supporting Services
-
-#### PostgreSQL (Port 5432)
-```yaml
-User: postgres
-Password: postgres
-Database: taskdb
-```
-
-#### Redis (Port 6379)
-- Cache, sessions, task queues
-- Data volume: `redis_data:/data`
-- Append-only file (AOF) enabled
-
-#### Elasticsearch (Port 9200)
-- Full-text search for tasks
-- Security disabled (enable for production)
-- Data volume: `elasticsearch_data:/usr/share/elasticsearch/data`
-
-#### Qdrant (Port 6333)
-- Vector database for embeddings
-- API Key: optional (set `QDRANT_API_KEY`)
-- Data volume: `qdrant_data:/qdrant/storage`
-
-#### Flyway & Seed
-- Automatic database migrations on startup
-- Seed data loading (if `seed_data.sql` exists)
-
-#### pgAdmin (Port 5050)
-- PostgreSQL admin UI
-- Email: admin@admin.com
-- Password: admin
-
-## Advanced Usage
-
-### Local Development (Without Docker)
-
-For local development without Docker:
+The current compose file does not bind mount `proxy/nginx.conf`. After changing
+Nginx config, rebuild the Nginx image:
 
 ```bash
-# Terminal 1: Start infrastructure
-cd server
-./docker-compose up postgres redis elasticsearch
-
-# Terminal 2: Spring Boot
-cd server
-./mvnw spring-boot:run
-
-# Terminal 3: AI Service
-cd ai
-uv run uvicorn app.main:app --reload
-
-# Terminal 4: Frontend
-cd client
-npm run dev
+docker compose --env-file .env -f infra/docker/compose.yaml build tasksense-nginx
+docker compose --env-file .env -f infra/docker/compose.yaml up -d tasksense-nginx
 ```
 
-### Database Access
+## Networks And Ports
 
-**Via pgAdmin**:
-- URL: http://localhost:5050
-- Email: admin@admin.com
-- Password: admin
+| Network | Role |
+| --- | --- |
+| `tasksense_net` | Public app network for Nginx, frontend, Spring, AI, Qdrant |
+| `tasksense_database_net` | Internal network for databases and services that need them |
 
-**Via psql CLI**:
-```bash
-psql -h localhost -U postgres -d taskdb
-```
+Only host port `80` is published by the current compose file.
 
-### Logs and Monitoring
+| Internal service | Internal address |
+| --- | --- |
+| Spring | `tasksense-spring-api:8080` |
+| AI | `tasksense-ai:8000` |
+| Frontend | `tasksense-client:5173` |
+| PostgreSQL | `tasksense-postgres:5432` |
+| Redis | `tasksense-redis:6379` |
+| Elasticsearch | `tasksense-elasticsearch:9200` |
+| Qdrant | `tasksense-qdrant:6333` |
+
+## Production Build With Registry Tags
+
+`infra/docker/compose.build.yaml` adds image names for the three app images.
 
 ```bash
-# All services
-docker-compose logs -f
-
-# Specific service with timestamps
-docker-compose logs -f --timestamps spring
-
-# Last 100 lines
-docker-compose logs --tail 100 spring
-
-# Real-time metrics
-docker stats
+IMAGE_PREFIX=ghcr.io/acme/tasksense IMAGE_TAG=2026-06-05 \
+  docker compose \
+    --env-file .env \
+    -f infra/docker/compose.yaml \
+    -f infra/docker/compose.build.yaml \
+    build
 ```
 
-### Rebuild Specific Service
+Push:
 
 ```bash
-# Rebuild Spring without cache
-docker-compose build --no-cache spring
-
-# Rebuild and restart
-docker-compose up -d --build spring
+IMAGE_PREFIX=ghcr.io/acme/tasksense IMAGE_TAG=2026-06-05 \
+  docker compose \
+    --env-file .env \
+    -f infra/docker/compose.yaml \
+    -f infra/docker/compose.build.yaml \
+    push tasksense-spring-api tasksense-ai tasksense-client
 ```
 
-### Database Migrations
-
-Migrations run automatically on startup via Flyway. To add new migrations:
-
-1. Create migration file in `server/src/main/resources/db/migration/`
-   - Naming: `V###__description.sql` (e.g., `V004__add_new_table.sql`)
-2. Restart Spring service: `docker-compose restart spring`
-
-### Seed Data
-
-Add seed data in `server/src/main/resources/db/seed/seed_data.sql`. Runs once after migrations.
-
-## Production Deployment
-
-### SSL/HTTPS Setup
-
-1. Obtain certificates (Let's Encrypt recommended):
-```bash
-mkdir -p certs
-# Copy cert.pem and key.pem to certs/
-```
-
-2. Uncomment HTTPS configuration in `proxy/nginx.conf`
-
-3. Update docker-compose.yaml volumes:
-```yaml
-volumes:
-  - ./certs/cert.pem:/etc/nginx/ssl/cert.pem:ro
-  - ./certs/key.pem:/etc/nginx/ssl/key.pem:ro
-```
-
-### Environment Configuration
-
-Create `.env` with production values:
-```bash
-# Security
-GOOGLE_CLIENT_ID=prod-client-id
-GOOGLE_CLIENT_SECRET=prod-secret
-
-# Email
-EMAIL_USERNAME=noreply@tasksense.app
-EMAIL_PASSWORD=app-specific-password
-
-# LLM
-OPENAI_API_KEY=sk-prod-key
-LLM_PROVIDER=openai
-
-# URLs
-VITE_API_BASE_URL=https://api.tasksense.app/api/v1
-VITE_AI_API_BASE_URL=https://api.tasksense.app/ai
-```
-
-### Scale Up
-
-Modify `docker-compose.yaml` for load balancing:
-```yaml
-services:
-  spring:
-    deploy:
-      replicas: 3
-    environment:
-      JAVA_OPTS: -Xms1024m -Xmx2048m
-  ai:
-    deploy:
-      replicas: 2
-```
-
-### Backup Strategy
+On a server, pull and start with the same image prefix/tag:
 
 ```bash
-# Backup PostgreSQL
-docker-compose exec postgres pg_dump -U postgres taskdb > backup.sql
+IMAGE_PREFIX=ghcr.io/acme/tasksense IMAGE_TAG=2026-06-05 \
+  docker compose \
+    --env-file .env \
+    -f infra/docker/compose.yaml \
+    -f infra/docker/compose.build.yaml \
+    pull
 
-# Restore PostgreSQL
-docker-compose exec -T postgres psql -U postgres taskdb < backup.sql
+IMAGE_PREFIX=ghcr.io/acme/tasksense IMAGE_TAG=2026-06-05 \
+  docker compose \
+    --env-file .env \
+    -f infra/docker/compose.yaml \
+    -f infra/docker/compose.build.yaml \
+    up -d
+```
 
-# Backup volumes
-docker run --rm -v postgres_data:/data -v $(pwd):/backup \
-  alpine tar czf /backup/postgres_backup.tar.gz -C /data .
+## Kubernetes Mapping
+
+| Compose | Kubernetes |
+| --- | --- |
+| `tasksense-spring-api` | Spring API Deployment + Service |
+| `tasksense-ai` | AI Deployment + Service |
+| `tasksense-client` | Frontend Deployment + Service |
+| `tasksense-nginx` | Ingress Controller or Nginx Deployment |
+| `tasksense-flyway` | Migration Job |
+| `tasksense-seed` | Seed Job |
+| Named volumes | PVCs |
+| `.env` | ConfigMaps and Secrets |
+| Health checks | readiness/liveness/startup probes |
+
+Ingress path plan:
+
+```text
+/                 -> frontend Service
+/api/core/v1      -> spring-api Service, rewrite to /api/v1
+/api/core/v1/*    -> spring-api Service, rewrite to /api/v1/*
+/api/chat/v1      -> ai Service, rewrite to /api/v1
+/api/chat/v1/*    -> ai Service, rewrite to /api/v1/*
 ```
 
 ## Troubleshooting
 
-### Service Won't Start
+### Nginx 502 or 504
 
 ```bash
-# Check logs
-docker-compose logs spring
-
-# Rebuild and restart
-docker-compose down
-docker-compose build --no-cache
-docker-compose up
+docker compose --env-file .env -f infra/docker/compose.yaml ps
+docker compose --env-file .env -f infra/docker/compose.yaml logs -f tasksense-nginx
+docker compose --env-file .env -f infra/docker/compose.yaml exec tasksense-nginx nginx -T
 ```
 
-### Database Connection Issues
+Check that upstream service names in `proxy/nginx.conf` are still:
+
+```text
+tasksense-spring-api:8080
+tasksense-ai:8000
+tasksense-client:5173
+```
+
+### Spring Cannot Start
 
 ```bash
-# Test PostgreSQL connection
-docker-compose exec postgres psql -U postgres -c "SELECT 1"
-
-# Check if service is healthy
-docker-compose ps
-
-# Manually run migrations
-docker-compose up flyway
+docker compose --env-file .env -f infra/docker/compose.yaml logs -f tasksense-spring-api
+docker compose --env-file .env -f infra/docker/compose.yaml logs -f tasksense-postgres
+docker compose --env-file .env -f infra/docker/compose.yaml logs -f tasksense-elasticsearch
 ```
 
-### Nginx 502 Bad Gateway
+### AI Cannot Start
 
 ```bash
-# Check upstream services are running
-docker-compose ps spring ai frontend
-
-# Check nginx logs
-docker-compose logs nginx
-
-# Verify nginx configuration
-docker-compose exec nginx nginx -t
+docker compose --env-file .env -f infra/docker/compose.yaml logs -f tasksense-ai
+docker compose --env-file .env -f infra/docker/compose.yaml exec tasksense-ai env | grep -E 'LLM|OPENAI|QDRANT|REDIS|ELASTICSEARCH|SECURITY'
 ```
 
-### Out of Memory
+### Frontend Calls Wrong API URL
 
-Adjust in docker-compose.yaml:
-```yaml
-spring:
-  environment:
-    JAVA_OPTS: -Xms512m -Xmx2048m  # Increase as needed
-```
-
-### Slow Response Times
-
-1. Check service logs for errors
-2. Monitor docker stats: `docker stats`
-3. Verify database performance: check pgAdmin query logs
-4. Check Elasticsearch cluster health: `curl http://localhost:9200/_cluster/health`
-
-## Monitoring and Health Checks
-
-All services include health checks:
-
-```yaml
-healthcheck:
-  test: ["CMD", "curl", "-f", "http://..."]
-  interval: 30s
-  timeout: 10s
-  retries: 3
-```
-
-View health status:
-```bash
-docker-compose ps  # STATUS column shows health
-```
-
-## File Permissions
-
-If you encounter permission issues:
+Vite variables are baked during build. Rebuild the frontend image after changing
+frontend URLs:
 
 ```bash
-# Fix Spring logs volume
-docker-compose exec spring chmod 777 /app/logs
-
-# Fix database volume
-sudo chown -R 999:999 postgres_data/
+docker compose --env-file .env -f infra/docker/compose.yaml build tasksense-client
+docker compose --env-file .env -f infra/docker/compose.yaml up -d tasksense-client tasksense-nginx
 ```
-
-## References
-
-- **Spring Boot**: https://spring.io/projects/spring-boot
-- **FastAPI**: https://fastapi.tiangolo.com/
-- **Nginx**: https://nginx.org/
-- **Docker Compose**: https://docs.docker.com/compose/
-- **PostgreSQL**: https://www.postgresql.org/docs/
-- **Redis**: https://redis.io/documentation
-- **Elasticsearch**: https://www.elastic.co/guide/
-- **Qdrant**: https://qdrant.tech/documentation/
-
-## Support
-
-For issues:
-1. Check logs: `docker-compose logs -f <service>`
-2. Verify environment variables in `.env`
-3. Ensure all ports are available: `netstat -an | grep LISTEN`
-4. Check disk space: `df -h`
-5. Review service health: `docker-compose ps`

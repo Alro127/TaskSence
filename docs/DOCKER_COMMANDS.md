@@ -1,352 +1,293 @@
-# Docker Quick Reference for TaskSense
+# TaskSense Docker Commands
 
-## Common Commands
+This quick reference uses the current infrastructure compose file:
 
-### Start/Stop
+```bash
+COMPOSE="docker compose -f infra/docker/compose.yaml"
+```
+
+For one-off commands, expand it directly as shown below. Do not use old service
+names such as `spring`, `ai`, `frontend`, `postgres`, or `nginx`; the current
+service names are `tasksense-spring-api`, `tasksense-ai`, `tasksense-client`,
+`tasksense-postgres`, `tasksense-redis`, `tasksense-elasticsearch`,
+`tasksense-qdrant`, and `tasksense-nginx`.
+
+## Start / Stop
 
 ```bash
 # Start all services in background
-docker-compose up -d
+docker compose -f infra/docker/compose.yaml up -d
 
-# Stop all services
-docker-compose stop
+# Stop all services without removing containers
+docker compose -f infra/docker/compose.yaml stop
 
 # Stop and remove containers
-docker-compose down
+docker compose -f infra/docker/compose.yaml down
 
-# Stop and remove everything including volumes
-docker-compose down -v
+# Stop and remove containers plus persistent volumes
+docker compose -f infra/docker/compose.yaml down -v
 ```
 
-### Build
+## Build
 
 ```bash
-# Build all images
-docker-compose build
+# Build all local images
+docker compose -f infra/docker/compose.yaml build
 
-# Build specific service
-docker-compose build spring
+# Build one service
+docker compose -f infra/docker/compose.yaml build tasksense-spring-api
+docker compose -f infra/docker/compose.yaml build tasksense-ai
+docker compose -f infra/docker/compose.yaml build tasksense-client
 
 # Build without cache
-docker-compose build --no-cache spring
+docker compose -f infra/docker/compose.yaml build --no-cache tasksense-spring-api
 
 # Build and start
-docker-compose up -d --build
+docker compose -f infra/docker/compose.yaml up -d --build
 ```
 
-### Logs
+When building tagged images for a registry, use the build override:
 
 ```bash
-# View all logs (follow mode)
-docker-compose logs -f
-
-# View specific service logs
-docker-compose logs -f spring
-docker-compose logs -f ai
-docker-compose logs -f nginx
-
-# View last 100 lines
-docker-compose logs --tail 100 spring
-
-# View with timestamps
-docker-compose logs -f --timestamps
+IMAGE_PREFIX=ghcr.io/acme/tasksense IMAGE_TAG=2026-06-05 \
+  docker compose \
+    -f infra/docker/compose.yaml \
+    -f infra/docker/compose.build.yaml \
+    build
 ```
 
-### Status
+## Logs
 
 ```bash
-# List all services and their status
-docker-compose ps
+# All logs
+docker compose -f infra/docker/compose.yaml logs -f
+
+# Specific services
+docker compose -f infra/docker/compose.yaml logs -f tasksense-spring-api
+docker compose -f infra/docker/compose.yaml logs -f tasksense-ai
+docker compose -f infra/docker/compose.yaml logs -f tasksense-nginx
+
+# Last 100 lines
+docker compose -f infra/docker/compose.yaml logs --tail 100 tasksense-spring-api
+
+# Logs with timestamps
+docker compose -f infra/docker/compose.yaml logs -f --timestamps
+```
+
+## Status
+
+```bash
+# List services and health state
+docker compose -f infra/docker/compose.yaml ps
+
+# Include stopped containers
+docker compose -f infra/docker/compose.yaml ps --all
 
 # Show resource usage
 docker stats
 
-# Inspect specific container
-docker inspect tasksense_spring
+# Inspect one container
+docker inspect tasksense_spring_api
 ```
 
-### Database Operations
+## Public Endpoints Through Nginx
+
+`proxy/nginx.conf` is the source of truth. Current public routes:
+
+```text
+http://localhost/                 -> tasksense-client:5173
+http://localhost/api/core/v1      -> tasksense-spring-api:8080/api/v1
+http://localhost/api/core/v1/*    -> tasksense-spring-api:8080/api/v1/*
+http://localhost/api/chat/v1      -> tasksense-ai:8000/api/v1
+http://localhost/api/chat/v1/*    -> tasksense-ai:8000/api/v1/*
+```
+
+Not currently configured in Nginx:
+
+```text
+/api/v1/*
+/chat/*
+/ai/*
+/health
+HTTPS listener on 443
+```
+
+## Health Checks
+
+```bash
+# Frontend through Nginx
+curl -I http://localhost
+
+# Spring health through Nginx
+curl http://localhost/api/core/v1/health
+
+# AI API prefix through Nginx. This verifies proxy routing; the exact response
+# depends on AI API implementation.
+curl -i http://localhost/api/chat/v1
+
+# AI internal health. Nginx does not expose /health.
+docker compose -f infra/docker/compose.yaml exec tasksense-ai \
+  python -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8000/health').read().decode())"
+
+# Nginx configuration test
+docker compose -f infra/docker/compose.yaml exec tasksense-nginx nginx -t
+
+# PostgreSQL
+docker compose -f infra/docker/compose.yaml exec tasksense-postgres pg_isready -U postgres
+
+# Redis
+docker compose -f infra/docker/compose.yaml exec tasksense-redis redis-cli ping
+
+# Elasticsearch, internal network only
+docker compose -f infra/docker/compose.yaml exec tasksense-elasticsearch \
+  curl -fsS http://localhost:9200/_cluster/health
+
+# Qdrant, internal network only
+docker compose -f infra/docker/compose.yaml exec tasksense-qdrant \
+  curl -fsS http://localhost:6333/health
+```
+
+## Database Operations
 
 ```bash
 # Connect to PostgreSQL
-docker-compose exec postgres psql -U postgres -d taskdb
+docker compose -f infra/docker/compose.yaml exec tasksense-postgres \
+  psql -U postgres -d taskdb
 
 # Run a SQL query
-docker-compose exec postgres psql -U postgres -d taskdb -c "SELECT * FROM users LIMIT 5;"
+docker compose -f infra/docker/compose.yaml exec tasksense-postgres \
+  psql -U postgres -d taskdb -c "SELECT 1;"
 
 # Backup database
-docker-compose exec postgres pg_dump -U postgres taskdb > backup.sql
+docker compose -f infra/docker/compose.yaml exec tasksense-postgres \
+  pg_dump -U postgres taskdb > backup.sql
 
 # Restore database
-docker-compose exec -T postgres psql -U postgres taskdb < backup.sql
-
-# Access pgAdmin
-# Open: http://localhost:5050
-# Email: admin@admin.com
-# Password: admin
+docker compose -f infra/docker/compose.yaml exec -T tasksense-postgres \
+  psql -U postgres taskdb < backup.sql
 ```
 
-### Service Management
+## Service Management
 
 ```bash
 # Restart all services
-docker-compose restart
+docker compose -f infra/docker/compose.yaml restart
 
-# Restart specific service
-docker-compose restart spring
+# Restart one service
+docker compose -f infra/docker/compose.yaml restart tasksense-spring-api
 
-# Stop specific service
-docker-compose stop spring
+# Stop/start one service
+docker compose -f infra/docker/compose.yaml stop tasksense-spring-api
+docker compose -f infra/docker/compose.yaml start tasksense-spring-api
 
-# Start specific service
-docker-compose start spring
-
-# Remove all containers
-docker-compose rm -f
+# Remove stopped service containers
+docker compose -f infra/docker/compose.yaml rm -f
 ```
 
-### Execute Commands
+## Execute Commands
 
 ```bash
-# Run command in running container
-docker-compose exec spring ls /app
+# Shell in app containers
+docker compose -f infra/docker/compose.yaml exec -it tasksense-spring-api /bin/bash
+docker compose -f infra/docker/compose.yaml exec -it tasksense-ai /bin/bash
 
-# Run command without attaching
-docker-compose exec -T spring cat /app/logs/app.log
+# Shell in Nginx container
+docker compose -f infra/docker/compose.yaml exec -it tasksense-nginx /bin/sh
 
-# Run interactive shell
-docker-compose exec -it spring /bin/bash
-docker-compose exec -it postgres psql -U postgres
+# View Spring environment variables
+docker compose -f infra/docker/compose.yaml exec tasksense-spring-api env | grep SPRING_
+
+# Show container IP
+docker compose -f infra/docker/compose.yaml exec tasksense-spring-api hostname -I
 ```
 
-### Development
+## Networking Debug
 
 ```bash
-# Rebuild Spring after code changes
-docker-compose build spring && docker-compose up -d spring
+# DNS lookup by Docker service name
+docker compose -f infra/docker/compose.yaml exec tasksense-spring-api \
+  getent hosts tasksense-postgres
 
-# Rebuild AI after code changes
-docker-compose build ai && docker-compose up -d ai
+# Test connectivity to Redis and Elasticsearch
+docker compose -f infra/docker/compose.yaml exec tasksense-spring-api \
+  sh -c "nc -zv tasksense-redis 6379 && nc -zv tasksense-elasticsearch 9200"
 
-# Rebuild frontend after code changes
-docker-compose build frontend && docker-compose up -d frontend
-
-# Follow Spring logs after restart
-docker-compose logs -f spring
+# Inspect Docker networks
+docker network inspect tasksense_net
+docker network inspect tasksense_database_net
 ```
 
-### Health Checks
+## Environment File
+
+Create `.env` from the template:
 
 ```bash
-# Test Spring health
-curl http://localhost/api/v1/health/status
-
-# Test AI service health
-curl http://localhost/ai/health
-
-# Test Nginx health
-curl http://localhost/health
-
-# Test frontend
-curl http://localhost -I
-
-# Test database
-docker-compose exec postgres pg_isready -U postgres
-
-# Test Redis
-docker-compose exec redis redis-cli ping
-
-# Test Elasticsearch
-curl http://localhost:9200/_cluster/health
-
-# Test Qdrant
-curl http://localhost:6333/health
+cp .env.example .env
 ```
 
-### Cleanup
+Minimum required values for a deployable environment:
 
 ```bash
-# Remove stopped containers
-docker-compose rm
+SECURITY_JWT_SECRET=change-me-to-a-long-random-secret
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URL=http://localhost
+EMAIL_USERNAME=your-email@gmail.com
+EMAIL_PASSWORD=your-email-app-password
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+VITE_API_BASE_URL=http://localhost/api/core/v1
+VITE_API_AGENT_BASE_URL=http://localhost/api/chat/v1
+VITE_WS_URL=ws://localhost/api/core/v1/ws
+```
 
-# Remove unused images
+Important compose limitation: `infra/docker/compose.yaml` still hardcodes
+PostgreSQL credentials for Flyway, seed, and Spring datasource. Keep
+`POSTGRES_PASSWORD=postgres` unless you also introduce a compose override or
+infra change.
+
+## Exposed Ports
+
+| Service | Host access | Notes |
+| --- | --- | --- |
+| Nginx | `http://localhost:80` | Only public host port in `infra/docker/compose.yaml` |
+| Frontend | `http://localhost/` | Proxied to `tasksense-client:5173` |
+| Spring API | `http://localhost/api/core/v1` | Proxied to internal `/api/v1` |
+| AI API | `http://localhost/api/chat/v1` | Proxied to internal `/api/v1` |
+| PostgreSQL | Internal only | `tasksense-postgres:5432` |
+| Redis | Internal only | `tasksense-redis:6379` |
+| Elasticsearch | Internal only | `tasksense-elasticsearch:9200` |
+| Qdrant | Internal only | `tasksense-qdrant:6333` |
+
+## Cleanup
+
+```bash
+# Remove stopped compose containers
+docker compose -f infra/docker/compose.yaml rm
+
+# Remove unused Docker objects
 docker image prune
-
-# Remove unused volumes
 docker volume prune
-
-# Remove all unused data
 docker system prune
 
-# Aggressive cleanup (removes everything not currently in use)
+# Aggressive cleanup
 docker system prune -a
 ```
 
-### Environment Setup
+## Troubleshooting
 
 ```bash
-# Copy environment template
-cp .env.example .env
+# Full restart
+docker compose -f infra/docker/compose.yaml down
+docker compose -f infra/docker/compose.yaml up -d --build
 
-# Edit environment variables
-vim .env
+# Clean database and caches
+docker compose -f infra/docker/compose.yaml down -v
+docker compose -f infra/docker/compose.yaml up -d --build
 
-# View environment variables in a container
-docker-compose exec spring env | grep SPRING_
+# Check Nginx route config
+docker compose -f infra/docker/compose.yaml exec tasksense-nginx nginx -T
 
-# Pass environment variable at runtime
-docker-compose run spring env
+# Port 80 already in use
+lsof -i :80
 ```
-
-### Monitoring and Debugging
-
-```bash
-# Real-time resource monitoring
-docker stats
-
-# View container details
-docker-compose ps --all
-
-# Inspect network
-docker network inspect tasksense_tasksense_net
-
-# View all volumes
-docker volume ls
-
-# Inspect volume
-docker volume inspect tasksense_postgres_data
-
-# View Docker logs
-docker-compose logs -f --tail 20 spring
-
-# Check container IP address
-docker-compose exec spring hostname -I
-```
-
-### Performance
-
-```bash
-# Limit container memory
-# Edit docker-compose.yaml and add to service:
-#   deploy:
-#     resources:
-#       limits:
-#         memory: 1024M
-
-# View memory usage
-docker stats --no-stream
-
-# Prune old images
-docker image prune -a --filter "until=24h"
-```
-
-### Networking
-
-```bash
-# Check if services can reach each other
-docker-compose exec spring ping redis
-
-# Debug DNS resolution
-docker-compose exec spring nslookup postgres
-
-# Test port connectivity
-docker-compose exec spring nc -zv elasticsearch 9200
-```
-
-## Environment File (.env)
-
-### Required Variables
-
-```bash
-# OAuth
-GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
-
-# Email
-EMAIL_USERNAME=your-email@gmail.com
-EMAIL_PASSWORD=your-app-password
-
-# AI Service
-OPENAI_API_KEY=sk-xxx
-ANTHROPIC_API_KEY=xxx
-
-# Frontend URLs
-VITE_API_BASE_URL=http://localhost:8080/api/v1
-VITE_AI_API_BASE_URL=http://localhost:8080/ai
-```
-
-### Optional Variables
-
-```bash
-# AWS S3
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY=your-access-key
-AWS_SECRET_KEY=your-secret-key
-AWS_BUCKET=your-bucket
-
-# LLM Provider
-LLM_PROVIDER=openai  # or anthropic
-
-# Qdrant
-QDRANT_API_KEY=your-api-key
-```
-
-## Service Ports
-
-| Service | Port | URL |
-|---------|------|-----|
-| Nginx (Proxy) | 80 | http://localhost |
-| Spring Backend | 8080 | http://localhost:8080/api/v1 |
-| AI Service | 8000 | http://localhost:8000 |
-| Frontend | 5173 | http://localhost:5173 |
-| PostgreSQL | 5432 | localhost:5432 |
-| Redis | 6379 | localhost:6379 |
-| Elasticsearch | 9200 | http://localhost:9200 |
-| Qdrant | 6333 | http://localhost:6333 |
-| pgAdmin | 5050 | http://localhost:5050 |
-
-## Troubleshooting Quick Fixes
-
-```bash
-# Service stuck? Full restart
-docker-compose down -v && docker-compose build && docker-compose up -d
-
-# Out of memory?
-docker system prune -a && docker volume prune
-
-# Port already in use?
-# Find what's using port 8080
-lsof -i :8080
-# Kill process or change port in docker-compose.yaml
-
-# Database locked?
-docker-compose exec postgres psql -U postgres -d taskdb \
-  -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'taskdb' AND pid <> pg_backend_pid();"
-
-# Want clean slate?
-docker-compose down -v
-docker system prune -a
-docker-compose build --no-cache
-docker-compose up -d
-```
-
-## File Locations (In Containers)
-
-| Service | Location | Purpose |
-|---------|----------|---------|
-| Spring | `/app/app.jar` | Spring Boot JAR |
-| AI | `/workspace/` | Python application |
-| Frontend | `/app/dist/` | Built React app |
-| Nginx | `/etc/nginx/nginx.conf` | Nginx configuration |
-| PostgreSQL | `/var/lib/postgresql/data` | Database files |
-| Redis | `/data` | Redis data |
-| Elasticsearch | `/usr/share/elasticsearch/data` | ES indices |
-| Qdrant | `/qdrant/storage` | Vector DB |
-
-## Documentation Links
-
-- Docker Compose: https://docs.docker.com/compose/compose-file/
-- Nginx Configuration: https://nginx.org/en/docs/
-- Spring Boot Docker: https://spring.io/guides/topicals/spring-boot-docker/
-- FastAPI Deployment: https://fastapi.tiangolo.com/deployment/
-- React + Vite: https://vitejs.dev/guide/
