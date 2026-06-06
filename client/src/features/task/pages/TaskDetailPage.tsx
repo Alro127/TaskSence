@@ -17,6 +17,8 @@ import {
 import { format } from "date-fns";
 
 import { useAppSelector } from "@/app/hooks";
+import { GuidanceTarget } from "@/features/guidance/components/GuidanceTarget";
+import { useGuidance } from "@/features/guidance/context/GuidanceContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -186,6 +188,7 @@ export function TaskDetailPage() {
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
   const [createTask] = useCreateTaskMutation();
+  const { reportAction } = useGuidance();
 
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
@@ -232,6 +235,9 @@ export function TaskDetailPage() {
   function saveStatus(status: TaskStatus) {
     updateTaskStatus({ projectId, taskId, status })
       .unwrap()
+      .then(() => {
+        reportAction("TASK_STATUS_UPDATED");
+      })
       .catch((err) => toast.error(getApiErrorMessage(err, "Failed to update status")));
   }
 
@@ -649,22 +655,24 @@ export function TaskDetailPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#444651]">
                   Status
                 </p>
-                <Select
-                  value={task.status}
-                  onValueChange={(v) => saveStatus(v as TaskStatus)}
-                  disabled={!canUpdateStatus}
-                >
-                  <SelectTrigger className={cn("border font-medium", statusCfg.badgeClass)}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <GuidanceTarget capability="UPDATE_TASK_STATUS">
+                  <Select
+                    value={task.status}
+                    onValueChange={(v) => saveStatus(v as TaskStatus)}
+                    disabled={!canUpdateStatus}
+                  >
+                    <SelectTrigger className={cn("border font-medium", statusCfg.badgeClass)}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </GuidanceTarget>
               </div>
 
               <div className="space-y-1.5">

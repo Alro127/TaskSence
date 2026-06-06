@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -406,6 +406,7 @@ export function ProjectDetailPage() {
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
   const [isLeaveProjectOpen, setIsLeaveProjectOpen] = useState(false);
   const [isCreateWorkflowDialogOpen, setIsCreateWorkflowDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [includeSubtasks, setIncludeSubtasks] = useState(true);
   const [includeCompletedTasks, setIncludeCompletedTasks] = useState(false);
   const [useAiRefinement, setUseAiRefinement] = useState(false);
@@ -414,7 +415,25 @@ export function ProjectDetailPage() {
   const [createWorkflowDraftFromProject, { isLoading: isCreatingWorkflowDraft }] =
     useCreateWorkflowDraftFromProjectMutation();
 
-  const { startGuidance } = useGuidance();
+  const { startGuidance, currentStep, currentStepIndex } = useGuidance();
+  const lastStepIndexRef = useRef(-1);
+
+  useEffect(() => {
+    if (currentStepIndex !== lastStepIndexRef.current && currentStep?.uiTarget) {
+      lastStepIndexRef.current = currentStepIndex;
+      const targetToTab: Record<string, string> = {
+        CREATE_SPRINT: "sprints",
+        CREATE_TASK: "tasks",
+        CREATE_TAG: "tags",
+        MANAGE_MEMBERS: "members",
+        PROJECT_ANALYTICS: "analytics",
+      };
+      const targetTab = targetToTab[currentStep.uiTarget];
+      if (targetTab && targetTab !== activeTab) {
+        setActiveTab(targetTab);
+      }
+    }
+  }, [currentStep, currentStepIndex, activeTab]);
   const { data: guidanceData } = useGetGuidanceByProjectQuery(
     { projectId },
     { skip: skipMemberOnlyQueries }
@@ -424,11 +443,11 @@ export function ProjectDetailPage() {
     if (guidanceData?.data && project) {
       // Small delay to ensure targets have mounted
       const timer = setTimeout(() => {
-        startGuidance(guidanceData.data);
+        void startGuidance(guidanceData.data, projectId, project.workflowId!);
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [guidanceData, project, startGuidance]);
+  }, [guidanceData, project, projectId, startGuidance]);
 
   const handleLeaveProject = async () => {
     try {
@@ -750,7 +769,7 @@ export function ProjectDetailPage() {
       </div>
 
       {/* ── Tabs ── */}
-      <Tabs defaultValue={defaultTab}>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="overflow-x-auto hide-scrollbar">
         <TabsList>
           <TabsTrigger value="overview" className="gap-2">
@@ -896,7 +915,7 @@ export function ProjectDetailPage() {
               {isProjectOwner && guidanceData?.data && (
                 <ProjectGuidanceCard
                   guidance={guidanceData.data}
-                  onStartGuidance={() => startGuidance(guidanceData.data)}
+                  onStartGuidance={() => startGuidance(guidanceData.data, projectId, true)}
                 />
               )}
 
@@ -998,11 +1017,13 @@ export function ProjectDetailPage() {
 
         {/* ── Sprints Tab ── */}
         <TabsContent value="sprints" className="mt-6 space-y-6">
-          <SprintManagementTab
-            workspaceId={workspaceId}
-            projectId={projectId}
-            isManager={canManageSprints}
-          />
+          <GuidanceTarget capability="CREATE_SPRINT">
+            <SprintManagementTab
+              workspaceId={workspaceId}
+              projectId={projectId}
+              isManager={canManageSprints}
+            />
+          </GuidanceTarget>
         </TabsContent>
 
         {/* ── Tags Tab ── */}

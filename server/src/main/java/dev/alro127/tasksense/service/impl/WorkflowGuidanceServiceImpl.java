@@ -3,11 +3,13 @@ package dev.alro127.tasksense.service.impl;
 import dev.alro127.tasksense.client.AiServiceClient;
 import dev.alro127.tasksense.domain.entity.*;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
+import dev.alro127.tasksense.domain.enums.WorkflowGenerationSource;
 import dev.alro127.tasksense.domain.enums.WorkflowStatus;
 import dev.alro127.tasksense.dto.guidance.GuidanceGenerationContextDto;
 import dev.alro127.tasksense.dto.guidance.WorkflowGuidanceDto;
 import dev.alro127.tasksense.dto.request.CreateProjectFromWorkflowRequest;
 import dev.alro127.tasksense.dto.request.CreateWorkspaceRequest;
+import dev.alro127.tasksense.dto.request.GenerateGuidanceRequest;
 import dev.alro127.tasksense.dto.request.UpdateWorkflowGuidanceRequest;
 import dev.alro127.tasksense.dto.response.ProjectResponse;
 import dev.alro127.tasksense.dto.response.WorkspaceResponse;
@@ -46,13 +48,9 @@ public class WorkflowGuidanceServiceImpl implements WorkflowGuidanceService {
 
     @Override
     @Transactional
-    public WorkflowGuidanceDto generateGuidance(Long workflowId, String authToken) {
+    public WorkflowGuidanceDto generateGuidance(Long workflowId, GenerateGuidanceRequest request, String authToken) {
         WorkflowEntity workflow = workflowRepository.findById(workflowId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workflow not found"));
-
-        if (workflow.getStatus() != WorkflowStatus.PUBLIC) {
-            throw new BadRequestException("Guidance can only be generated for PUBLIC workflows");
-        }
 
         UserEntity currentUser = securityService.getCurrentUser();
         if (!workflow.getCreatedBy().getId().equals(currentUser.getId())) {
@@ -66,6 +64,7 @@ public class WorkflowGuidanceServiceImpl implements WorkflowGuidanceService {
                 .name(workflow.getName())
                 .description(workflow.getDescription())
                 .projectName(workflow.getProject().getName())
+                .userInstructions(request != null ? request.getUserInstructions() : null)
                 .steps(steps.stream().map(s -> GuidanceGenerationContextDto.WorkflowStepContextDto.builder()
                         .title(s.getTitle())
                         .description(s.getDescription())
@@ -88,6 +87,9 @@ public class WorkflowGuidanceServiceImpl implements WorkflowGuidanceService {
         guidanceEntity.setEditedBy(null);
 
         workflowGuidanceRepository.save(guidanceEntity);
+
+        workflow.setGenerationSource(WorkflowGenerationSource.AI_REFINED);
+        workflowRepository.save(workflow);
 
         return guidanceDto;
     }

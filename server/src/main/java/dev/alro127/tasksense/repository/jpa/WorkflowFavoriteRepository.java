@@ -37,4 +37,6 @@ public interface WorkflowFavoriteRepository extends JpaRepository<WorkflowFavori
     boolean existsByWorkflowIdAndUserId(Long workflowId, Long userId);
 
     void deleteByWorkflowIdAndUserId(Long workflowId, Long userId);
+
+    void deleteByWorkflowId(Long workflowId);
 }

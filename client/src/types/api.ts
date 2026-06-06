@@ -430,6 +430,10 @@ export interface WorkflowGuidanceDto {
   interactiveSteps: GuidanceStepDto[];
 }
 
+export interface GenerateGuidanceRequest {
+  userInstructions?: string;
+}
+
 export interface UpdateGuidanceStepRequest {
   id: string;
   description: string;

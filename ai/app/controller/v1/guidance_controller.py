@@ -27,6 +27,7 @@ class GuidanceGenerationRequest(BaseModel):
     name: str
     description: str | None = None
     projectName: str | None = None
+    userInstructions: str | None = None
     steps: list[WorkflowStepContext]
 
 
@@ -50,6 +51,7 @@ async def generate(
             name=request.name,
             description=request.description,
             project_name=request.projectName,
+            user_instructions=request.userInstructions,
             steps=[step.model_dump() for step in request.steps],
         )
         return ResponseObject[dict[str, Any]](

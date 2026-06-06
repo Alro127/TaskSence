@@ -9,18 +9,32 @@ Workflow Description: {workflowDescription}
 Workflow Steps:
 {workflowSteps}
 
-AVAILABLE INTERACTIVE ACTIONS:
-- CREATE_TASK: Prompt the user to create a specific task.
-- CREATE_SPRINT: Prompt the user to create a sprint.
-- UPDATE_TASK_STATUS: Prompt the user to update a task status.
+AVAILABLE INTERACTIVE CAPABILITIES:
+- CREATE_TASK: Trigger to add a new task (Button/Form).
+- CREATE_SPRINT: Trigger to initialize a new sprint.
+- UPDATE_TASK_STATUS: Interaction to change task status (Dropdown/Drag).
+- NAVIGATE_TASK_BOARD: Navigation to the Kanban board view.
+- NAVIGATE_PROJECT_DETAIL: Navigation to the project overview page.
+- INVITE_MEMBER: Trigger to add users to the project.
+- MANUAL: Use when a step requires manual confirmation without a specific UI target.
 
 INSTRUCTIONS:
 1. Provide a high-level summary including an overview of the workflow, best practices, and potential risks.
-2. Generate a sequence of interactive steps. Each step MUST map to one of the AVAILABLE INTERACTIVE ACTIONS.
-3. Use 'uiTarget' to specify the semantic UI capability (e.g., "CREATE_TASK") that the frontend Guidance Engine should highlight.
-4. DO NOT generate CSS selectors or internal DOM details. Use semantic action names only.
-5. Each step can depend on previous steps using their IDs.
-6. Specify completion conditions (e.g., type: "TASK_CREATED", count: 1).
+2. Generate a sequence of interactive steps. Each step MUST map to one of the AVAILABLE INTERACTIVE CAPABILITIES.
+3. ATOMICITY RULE: Each step MUST contain exactly ONE conceptual action. DO NOT combine multiple actions.
+4. FOCUSED DESCRIPTIONS: The description for each step should focus ONLY on the current action.
+5. Use 'action' and 'uiTarget' from the AVAILABLE INTERACTIVE CAPABILITIES list.
+6. DO NOT generate CSS selectors or internal DOM details.
+7. Each step can depend on previous steps using their IDs.
+8. Use correct completion conditions based on the capability:
+   - action "CREATE_TASK" -> completionCondition type: "TASK_CREATED"
+   - action "CREATE_SPRINT" -> completionCondition type: "SPRINT_CREATED"
+   - action "UPDATE_TASK_STATUS" -> completionCondition type: "TASK_STATUS_UPDATED"
+   - action "MANUAL" -> completionCondition type: "MANUAL"
+
+   ALLOWED VALUES:
+   - 'action' and 'uiTarget' MUST be one of: [CREATE_TASK, CREATE_SPRINT, UPDATE_TASK_STATUS, NAVIGATE_TASK_BOARD, NAVIGATE_PROJECT_DETAIL, INVITE_MEMBER, MANUAL]
+   - 'completionCondition.type' MUST be one of: [TASK_CREATED, SPRINT_CREATED, TASK_STATUS_UPDATED, MANUAL]
 
 OUTPUT FORMAT:
 Return ONLY a valid JSON object matching this schema:

@@ -17,4 +17,6 @@ public interface WorkflowRatingRepository extends JpaRepository<WorkflowRatingEn
 
     @Query("SELECT AVG(r.stars) FROM WorkflowRatingEntity r WHERE r.workflow.id = :workflowId")
     Double findAverageStarsByWorkflowId(@Param("workflowId") Long workflowId);
+
+    void deleteByWorkflowId(Long workflowId);
 }

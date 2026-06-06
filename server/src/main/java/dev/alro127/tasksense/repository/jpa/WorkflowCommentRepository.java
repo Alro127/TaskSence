@@ -13,15 +13,45 @@ public interface WorkflowCommentRepository extends JpaRepository<WorkflowComment
         SELECT c
         FROM WorkflowCommentEntity c
         JOIN FETCH c.user
-        LEFT JOIN FETCH c.parentComment
         WHERE c.workflow.id = :workflowId
+        AND c.parentComment IS NULL
         AND c.deletedAt IS NULL
-        AND (:cursor IS NULL OR c.id < :cursor)
-        ORDER BY c.id DESC
+        AND (
+            (:sort = 'desc' AND (:cursor IS NULL OR c.id < :cursor)) OR
+            (:sort = 'asc' AND (:cursor IS NULL OR c.id > :cursor))
+        )
+        ORDER BY
+            CASE WHEN :sort = 'desc' THEN c.id END DESC,
+            CASE WHEN :sort = 'asc' THEN c.id END ASC
     """)
-    List<WorkflowCommentEntity> findComments(
+    List<WorkflowCommentEntity> findTopLevelComments(
             Long workflowId,
+            Long cursor,
+            String sort,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT c
+        FROM WorkflowCommentEntity c
+        JOIN FETCH c.user
+        WHERE c.parentComment.id = :parentId
+        AND c.deletedAt IS NULL
+        AND (:cursor IS NULL OR c.id > :cursor)
+        ORDER BY c.id ASC
+    """)
+    List<WorkflowCommentEntity> findReplies(
+            Long parentId,
             Long cursor,
             Pageable pageable
     );
+
+    @Query("""
+        SELECT c.parentComment.id, COUNT(c)
+        FROM WorkflowCommentEntity c
+        WHERE c.parentComment.id IN :parentIds
+        AND c.deletedAt IS NULL
+        GROUP BY c.parentComment.id
+    """)
+    List<Object[]> countRepliesByParentIds(List<Long> parentIds);
 }

@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,6 +48,19 @@ public class WorkflowController {
                 return ResponseEntity.ok(response);
         }
 
+        @DeleteMapping("/{workflowId}")
+        @PreAuthorize("@perm.workflowOwner(#workflowId)")
+        public ResponseEntity<ApiResponse<Void>> deleteWorkflowDraft(@PathVariable Long workflowId) {
+                workflowService.deleteWorkflowDraft(workflowId);
+                ApiResponse<Void> response = new ApiResponse<>(
+                                "200",
+                                "Delete workflow draft successfully",
+                                null,
+                                null);
+
+                return ResponseEntity.ok(response);
+        }
+
         @PostMapping("/{workflowId}/publish")
         @PreAuthorize("@perm.workflowOwner(#workflowId)")
         public ResponseEntity<ApiResponse<WorkflowDraftResponse>> publishWorkflow(@PathVariable Long workflowId) {
@@ -54,6 +68,18 @@ public class WorkflowController {
                                 "200",
                                 "Publish workflow successfully",
                                 workflowService.publishWorkflow(workflowId),
+                                null);
+
+                return ResponseEntity.ok(response);
+        }
+
+        @PostMapping("/{workflowId}/unpublish")
+        @PreAuthorize("@perm.workflowOwner(#workflowId)")
+        public ResponseEntity<ApiResponse<WorkflowDraftResponse>> unpublishWorkflow(@PathVariable Long workflowId) {
+                ApiResponse<WorkflowDraftResponse> response = new ApiResponse<>(
+                                "200",
+                                "Unpublish workflow successfully",
+                                workflowService.unpublishWorkflow(workflowId),
                                 null);
 
                 return ResponseEntity.ok(response);

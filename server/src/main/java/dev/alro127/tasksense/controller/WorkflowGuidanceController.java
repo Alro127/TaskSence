@@ -3,6 +3,7 @@ package dev.alro127.tasksense.controller;
 import dev.alro127.tasksense.dto.common.ApiResponse;
 import dev.alro127.tasksense.dto.guidance.WorkflowGuidanceDto;
 import dev.alro127.tasksense.dto.request.CreateProjectFromWorkflowRequest;
+import dev.alro127.tasksense.dto.request.GenerateGuidanceRequest;
 import dev.alro127.tasksense.dto.request.UpdateWorkflowGuidanceRequest;
 import dev.alro127.tasksense.dto.response.ProjectResponse;
 import dev.alro127.tasksense.service.WorkflowGuidanceService;
@@ -24,13 +25,14 @@ public class WorkflowGuidanceController {
     @PreAuthorize("@perm.workflowOwner(#workflowId)")
     public ResponseEntity<ApiResponse<WorkflowGuidanceDto>> generateGuidance(
             @PathVariable Long workflowId,
-            HttpServletRequest request) {
+            @RequestBody(required = false) GenerateGuidanceRequest request,
+            HttpServletRequest servletRequest) {
 
-        String authToken = request.getHeader("Authorization");
+        String authToken = servletRequest.getHeader("Authorization");
         ApiResponse<WorkflowGuidanceDto> response = new ApiResponse<>(
                 "200",
                 "Generate guidance successfully",
-                guidanceService.generateGuidance(workflowId, authToken),
+                guidanceService.generateGuidance(workflowId, request, authToken),
                 null);
 
         return ResponseEntity.ok(response);

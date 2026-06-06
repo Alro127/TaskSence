@@ -133,6 +133,8 @@ export function ProjectTagsTab({ projectId, isManager }: ProjectTagsTabProps) {
     [tags],
   );
 
+  const { reportAction } = useGuidance();
+
   async function handleCreate() {
     const normalizedName = normalizeTagInput(newName);
     if (!normalizedName) {
@@ -150,6 +152,7 @@ export function ProjectTagsTab({ projectId, isManager }: ProjectTagsTabProps) {
       }).unwrap();
 
       toast.success("Tag created");
+      reportAction("TAG_CREATED");
       setNewName("");
       setNewColor(TAG_COLOR_PRESETS[0].value);
     } catch (err) {

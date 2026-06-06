@@ -35,6 +35,8 @@ public class WorkflowCommentResponse {
 
     private Map<String, Long> reactions;
 
+    private Long replyCount;
+
     public static WorkflowCommentResponse mapToResponse(WorkflowCommentEntity comment) {
         return WorkflowCommentResponse.builder()
                 .id(comment.getId())
@@ -51,6 +53,7 @@ public class WorkflowCommentResponse {
                 .user(UserResponse.mapToResponse(comment.getUser()))
                 .mentions(List.of())
                 .reactions(Map.of())
+                .replyCount(0L)
                 .build();
     }
 
@@ -58,6 +61,15 @@ public class WorkflowCommentResponse {
             WorkflowCommentEntity comment,
             List<WorkflowCommentReactionEntity> reactions,
             List<WorkflowCommentMentionEntity> mentions
+    ) {
+        return mapToResponse(comment, reactions, mentions, 0L);
+    }
+
+    public static WorkflowCommentResponse mapToResponse(
+            WorkflowCommentEntity comment,
+            List<WorkflowCommentReactionEntity> reactions,
+            List<WorkflowCommentMentionEntity> mentions,
+            Long replyCount
     ) {
 
         Map<String, Long> reactionMap = reactions.stream()
@@ -85,6 +97,7 @@ public class WorkflowCommentResponse {
                 .user(UserResponse.mapToResponse(comment.getUser()))
                 .mentions(mentionUsers)
                 .reactions(reactionMap)
+                .replyCount(replyCount)
                 .build();
     }
 }

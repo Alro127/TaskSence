@@ -28,6 +28,14 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMemberEnti
             """)
     Page<ProjectMemberEntity> findAllByProjectId(Long projectId, Pageable pageable);
 
+    @Query("""
+                SELECT m
+                FROM ProjectMemberEntity m
+                JOIN FETCH m.user
+                WHERE m.project.id = :projectId
+            """)
+    List<ProjectMemberEntity> findAllByProjectId(Long projectId);
+
     List<ProjectMemberEntity> findByProjectIdAndUserIdIn(Long projectId, List<Long> userIds);
 
     Optional<ProjectMemberEntity> findByProjectIdAndUserId(Long projectId, Long userId);

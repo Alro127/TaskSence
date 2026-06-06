@@ -18,6 +18,7 @@ def generate_guidance(
     description: str | None,
     project_name: str | None,
     steps: list[dict[str, Any]],
+    user_instructions: str | None = None,
 ) -> dict[str, Any]:
     """
     Generate structured guidance JSON for a given workflow.
@@ -30,12 +31,19 @@ def generate_guidance(
     for s in steps:
         steps_context += f"- Position {s.get('position')}: {s.get('title')} ({s.get('description', 'No description')})\n"
         
+    user_context = ""
+    if user_instructions:
+        user_context = f"\nUSER ADDITIONAL INSTRUCTIONS:\n{user_instructions}\n"
+
     prompt = template.format(
         projectName=project_name or "Unknown Project",
         workflowName=name,
         workflowDescription=description or "No description provided.",
         workflowSteps=steps_context
     )
+    
+    if user_context:
+        prompt += user_context
     
     llm = get_llm()
     messages = [

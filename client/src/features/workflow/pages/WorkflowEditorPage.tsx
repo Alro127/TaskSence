@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { AlertTriangle, ArrowLeft, Eye, Loader2, Plus, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Eye, Loader2, Plus, Sparkles, Trash2, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,9 +24,13 @@ import type {
 import {
   useGetMyWorkflowsQuery,
   usePublishWorkflowMutation,
+  useUnpublishWorkflowMutation,
   useUpdateWorkflowDraftMutation,
+  useDeleteWorkflowDraftMutation,
+  useGenerateGuidanceMutation,
+  useGetGuidanceByWorkflowQuery,
 } from "../api/workflowApi";
-import { WorkflowEditorStepCard } from "../components";
+import { RegenerateGuidanceDialog, WorkflowEditorStepCard } from "../components";
 
 interface TaskOption {
   id: number;
@@ -211,12 +215,45 @@ export function WorkflowEditorPage() {
     return null;
   }, [workflowFromState, workflowId, workflowListData?.data?.data]);
 
+  const { data: guidanceData, isLoading: isGuidanceLoading } = useGetGuidanceByWorkflowQuery(
+    { workflowId },
+    { skip: Number.isNaN(workflowId) }
+  );
+  const guidance = guidanceData?.data;
+
   const [editorStateById, setEditorStateById] = useState<Record<number, EditorState>>({});
   const [validation, setValidation] = useState<ValidationState>(emptyValidationState);
   const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const [isUnpublishDialogOpen, setIsUnpublishDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isGuidanceDialogOpen, setIsGuidanceDialogOpen] = useState(false);
 
   const [updateWorkflowDraft, { isLoading: isSaving }] = useUpdateWorkflowDraftMutation();
   const [publishWorkflow, { isLoading: isPublishing }] = usePublishWorkflowMutation();
+  const [unpublishWorkflow, { isLoading: isUnpublishing }] = useUnpublishWorkflowMutation();
+  const [deleteWorkflowDraft, { isLoading: isDeleting }] = useDeleteWorkflowDraftMutation();
+  const [generateGuidance, { isLoading: isGeneratingGuidance }] = useGenerateGuidanceMutation();
+
+  const handleGenerateGuidance = () => {
+    setIsGuidanceDialogOpen(true);
+  };
+
+  const handleConfirmRegenerate = async (userInstructions: string) => {
+    if (!workflow) {
+      return;
+    }
+
+    try {
+      await generateGuidance({
+        workflowId: workflow.id,
+        body: userInstructions.trim() ? { userInstructions } : undefined,
+      }).unwrap();
+      toast.success("AI Guidance generated successfully");
+      setIsGuidanceDialogOpen(false);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to generate guidance."));
+    }
+  };
 
   const taskCatalog = useMemo(() => (workflow ? extractTaskOptions(workflow) : []), [workflow]);
   const baselineEditorState = useMemo(() => (workflow ? createEditorState(workflow) : null), [workflow]);
@@ -241,7 +278,7 @@ export function WorkflowEditorPage() {
     );
   }, [effectiveEditorState, currentPayload]);
 
-  const isReadOnly = effectiveEditorState?.status === "PUBLIC" || isPublishing;
+  const isReadOnly = effectiveEditorState?.status === "PUBLIC" || isPublishing || isDeleting || isUnpublishing;
 
   const updateEditorState = (
     updater: (prev: EditorState) => EditorState,
@@ -325,6 +362,36 @@ export function WorkflowEditorPage() {
     }
   };
 
+  const handleConfirmUnpublish = async () => {
+    if (!workflow || isUnpublishing) {
+      return;
+    }
+
+    try {
+      const response = await unpublishWorkflow({ workflowId: workflow.id }).unwrap();
+      applyWorkflow(response.data);
+      setIsUnpublishDialogOpen(false);
+      toast.success("Workflow unpublished successfully. You can now edit it again.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to unpublish workflow."));
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!workflow || isReadOnly) {
+      return;
+    }
+
+    try {
+      await deleteWorkflowDraft({ workflowId: workflow.id }).unwrap();
+      setIsDeleteDialogOpen(false);
+      toast.success("Workflow draft deleted");
+      navigate("/workflows");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to delete workflow draft."));
+    }
+  };
+
   if (Number.isNaN(workflowId)) {
     return (
       <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 text-center">
@@ -363,9 +430,9 @@ export function WorkflowEditorPage() {
   const statusCfg = WORKFLOW_STATUS_CONFIG[effectiveEditorState.status];
 
   return (
-    <div className="space-y-6">
-      <header className="sticky top-0 z-20 -mx-4 border-b border-[#efeeec] bg-[#faf9f7]/95 px-4 py-3 backdrop-blur-sm md:-mx-8 md:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-col">
+      <header className="sticky top-[-1rem] z-20 -mx-4 -mt-4 mb-6 border-b border-[#efeeec] bg-[#faf9f7]/95 pb-3 pt-7 backdrop-blur-sm md:top-[-2rem] md:-mx-8 md:-mt-8 md:pb-3 md:pt-11">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate("/workflows")}>
               <ArrowLeft className="h-4 w-4" />
@@ -387,10 +454,48 @@ export function WorkflowEditorPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {!isReadOnly && effectiveEditorState.status === "DRAFT" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 text-[#ba1a1a] hover:bg-[rgba(186,26,26,0.08)] hover:text-[#ba1a1a]"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                disabled={isDeleting || isSaving}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Draft
+              </Button>
+            )}
+
+            {effectiveEditorState.status === "PUBLIC" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 border-[#444651] text-[#444651] hover:bg-[rgba(68,70,81,0.04)]"
+                onClick={() => setIsUnpublishDialogOpen(true)}
+                disabled={isUnpublishing}
+              >
+                {isUnpublishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+                Unpublish
+              </Button>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 border-[#233a87] text-[#233a87] hover:bg-[rgba(35,58,135,0.04)]"
+              disabled={isGeneratingGuidance || isGuidanceLoading}
+              onClick={() => void handleGenerateGuidance()}
+            >
+              {isGeneratingGuidance ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+              {guidance ? "Regenerate AI Guidance" : "Generate AI Guidance"}
+            </Button>
+
             <Button variant="outline" onClick={handleSave} disabled={isReadOnly || isSaving || !isDirty}>
               {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
               Save
             </Button>
+
             <Button
               className="bg-[#233a87] text-white hover:opacity-90"
               disabled={isReadOnly || isSaving || isDirty}
@@ -405,7 +510,7 @@ export function WorkflowEditorPage() {
 
       {effectiveEditorState.status === "PUBLIC" && (
         <div className="rounded-xl border border-[rgba(0,106,97,0.2)] bg-[rgba(0,106,97,0.08)] px-4 py-3 text-sm text-[#006a61]">
-          This workflow is published and now read-only.
+          This workflow is published and now read-only. Click "Unpublish" to resume editing.
         </div>
       )}
 
@@ -652,6 +757,68 @@ export function WorkflowEditorPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isUnpublishDialogOpen} onOpenChange={setIsUnpublishDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Unpublish workflow</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to unpublish <span className="font-semibold text-[#1a1c1b]">{effectiveEditorState.name || workflow.name}</span>?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-lg border border-[rgba(68,70,81,0.2)] bg-[rgba(68,70,81,0.08)] px-3 py-2 text-xs text-[#444651]">
+            This will revert the workflow to a draft status, making it invisible to the public but allowing you to edit it again.
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUnpublishDialogOpen(false)} disabled={isUnpublishing}>
+              Cancel
+            </Button>
+            <Button className="bg-[#233a87] text-white hover:opacity-90" onClick={handleConfirmUnpublish} disabled={isUnpublishing}>
+              {isUnpublishing && <Loader2 className="h-4 w-4 animate-spin" />}
+              Confirm unpublish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#ba1a1a]">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Workflow Draft
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <span className="font-semibold text-[#1a1c1b]">{effectiveEditorState.name || workflow.name}</span>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="bg-[#ba1a1a] text-white hover:bg-[#931515]"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <RegenerateGuidanceDialog
+        open={isGuidanceDialogOpen}
+        onOpenChange={setIsGuidanceDialogOpen}
+        onConfirm={handleConfirmRegenerate}
+        isLoading={isGeneratingGuidance}
+        isRegenerating={!!guidance}
+      />
     </div>
   );
 }

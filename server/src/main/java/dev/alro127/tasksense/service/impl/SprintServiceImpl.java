@@ -3,6 +3,7 @@ package dev.alro127.tasksense.service.impl;
 import dev.alro127.tasksense.domain.entity.ProjectEntity;
 import dev.alro127.tasksense.domain.entity.SprintEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
+import dev.alro127.tasksense.domain.enums.GuidanceConditionType;
 import dev.alro127.tasksense.domain.enums.SprintStatus;
 import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
@@ -15,6 +16,7 @@ import dev.alro127.tasksense.repository.jpa.SprintRepository;
 import dev.alro127.tasksense.repository.jpa.TaskRepository;
 import dev.alro127.tasksense.security.permission.PermissionChecker;
 import dev.alro127.tasksense.security.permission.ProjectPermission;
+import dev.alro127.tasksense.service.ProjectGuidanceService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.SprintService;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,7 @@ public class SprintServiceImpl implements SprintService {
         private final TaskRepository taskRepository;
         private final SecurityService securityService;
         private final PermissionChecker permissionChecker;
+        private final ProjectGuidanceService projectGuidanceService;
 
         @Override
         @Transactional
@@ -60,6 +63,8 @@ public class SprintServiceImpl implements SprintService {
                                 .build();
 
                 sprintRepository.save(sprint);
+
+                projectGuidanceService.reportAction(request.getProjectId(), GuidanceConditionType.SPRINT_CREATED, Map.of("sprintId", sprint.getId()));
 
                 return SprintResponse.mapToResponse(sprint, 0L, 0L);
         }

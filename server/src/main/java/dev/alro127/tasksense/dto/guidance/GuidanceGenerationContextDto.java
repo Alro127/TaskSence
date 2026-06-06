@@ -16,6 +16,7 @@ public class GuidanceGenerationContextDto {
     private String name;
     private String description;
     private String projectName;
+    private String userInstructions;
     private List<WorkflowStepContextDto> steps;
 
     @Data

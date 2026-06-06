@@ -153,11 +153,12 @@ public class WorkflowCommentServiceImpl implements WorkflowCommentService {
     }
 
     @Override
-    public List<WorkflowCommentResponse> getComments(Long workflowId, Long cursor, int limit) {
+    public List<WorkflowCommentResponse> getComments(Long workflowId, Long cursor, int limit, String sort) {
         getPublicWorkflowOrThrow(workflowId);
 
+        String sortDir = sort != null && sort.equalsIgnoreCase("asc") ? "asc" : "desc";
         PageRequest pageable = PageRequest.of(0, limit);
-        List<WorkflowCommentEntity> comments = workflowCommentRepository.findComments(workflowId, cursor, pageable);
+        List<WorkflowCommentEntity> comments = workflowCommentRepository.findTopLevelComments(workflowId, cursor, sortDir, pageable);
 
         if (comments.isEmpty()) {
             return List.of();
@@ -177,11 +178,54 @@ public class WorkflowCommentServiceImpl implements WorkflowCommentService {
                         .stream()
                         .collect(Collectors.groupingBy(m -> m.getComment().getId()));
 
+        Map<Long, Long> replyCountMap = workflowCommentRepository.countRepliesByParentIds(commentIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Long) row[1]
+                ));
+
         return comments.stream()
                 .map(comment -> WorkflowCommentResponse.mapToResponse(
                         comment,
                         reactionMap.getOrDefault(comment.getId(), List.of()),
-                        mentionMap.getOrDefault(comment.getId(), List.of())
+                        mentionMap.getOrDefault(comment.getId(), List.of()),
+                        replyCountMap.getOrDefault(comment.getId(), 0L)
+                ))
+                .toList();
+    }
+
+    @Override
+    public List<WorkflowCommentResponse> getReplies(Long parentId, Long cursor, int limit) {
+        WorkflowCommentEntity parent = getPublicCommentOrThrow(parentId);
+
+        PageRequest pageable = PageRequest.of(0, limit);
+        List<WorkflowCommentEntity> replies = workflowCommentRepository.findReplies(parentId, cursor, pageable);
+
+        if (replies.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> replyIds = replies.stream()
+                .map(WorkflowCommentEntity::getId)
+                .toList();
+
+        Map<Long, List<WorkflowCommentReactionEntity>> reactionMap =
+                reactionRepository.findByCommentIdIn(replyIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(r -> r.getComment().getId()));
+
+        Map<Long, List<WorkflowCommentMentionEntity>> mentionMap =
+                mentionRepository.findByCommentIdIn(replyIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(m -> m.getComment().getId()));
+
+        return replies.stream()
+                .map(reply -> WorkflowCommentResponse.mapToResponse(
+                        reply,
+                        reactionMap.getOrDefault(reply.getId(), List.of()),
+                        mentionMap.getOrDefault(reply.getId(), List.of()),
+                        0L // Replies typically don't show reply counts for deep nesting in this UI
                 ))
                 .toList();
     }

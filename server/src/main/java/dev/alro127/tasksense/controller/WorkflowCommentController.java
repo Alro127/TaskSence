@@ -76,12 +76,28 @@ public class WorkflowCommentController {
         public ResponseEntity<ApiResponse<List<WorkflowCommentResponse>>> getCommentsByWorkflow(
                         @PathVariable Long workflowId,
                         @RequestParam(required = false) Long cursor,
-                        @RequestParam(defaultValue = "10") int limit) {
+                        @RequestParam(defaultValue = "10") int limit,
+                        @RequestParam(defaultValue = "desc") String sort) {
 
                 ApiResponse<List<WorkflowCommentResponse>> response = new ApiResponse<>(
                                 "200",
                                 "Get workflow comments successfully",
-                                workflowCommentService.getComments(workflowId, cursor, limit),
+                                workflowCommentService.getComments(workflowId, cursor, limit, sort),
+                                null);
+
+                return ResponseEntity.ok(response);
+        }
+
+        @GetMapping("/{commentId}/replies")
+        public ResponseEntity<ApiResponse<List<WorkflowCommentResponse>>> getReplies(
+                        @PathVariable Long commentId,
+                        @RequestParam(required = false) Long cursor,
+                        @RequestParam(defaultValue = "5") int limit) {
+
+                ApiResponse<List<WorkflowCommentResponse>> response = new ApiResponse<>(
+                                "200",
+                                "Get workflow comment replies successfully",
+                                workflowCommentService.getReplies(commentId, cursor, limit),
                                 null);
 
                 return ResponseEntity.ok(response);

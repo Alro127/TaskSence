@@ -19,6 +19,8 @@ public interface WorkflowService {
 
     WorkflowDraftResponse publishWorkflow(Long workflowId);
 
+    WorkflowDraftResponse unpublishWorkflow(Long workflowId);
+
     PageResponse<WorkflowDraftResponse> getMyWorkflows(WorkflowStatus status, Pageable pageable);
 
     PageResponse<WorkflowDraftResponse> getMyFavoriteWorkflows(Pageable pageable);
@@ -32,4 +34,6 @@ public interface WorkflowService {
     WorkflowRatingSummaryResponse getWorkflowRatingSummary(Long workflowId);
 
     WorkflowFavoriteToggleResponse toggleWorkflowFavorite(Long workflowId);
+
+    void deleteWorkflowDraft(Long workflowId);
 }

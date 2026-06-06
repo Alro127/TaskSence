@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { GuidanceTarget } from "@/features/guidance/components/GuidanceTarget";
 import {
   Select,
   SelectContent,
@@ -37,6 +38,7 @@ import {
   useGetProjectSprintsQuery,
   useUpdateSprintMutation,
 } from "@/features/sprint/api/sprintApi";
+import { useGuidance } from "@/features/guidance/context/GuidanceContext";
 
 type SprintFormState = {
   name: string;
@@ -209,6 +211,8 @@ export function SprintManagementTab({
     setIsFormOpen(true);
   };
 
+  const { reportAction } = useGuidance();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -243,6 +247,7 @@ export function SprintManagementTab({
           ...payload,
         }).unwrap();
         toast.success("Sprint created");
+        reportAction("SPRINT_CREATED");
       }
 
       setIsFormOpen(false);
@@ -287,10 +292,12 @@ export function SprintManagementTab({
           </Select>
 
           {isManager && (
-            <Button size="sm" onClick={openCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Sprint
-            </Button>
+            <GuidanceTarget capability="CREATE_SPRINT">
+              <Button size="sm" onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Sprint
+              </Button>
+            </GuidanceTarget>
           )}
         </div>
       </div>

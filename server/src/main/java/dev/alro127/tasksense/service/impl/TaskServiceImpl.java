@@ -2,6 +2,7 @@ package dev.alro127.tasksense.service.impl;
 
 import dev.alro127.tasksense.domain.entity.*;
 import dev.alro127.tasksense.domain.enums.EntityType;
+import dev.alro127.tasksense.domain.enums.GuidanceConditionType;
 import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.domain.enums.TaskPriority;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
@@ -21,10 +22,7 @@ import dev.alro127.tasksense.security.permission.PermissionChecker;
 import dev.alro127.tasksense.security.permission.TaskPermission;
 import dev.alro127.tasksense.event.EntityChangedEvent;
 import dev.alro127.tasksense.event.EntityChangedEvent.Operation;
-import dev.alro127.tasksense.service.NotificationService;
-import dev.alro127.tasksense.service.ReminderService;
-import dev.alro127.tasksense.service.SecurityService;
-import dev.alro127.tasksense.service.TaskService;
+import dev.alro127.tasksense.service.*;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -55,6 +53,7 @@ public class TaskServiceImpl implements TaskService {
     private final NotificationService notificationService;
     private final TagRepository tagRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final ProjectGuidanceService projectGuidanceService;
 
     // ===== Helpers =====
 
@@ -193,6 +192,7 @@ public class TaskServiceImpl implements TaskService {
         }
 
         eventPublisher.publishEvent(new EntityChangedEvent(EntityType.TASK, saved.getId(), Operation.UPSERT));
+        projectGuidanceService.reportAction(projectId, GuidanceConditionType.TASK_CREATED, Map.of("taskId", saved.getId()));
         return toResponseWithPermissions(saved, projectId);
     }
 
@@ -397,6 +397,7 @@ public class TaskServiceImpl implements TaskService {
 
         taskRepository.save(task);
         eventPublisher.publishEvent(new EntityChangedEvent(EntityType.TASK, taskId, Operation.UPSERT));
+        projectGuidanceService.reportAction(projectId, GuidanceConditionType.TASK_STATUS_UPDATED, Map.of("taskId", taskId, "status", request.getStatus()));
         return toResponseWithPermissions(task, projectId);
     }
 

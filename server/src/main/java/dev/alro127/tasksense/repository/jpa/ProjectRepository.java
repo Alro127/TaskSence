@@ -135,4 +135,6 @@ public interface ProjectRepository extends JpaRepository<ProjectEntity, Long> {
             @Param("allowedProjectRoles") Collection<ProjectMemberRole> allowedProjectRoles,
             @Param("allowedInheritedWorkspaceRoles") Collection<WorkspaceRole> allowedInheritedWorkspaceRoles,
             Pageable pageable);
+
+    List<ProjectEntity> findAllBySourceWorkflowId(Long sourceWorkflowId);
 }

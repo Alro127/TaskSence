@@ -1,5 +1,6 @@
 package dev.alro127.tasksense.dto.guidance;
 
+import dev.alro127.tasksense.domain.enums.GuidanceConditionType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,6 +11,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StepCompletionConditionDto {
-    private String type; // e.g., TASK_CREATED, MANUAL
+    private GuidanceConditionType type;
     private Integer count;
 }
