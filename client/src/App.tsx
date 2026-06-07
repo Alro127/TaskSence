@@ -6,6 +6,8 @@ import { GuidanceProvider } from "@/features/guidance/context/GuidanceContext";
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
+console.log("[System] TaskSense App Loading - Version: " + new Date().toISOString());
+
 function App() {
   return (
     <GoogleOAuthProvider clientId={googleClientId}>

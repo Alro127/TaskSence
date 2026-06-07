@@ -12,6 +12,7 @@ export function GuidanceOverlay() {
   const { 
     isVisible, 
     currentStep, 
+    currentStepIndex,
     activeGuidance, 
     nextStep, 
     prevStep, 
@@ -28,6 +29,21 @@ export function GuidanceOverlay() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [targetFound, setTargetFound] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Detect modals to hide spotlight
+  useEffect(() => {
+    const checkModals = () => {
+      const modal = document.querySelector('[role="dialog"], [data-state="open"]');
+      setIsModalOpen(!!modal);
+    };
+
+    const observer = new MutationObserver(checkModals);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    
+    checkModals(); // Initial check
+    return () => observer.disconnect();
+  }, []);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -39,52 +55,77 @@ export function GuidanceOverlay() {
     dismiss(projectId);
   };
 
-  const currentStepIndex = useMemo(() => {
-    if (!activeGuidance || !currentStep) return -1;
-    return activeGuidance.interactiveSteps.findIndex(s => s.id === currentStep.id);
-  }, [activeGuidance, currentStep]);
-
   // Re-calculate target position when registry changes or step changes
   useLayoutEffect(() => {
-    if (!isVisible || !currentStep) {
-      setTargetRect(null);
-      setTargetFound(false);
+    // Reset state first to avoid showing old target during transitions
+    setTargetRect(null);
+    setTargetFound(false);
+
+    if (!isVisible || !currentStep || !activeGuidance) {
       return;
     }
 
     const updatePosition = () => {
-      const element = capabilityRegistry.getTarget(currentStep.uiTarget);
-      if (element) {
-        setTargetRect(element.getBoundingClientRect());
-        setTargetFound(true);
-      } else {
-        setTargetRect(null);
-        setTargetFound(false);
-        if (process.env.NODE_ENV === "development") {
-          console.warn(`[Guidance] UI Target "${currentStep.uiTarget}" not found on current screen. Ensure GuidanceTarget is registered.`);
-        }
+      const targetName = currentStep?.uiTarget;
+      if (!targetName) return false;
+      
+      const element = capabilityRegistry.getTarget(targetName);
+      if (!element) {
+        return false;
       }
+      
+      const rect = element.getBoundingClientRect();
+      // Only consider it found if it has actual dimensions and is on screen
+      if (rect.width > 0 && rect.height > 0) {
+        setTargetRect(rect);
+        setTargetFound(true);
+        return true;
+      }
+      return false;
     };
 
-    updatePosition();
-    return capabilityRegistry.subscribe(updatePosition);
-  }, [isVisible, currentStep]);
+    // Try immediately
+    const found = updatePosition();
+    
+    // Setup a retry interval (helps with tab transitions and delayed rendering)
+    let retryInterval: NodeJS.Timeout | null = null;
+    if (!found) {
+      let attempts = 0;
+      retryInterval = setInterval(() => {
+        attempts++;
+        if (updatePosition()) {
+          if (retryInterval) clearInterval(retryInterval);
+        } else if (attempts > 100) { // Try for 10 seconds (100 * 100ms)
+          if (retryInterval) clearInterval(retryInterval);
+        }
+      }, 100);
+    }
+
+    // Update position on scroll/resize to keep it anchored
+    const handleReposition = () => updatePosition();
+    window.addEventListener("scroll", handleReposition, true);
+    window.addEventListener("resize", handleReposition);
+
+    const unsubscribe = capabilityRegistry.subscribe(updatePosition);
+    
+    return () => {
+      unsubscribe();
+      if (retryInterval) clearInterval(retryInterval);
+      window.removeEventListener("scroll", handleReposition, true);
+      window.removeEventListener("resize", handleReposition);
+    };
+  }, [isVisible, currentStep, activeGuidance]);
 
   if (!isVisible || !activeGuidance) return null;
 
   // Render high-level summary if no current step yet
   if (!currentStep) {
-    // If we've completed some steps, it means we finished or are in a state where we shouldn't show the intro
-    if (completedStepIds.size > 0) {
-      return null;
-    }
-
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-lg bg-white rounded-2xl p-8 shadow-2xl border border-slate-200"
+          className="w-full max-w-lg bg-white rounded-2xl p-8 shadow-2xl border border-slate-200 z-[10000]"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-emerald-50 rounded-lg">
@@ -129,36 +170,55 @@ export function GuidanceOverlay() {
 
   const completed = isStepCompleted(currentStep.id);
 
+  // Smart positioning for tooltip
+  const getTooltipStyle = () => {
+    if (isModalOpen) {
+      return { top: 24, left: 24 };
+    }
+    if (!targetRect) return {};
+
+    const tooltipHeight = 250; // Estimate
+    const spaceBelow = window.innerHeight - targetRect.bottom;
+    const preferAbove = spaceBelow < tooltipHeight + 40;
+
+    return {
+      top: preferAbove ? targetRect.top - tooltipHeight - 16 : targetRect.bottom + 16,
+      left: Math.max(16, Math.min(window.innerWidth - 304, targetRect.left + (targetRect.width / 2) - 144)),
+    };
+  };
+
   // Render tooltip anchored to target
   return (
-    <div className="fixed inset-0 z-40 pointer-events-none">
+    <div className="fixed inset-0 z-[9999] pointer-events-none">
       <AnimatePresence>
         {targetRect && targetFound ? (
           <>
-            {/* Highlight box around target */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute border-2 border-emerald-500 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.4)] pointer-events-none"
-              style={{
-                top: targetRect.top - 4,
-                left: targetRect.left - 4,
-                width: targetRect.width + 8,
-                height: targetRect.height + 8,
-              }}
-            />
+            {/* Highlight box around target - hidden if modal is open */}
+            {!isModalOpen && targetRect.width > 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute border-2 border-emerald-500 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.15)] pointer-events-none z-[9999]"
+                style={{
+                  top: targetRect.top - 8,
+                  left: targetRect.left - 8,
+                  width: targetRect.width + 16,
+                  height: targetRect.height + 16,
+                }}
+              />
+            )}
 
             {/* Tooltip */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="absolute bg-white rounded-xl shadow-xl border border-slate-200 p-5 w-72 pointer-events-auto"
-              style={{
-                top: targetRect.bottom + 16,
-                left: Math.max(16, Math.min(window.innerWidth - 304, targetRect.left + (targetRect.width / 2) - 144)),
-              }}
+              className={cn(
+                "absolute bg-white rounded-xl shadow-xl border border-slate-200 p-5 w-72 pointer-events-auto z-[10000]",
+                isModalOpen && "shadow-2xl border-emerald-100"
+              )}
+              style={getTooltipStyle()}
             >
               <div className="flex justify-between items-start mb-2">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">
@@ -225,11 +285,11 @@ export function GuidanceOverlay() {
           </>
         ) : (
           /* Fallback UI when target not found on screen */
-          <div className="fixed inset-0 z-40 flex items-end justify-center p-6 pointer-events-none pb-20">
+          <div className="fixed inset-0 z-[9999] flex items-end justify-center p-6 pointer-events-none pb-20">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-xl shadow-2xl border border-emerald-100 p-5 w-full max-w-md pointer-events-auto"
+              className="bg-white rounded-xl shadow-2xl border border-emerald-100 p-5 w-full max-w-md pointer-events-auto z-[10000]"
             >
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-emerald-50 rounded-lg shrink-0">

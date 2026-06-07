@@ -147,7 +147,7 @@ function JoinRequestItem({
           </p>
           <span
             className={cn(
-              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
+              "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
               cfg.badgeClass,
             )}
           >
@@ -419,21 +419,31 @@ export function ProjectDetailPage() {
   const lastStepIndexRef = useRef(-1);
 
   useEffect(() => {
-    if (currentStepIndex !== lastStepIndexRef.current && currentStep?.uiTarget) {
-      lastStepIndexRef.current = currentStepIndex;
+    if (currentStep?.uiTarget) {
       const targetToTab: Record<string, string> = {
         CREATE_SPRINT: "sprints",
+        NAVIGATE_SPRINTS: "sprints",
         CREATE_TASK: "tasks",
+        NAVIGATE_TASK_BOARD: "tasks",
         CREATE_TAG: "tags",
+        NAVIGATE_TAGS: "tags",
         MANAGE_MEMBERS: "members",
+        INVITE_MEMBER: "members",
+        NAVIGATE_MEMBERS: "members",
         PROJECT_ANALYTICS: "analytics",
+        PROJECT_GUIDANCE: "overview",
+        NAVIGATE_PROJECT_DETAIL: "overview",
       };
+
       const targetTab = targetToTab[currentStep.uiTarget];
       if (targetTab && targetTab !== activeTab) {
+        console.log(`[Guidance] Target tab mismatch: current=${activeTab}, expected=${targetTab}. Switching...`);
+        // Use an immediate switch to avoid race conditions
         setActiveTab(targetTab);
       }
     }
-  }, [currentStep, currentStepIndex, activeTab]);
+  }, [currentStep, activeTab]);
+
   const { data: guidanceData } = useGetGuidanceByProjectQuery(
     { projectId },
     { skip: skipMemberOnlyQueries }
@@ -772,18 +782,14 @@ export function ProjectDetailPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="overflow-x-auto hide-scrollbar">
         <TabsList>
-          <GuidanceTarget capability="NAVIGATE_PROJECT_DETAIL">
-            <TabsTrigger value="overview" className="gap-2">
-              <Settings className="h-4 w-4" />
-              Overview
-            </TabsTrigger>
-          </GuidanceTarget>
-          <GuidanceTarget capability="NAVIGATE_TASK_BOARD">
-            <TabsTrigger value="tasks" className="gap-2">
-              <ListTodo className="h-4 w-4" />
-              Tasks
-            </TabsTrigger>
-          </GuidanceTarget>
+          <TabsTrigger value="overview" className="gap-2">
+            <Settings className="h-4 w-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="tasks" className="gap-2">
+            <ListTodo className="h-4 w-4" />
+            Tasks
+          </TabsTrigger>
           <TabsTrigger value="sprints" className="gap-2">
             <Flag className="h-4 w-4" />
             Sprints
@@ -917,10 +923,12 @@ export function ProjectDetailPage() {
 
             <div className="xl:col-span-4 xl:sticky xl:top-24 h-fit space-y-6">
               {guidanceData?.data && project?.workflowId && (
-                <ProjectGuidanceCard
-                  guidance={guidanceData.data}
-                  onStartGuidance={() => startGuidance(guidanceData.data, projectId, project.workflowId!, true)}
-                />
+                <GuidanceTarget capability="PROJECT_GUIDANCE">
+                  <ProjectGuidanceCard
+                    guidance={guidanceData.data}
+                    onStartGuidance={() => startGuidance(guidanceData.data, projectId, project.workflowId!, true)}
+                  />
+                </GuidanceTarget>
               )}
 
               {canCreateWorkflowDraft && (
@@ -1021,13 +1029,11 @@ export function ProjectDetailPage() {
 
         {/* ── Sprints Tab ── */}
         <TabsContent value="sprints" className="mt-6 space-y-6">
-          <GuidanceTarget capability="CREATE_SPRINT">
-            <SprintManagementTab
-              workspaceId={workspaceId}
-              projectId={projectId}
-              isManager={canManageSprints}
-            />
-          </GuidanceTarget>
+          <SprintManagementTab
+            workspaceId={workspaceId}
+            projectId={projectId}
+            isManager={canManageSprints}
+          />
         </TabsContent>
 
         {/* ── Tags Tab ── */}

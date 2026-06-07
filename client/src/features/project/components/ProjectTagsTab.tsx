@@ -23,6 +23,7 @@ import {
 } from "@/features/tag/api";
 import { TAG_COLOR_PRESETS, isValidHexColor } from "@/features/tag/constants/tagPalette";
 import { TagBadge } from "@/features/tag/components";
+import { useGuidance } from "@/features/guidance/context/GuidanceContext";
 
 interface ProjectTagsTabProps {
   projectId: number;

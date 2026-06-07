@@ -318,10 +318,12 @@ export function SprintManagementTab({
             </p>
           </div>
           {isManager && (
-            <Button size="sm" onClick={openCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create first sprint
-            </Button>
+            <GuidanceTarget capability="CREATE_SPRINT">
+              <Button size="sm" onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create first sprint
+              </Button>
+            </GuidanceTarget>
           )}
         </div>
       )}

@@ -6,6 +6,7 @@ interface GuidanceContextType {
   activeGuidance: WorkflowGuidanceDto | null;
   activeProjectId: number | null;
   currentStepId: string | null;
+  currentStepIndex: number;
   completedStepIds: Set<string>;
   isVisible: boolean;
   autoNavigate: boolean;
@@ -76,6 +77,10 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
             if (backendIdx > localIdx) {
               console.log(`[Guidance] Auto-navigating: ${currentStepId} -> ${backendStepId}`);
               setCurrentStepId(backendStepId);
+              if (!isVisible) {
+                console.log("[Guidance] Re-enabling visibility due to auto-navigation.");
+                setIsVisible(true);
+              }
             }
           }
         }
@@ -83,7 +88,7 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("[Guidance] Failed to refresh progress:", error);
     }
-  }, [activeProjectId, autoNavigate, currentStepId, activeGuidance]);
+  }, [activeProjectId, autoNavigate, currentStepId, activeGuidance, isVisible]);
 
   // Periodic polling for progress updates
   useEffect(() => {
@@ -99,6 +104,7 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
   const reportAction = useCallback(async (actionType: string) => {
     if (!activeProjectId) return;
     try {
+      console.log(`[Guidance] Reporting action: ${actionType}`);
       const token = localStorage.getItem('accessToken');
       await fetch(`${apiBaseUrl}/projects/${activeProjectId}/guidance/report?actionType=${actionType}`, {
         method: 'POST',
@@ -106,7 +112,7 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
           'Authorization': `Bearer ${token}`,
         }
       });
-      // Optionally refresh after reporting
+      // Refresh after reporting
       void refreshProgress();
     } catch (error) {
       console.error("[Guidance] Failed to report action:", error);
@@ -114,23 +120,37 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
   }, [activeProjectId, refreshProgress]);
 
   const startGuidance = useCallback(async (guidance: WorkflowGuidanceDto, projectId: number, workflowId: number, force = false) => {
+    console.log("[Guidance] startGuidance called", { projectId, workflowId, force, currentIsVisible: isVisible, hasActive: !!activeGuidance });
+    
     // If already active and not forced, don't restart
-    if (activeGuidance && !force) return;
+    if (activeGuidance && !force) {
+      console.log("[Guidance] Already active, skipping startGuidance.");
+      return;
+    }
 
     // If dismissed and not forced, don't start
-    if (projectId && dismissedProjectIds.has(projectId) && !force) return;
+    if (projectId && dismissedProjectIds.has(projectId) && !force) {
+      console.log("[Guidance] Project dismissed, skipping startGuidance.");
+      return;
+    }
 
     if (!projectId || !workflowId || typeof workflowId === 'boolean') {
       console.error("[Guidance] Cannot start guidance: invalid projectId or workflowId", { projectId, workflowId });
       return;
     }
 
+    // If forcing restart, clear local state first to trigger UI resets
+    if (force) {
+      console.log("[Guidance] Forcing restart, clearing local state.");
+      setIsVisible(false);
+      setCurrentStepId(null);
+      setCompletedStepIds(new Set());
+    }
+
     try {
       // Call backend to initialize progress
       const url = `${apiBaseUrl}/projects/${projectId}/guidance/start?workflowId=${workflowId}${force ? '&force=true' : ''}`;
       const token = localStorage.getItem('accessToken');
-      console.log("[Guidance] Starting guidance with URL:", url);
-      console.log("[Guidance] Access token present:", !!token);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -144,23 +164,35 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
         const progress = result.data;
         
         if (progress) {
+          console.log("[Guidance] Guidance started/resumed. Current step:", progress.currentStepId);
           setActiveGuidance(guidance);
           setActiveProjectId(projectId);
-          setCurrentStepId(progress.currentStepId);
-          setCompletedStepIds(new Set(progress.completedStepIds));
-          setIsVisible(true);
+          
+          // Small delay to ensure any "force clear" above has finished its render cycle
+          setTimeout(() => {
+            setCurrentStepId(progress.currentStepId);
+            setCompletedStepIds(new Set(progress.completedStepIds));
+            setIsVisible(true);
+            console.log("[Guidance] Visibility set to TRUE.");
+          }, 50);
         }
       } else {
-        console.error("[Guidance] Backend failed to start guidance:", response.status);
+        const error = await response.text();
+        console.error("[Guidance] Backend failed to start guidance:", response.status, error);
       }
     } catch (error) {
       console.error("[Guidance] Network error starting guidance:", error);
     }
-  }, [activeGuidance, dismissedProjectIds]);
+  }, [activeGuidance, dismissedProjectIds, isVisible]);
 
   const currentStep = useMemo(() => {
     if (!activeGuidance || !currentStepId) return null;
     return activeGuidance.interactiveSteps.find(s => s.id === currentStepId) || null;
+  }, [activeGuidance, currentStepId]);
+
+  const currentStepIndex = useMemo(() => {
+    if (!activeGuidance || !currentStepId) return -1;
+    return activeGuidance.interactiveSteps.findIndex(s => s.id === currentStepId);
   }, [activeGuidance, currentStepId]);
 
   const nextStep = useCallback(() => {
@@ -201,9 +233,9 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
   }, [completedStepIds]);
 
   const dismiss = useCallback((projectId?: number) => {
+    console.log("[Guidance] Dismissing guidance for project:", projectId);
     setIsVisible(false);
-    setActiveGuidance(null);
-    setActiveProjectId(null);
+    // Don't clear activeGuidance here so it can be resumed later
     
     if (projectId) {
       setDismissedProjectIds(prev => {
@@ -215,11 +247,16 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  useEffect(() => {
+    console.log("[Guidance] Global state update:", { isVisible, currentStepId, activeProjectId, hasActive: !!activeGuidance });
+  }, [isVisible, currentStepId, activeProjectId, activeGuidance]);
+
   const value = useMemo(
     () => ({
       activeGuidance,
       activeProjectId,
       currentStepId,
+      currentStepIndex,
       completedStepIds,
       isVisible,
       autoNavigate,
@@ -233,7 +270,7 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
       reportAction,
       isStepCompleted,
     }),
-    [activeGuidance, activeProjectId, currentStepId, completedStepIds, isVisible, autoNavigate, startGuidance, nextStep, prevStep, dismiss, toggleAutoNavigate, refreshProgress, currentStep, reportAction, isStepCompleted]
+    [activeGuidance, activeProjectId, currentStepId, currentStepIndex, completedStepIds, isVisible, autoNavigate, startGuidance, nextStep, prevStep, dismiss, toggleAutoNavigate, refreshProgress, currentStep, reportAction, isStepCompleted]
   );
 
   return <GuidanceContext.Provider value={value}>{children}</GuidanceContext.Provider>;

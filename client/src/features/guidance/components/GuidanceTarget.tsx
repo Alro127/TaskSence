@@ -1,34 +1,31 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { capabilityRegistry } from "../utils/CapabilityRegistry";
 
 interface GuidanceTargetProps {
   capability: string;
-  children: React.ReactElement;
+  children: React.ReactNode;
 }
 
 export function GuidanceTarget({ capability, children }: GuidanceTargetProps) {
-  const ref = useRef<HTMLElement>(null);
+  const ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    const element = ref.current;
-    if (element) {
-      capabilityRegistry.register(capability, element);
+    if (ref.current) {
+      console.log(`[Guidance] Registered: ${capability}`, {
+        rect: ref.current.getBoundingClientRect(),
+        isVisible: ref.current.offsetParent !== null
+      });
+      capabilityRegistry.register(capability, ref.current);
+      return () => {
+        console.log(`[Guidance] Unregistered: ${capability}`);
+        capabilityRegistry.unregister(capability);
+      };
     }
-    return () => {
-      capabilityRegistry.unregister(capability);
-    };
   }, [capability]);
 
-  // Clone child to attach the ref
-  return React.cloneElement(children, {
-    ...children.props,
-    ref: (node: HTMLElement) => {
-      // Keep existing refs if any
-      const { ref: oldRef } = children as any;
-      if (typeof oldRef === "function") oldRef(node);
-      else if (oldRef) oldRef.current = node;
-      
-      (ref as any).current = node;
-    }
-  });
+  return (
+    <span ref={ref} className="block w-fit h-fit">
+      {children}
+    </span>
+  );
 }
