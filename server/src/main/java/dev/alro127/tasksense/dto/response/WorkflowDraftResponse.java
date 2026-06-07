@@ -1,12 +1,13 @@
 package dev.alro127.tasksense.dto.response;
 
-import dev.alro127.tasksense.domain.enums.WorkflowGenerationSource;
-import dev.alro127.tasksense.domain.enums.WorkflowStatus;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+
+import dev.alro127.tasksense.domain.enums.WorkflowGenerationSource;
+import dev.alro127.tasksense.domain.enums.WorkflowStatus;
 
 @Data
 @Builder
@@ -15,6 +16,10 @@ public class WorkflowDraftResponse {
     private Long id;
 
     private Long projectId;
+
+    private String projectName;
+
+    private String workspaceName;
 
     private Long createdBy;
 

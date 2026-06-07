@@ -1,5 +1,6 @@
 package dev.alro127.tasksense.service.impl;
 
+import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.domain.entity.ProjectEntity;
 import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
 import dev.alro127.tasksense.domain.entity.SprintEntity;
@@ -10,12 +11,11 @@ import dev.alro127.tasksense.domain.entity.WorkflowFavoriteEntity;
 import dev.alro127.tasksense.domain.entity.WorkflowRatingEntity;
 import dev.alro127.tasksense.domain.entity.WorkflowStepEntity;
 import dev.alro127.tasksense.domain.entity.WorkflowStepTaskEntity;
+import dev.alro127.tasksense.domain.enums.EntityType;
+import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
 import dev.alro127.tasksense.domain.enums.WorkflowGenerationSource;
 import dev.alro127.tasksense.domain.enums.WorkflowStatus;
-import dev.alro127.tasksense.dto.message.NotificationMessage;
-import dev.alro127.tasksense.domain.enums.EntityType;
-import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.dto.common.PageResponse;
 import dev.alro127.tasksense.dto.request.CreateWorkflowFromProjectRequest;
 import dev.alro127.tasksense.dto.request.UpsertWorkflowRatingRequest;
@@ -487,11 +487,28 @@ public class WorkflowServiceImpl implements WorkflowService {
         workflowRepository.delete(workflow);
     }
 
+    @Override
+    @Transactional
+    public void deleteWorkflowsByProjectIds(List<Long> projectIds, OffsetDateTime now) {
+        if (projectIds == null || projectIds.isEmpty()) {
+            return;
+        }
+
+        List<Long> workflowIdsToDelete = workflowRepository.findIdsByProjectIds(projectIds);
+        if (!workflowIdsToDelete.isEmpty()) {
+            // Nullify references from projects that were created FROM these workflows
+            projectRepository.setSourceWorkflowToNullByWorkflowIds(workflowIdsToDelete);
+
+            // Soft delete the workflows themselves
+            workflowRepository.softDeleteByProjectIds(projectIds, now);
+        }
+    }
+
     private WorkflowStepTaskSummaryResponse toTaskSummary(TaskEntity task) {
         return WorkflowStepTaskSummaryResponse.builder()
                 .id(task.getId())
                 .title(task.getTitle())
-                .status(task.getStatus())
+                .status(TaskStatus.TODO)
                 .sprintId(task.getSprint() != null ? task.getSprint().getId() : null)
                 .parentTaskId(task.getParentTask() != null ? task.getParentTask().getId() : null)
                 .build();
@@ -573,7 +590,7 @@ public class WorkflowServiceImpl implements WorkflowService {
             boolean favorited) {
         Long currentUserId = getCurrentUserIdOrNull();
         boolean isOwner = currentUserId != null && workflow.getCreatedBy().getId().equals(currentUserId);
-        
+
         WorkflowGenerationSource effectiveSource = workflow.getGenerationSource();
         if (!isOwner && effectiveSource == WorkflowGenerationSource.AI_REFINED) {
             effectiveSource = WorkflowGenerationSource.RULE_BASED;
@@ -582,6 +599,8 @@ public class WorkflowServiceImpl implements WorkflowService {
         return WorkflowDraftResponse.builder()
                 .id(workflow.getId())
                 .projectId(workflow.getProject().getId())
+                .projectName(workflow.getProject().getName())
+                .workspaceName(workflow.getProject().getWorkspace().getName())
                 .createdBy(workflow.getCreatedBy().getId())
                 .name(workflow.getName())
                 .description(workflow.getDescription())

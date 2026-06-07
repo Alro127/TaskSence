@@ -912,12 +912,14 @@ export function TaskBoardPage() {
           {workspaceName}
         </Link>
         <ChevronRight className="h-3 w-3" />
-        <Link
-          to={`/workspaces/${workspaceId}/projects/${projectId}`}
-          className="hover:text-foreground transition-colors"
-        >
-          {projectName}
-        </Link>
+        <GuidanceTarget capability="NAVIGATE_PROJECT_DETAIL">
+          <Link
+            to={`/workspaces/${workspaceId}/projects/${projectId}`}
+            className="hover:text-foreground transition-colors"
+          >
+            {projectName}
+          </Link>
+        </GuidanceTarget>
         <ChevronRight className="h-3 w-3" />
         <span className="font-medium text-foreground">Tasks</span>
       </nav>

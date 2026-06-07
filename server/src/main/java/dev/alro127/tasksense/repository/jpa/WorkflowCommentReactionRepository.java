@@ -1,9 +1,10 @@
 package dev.alro127.tasksense.repository.jpa;
 
-import dev.alro127.tasksense.domain.entity.UserEntity;
-import dev.alro127.tasksense.domain.entity.WorkflowCommentReactionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+
+import dev.alro127.tasksense.domain.entity.UserEntity;
+import dev.alro127.tasksense.domain.entity.WorkflowCommentReactionEntity;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,22 +16,20 @@ public interface WorkflowCommentReactionRepository extends JpaRepository<Workflo
     Optional<WorkflowCommentReactionEntity> findByCommentIdAndUserIdAndIcon(
             Long commentId,
             Long userId,
-            String icon
-    );
+            String icon);
 
     Optional<WorkflowCommentReactionEntity> findByCommentIdAndUserId(Long commentId, Long userId);
 
     void deleteByCommentIdAndUserIdAndIcon(
             Long commentId,
             Long userId,
-            String icon
-    );
+            String icon);
 
     @Query("""
-    SELECT c.user
-    FROM WorkflowCommentReactionEntity c
-    WHERE c.icon = :icon
-    AND c.comment.id = :commentId
-""")
+                SELECT c.user
+                FROM WorkflowCommentReactionEntity c
+                WHERE c.icon = :icon
+                AND c.comment.id = :commentId
+            """)
     List<UserEntity> findUsersByCommentIdAndIcon(Long commentId, String icon);
 }

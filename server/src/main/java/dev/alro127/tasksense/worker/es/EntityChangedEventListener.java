@@ -22,7 +22,7 @@ import java.util.Map;
 public class EntityChangedEventListener {
 
     private static final int MAX_RETRIES = 3;
-    private static final long[] BACKOFF_MS = {500, 1_000, 2_000};
+    private static final long[] BACKOFF_MS = { 500, 1_000, 2_000 };
 
     private final SearchIndexService searchIndexService;
     private final OutboxEventRepository outboxEventRepository;

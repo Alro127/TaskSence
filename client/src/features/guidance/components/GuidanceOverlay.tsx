@@ -9,7 +9,19 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 
 export function GuidanceOverlay() {
-  const { isVisible, currentStep, activeGuidance, nextStep, prevStep, dismiss, isStepCompleted, autoNavigate, toggleAutoNavigate, refreshProgress } = useGuidance();
+  const { 
+    isVisible, 
+    currentStep, 
+    activeGuidance, 
+    nextStep, 
+    prevStep, 
+    dismiss, 
+    isStepCompleted, 
+    autoNavigate, 
+    toggleAutoNavigate, 
+    refreshProgress,
+    completedStepIds 
+  } = useGuidance();
   const { projectId: projectIdStr } = useParams<{ projectId: string }>();
   const projectId = projectIdStr ? Number(projectIdStr) : undefined;
 
@@ -21,6 +33,10 @@ export function GuidanceOverlay() {
     setIsRefreshing(true);
     await refreshProgress();
     setTimeout(() => setIsRefreshing(false), 600);
+  };
+
+  const handleDismiss = () => {
+    dismiss(projectId);
   };
 
   const currentStepIndex = useMemo(() => {
@@ -58,6 +74,11 @@ export function GuidanceOverlay() {
 
   // Render high-level summary if no current step yet
   if (!currentStep) {
+    // If we've completed some steps, it means we finished or are in a state where we shouldn't show the intro
+    if (completedStepIds.size > 0) {
+      return null;
+    }
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
         <motion.div 

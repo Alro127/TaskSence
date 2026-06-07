@@ -24,11 +24,9 @@ public class OutboxWorker {
         System.out.println("Worker is running");
         while (true) {
 
-            List<OutboxEventEntity> events =
-                    repository.lockEventsForProcessing(
-                            OutboxEventType.NOTIFICATION.name(),
-                            100
-                    );
+            List<OutboxEventEntity> events = repository.lockEventsForProcessing(
+                    OutboxEventType.NOTIFICATION.name(),
+                    100);
 
             if (events.isEmpty()) {
                 System.out.println("events is empty");
@@ -45,11 +43,9 @@ public class OutboxWorker {
         System.out.println("Worker is running");
         while (true) {
 
-            List<OutboxEventEntity> events =
-                    repository.lockEventsForProcessing(
-                            OutboxEventType.EMAIL.name(),
-                            100
-                    );
+            List<OutboxEventEntity> events = repository.lockEventsForProcessing(
+                    OutboxEventType.EMAIL.name(),
+                    100);
 
             if (events.isEmpty()) {
                 System.out.println("events is empty");

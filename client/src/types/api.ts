@@ -253,6 +253,7 @@ export interface Project {
   endDate: string | null;
   createdAt: string;
   updatedAt: string;
+  workflowId?: number;
 }
 
 export interface CreateProjectRequest {

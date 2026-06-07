@@ -1,10 +1,11 @@
 package dev.alro127.tasksense.dto.response;
 
-import dev.alro127.tasksense.domain.entity.TeamMemberTemplateEntity;
 import lombok.Builder;
 import lombok.Getter;
 
 import java.time.OffsetDateTime;
+
+import dev.alro127.tasksense.domain.entity.TeamMemberTemplateEntity;
 
 @Getter
 @Builder

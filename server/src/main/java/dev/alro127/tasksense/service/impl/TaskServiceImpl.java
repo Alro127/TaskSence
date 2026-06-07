@@ -192,7 +192,8 @@ public class TaskServiceImpl implements TaskService {
         }
 
         eventPublisher.publishEvent(new EntityChangedEvent(EntityType.TASK, saved.getId(), Operation.UPSERT));
-        projectGuidanceService.reportAction(projectId, GuidanceConditionType.TASK_CREATED, Map.of("taskId", saved.getId()));
+        projectGuidanceService.reportAction(projectId, GuidanceConditionType.TASK_CREATED,
+                Map.of("taskId", saved.getId()));
         return toResponseWithPermissions(saved, projectId);
     }
 
@@ -397,7 +398,8 @@ public class TaskServiceImpl implements TaskService {
 
         taskRepository.save(task);
         eventPublisher.publishEvent(new EntityChangedEvent(EntityType.TASK, taskId, Operation.UPSERT));
-        projectGuidanceService.reportAction(projectId, GuidanceConditionType.TASK_STATUS_UPDATED, Map.of("taskId", taskId, "status", request.getStatus()));
+        projectGuidanceService.reportAction(projectId, GuidanceConditionType.TASK_STATUS_UPDATED,
+                Map.of("taskId", taskId, "status", request.getStatus()));
         return toResponseWithPermissions(task, projectId);
     }
 

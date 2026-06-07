@@ -440,7 +440,7 @@ export function ProjectDetailPage() {
   );
 
   useEffect(() => {
-    if (guidanceData?.data && project) {
+    if (guidanceData?.data && project?.workflowId) {
       // Small delay to ensure targets have mounted
       const timer = setTimeout(() => {
         void startGuidance(guidanceData.data, projectId, project.workflowId!);
@@ -772,14 +772,18 @@ export function ProjectDetailPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="overflow-x-auto hide-scrollbar">
         <TabsList>
-          <TabsTrigger value="overview" className="gap-2">
-            <Settings className="h-4 w-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="tasks" className="gap-2">
-            <ListTodo className="h-4 w-4" />
-            Tasks
-          </TabsTrigger>
+          <GuidanceTarget capability="NAVIGATE_PROJECT_DETAIL">
+            <TabsTrigger value="overview" className="gap-2">
+              <Settings className="h-4 w-4" />
+              Overview
+            </TabsTrigger>
+          </GuidanceTarget>
+          <GuidanceTarget capability="NAVIGATE_TASK_BOARD">
+            <TabsTrigger value="tasks" className="gap-2">
+              <ListTodo className="h-4 w-4" />
+              Tasks
+            </TabsTrigger>
+          </GuidanceTarget>
           <TabsTrigger value="sprints" className="gap-2">
             <Flag className="h-4 w-4" />
             Sprints
@@ -912,10 +916,10 @@ export function ProjectDetailPage() {
             </div>
 
             <div className="xl:col-span-4 xl:sticky xl:top-24 h-fit space-y-6">
-              {isProjectOwner && guidanceData?.data && (
+              {guidanceData?.data && project?.workflowId && (
                 <ProjectGuidanceCard
                   guidance={guidanceData.data}
-                  onStartGuidance={() => startGuidance(guidanceData.data, projectId, true)}
+                  onStartGuidance={() => startGuidance(guidanceData.data, projectId, project.workflowId!, true)}
                 />
               )}
 
@@ -1050,10 +1054,12 @@ export function ProjectDetailPage() {
                 </Button>
               )}
               {canManageMembers && (
-                <Button size="sm" onClick={() => setIsAddMembersOpen(true)}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Add Members
-                </Button>
+                <GuidanceTarget capability="INVITE_MEMBER">
+                  <Button size="sm" onClick={() => setIsAddMembersOpen(true)}>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Add Members
+                  </Button>
+                </GuidanceTarget>
               )}
             </div>
           </div>

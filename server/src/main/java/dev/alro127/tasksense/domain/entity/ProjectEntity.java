@@ -1,11 +1,12 @@
 package dev.alro127.tasksense.domain.entity;
 
-import dev.alro127.tasksense.domain.enums.ProjectStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
+
+import dev.alro127.tasksense.domain.enums.ProjectStatus;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;

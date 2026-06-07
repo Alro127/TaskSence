@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+
 import dev.alro127.tasksense.domain.document.*;
 import dev.alro127.tasksense.domain.entity.*;
 import dev.alro127.tasksense.dto.response.ProjectAnalyticsResponse;
@@ -314,7 +315,8 @@ public class SearchIndexServiceImpl implements SearchIndexService {
                     return new ProjectAnalyticsResponse.MemberPerformance(
                             userId, assigned, completed, overdue, computeMemberScore(assigned, completed, overdue));
                 })
-                .sorted(Comparator.comparingInt(ProjectAnalyticsResponse.MemberPerformance::getPerformanceScore).reversed())
+                .sorted(Comparator.comparingInt(ProjectAnalyticsResponse.MemberPerformance::getPerformanceScore)
+                        .reversed())
                 .toList();
 
         // ── Derived metrics ─────────────────────────────────────────────────
@@ -348,14 +350,16 @@ public class SearchIndexServiceImpl implements SearchIndexService {
     }
 
     private int computeHealthScore(long totalTasks, long doneCount, long overdueCount) {
-        if (totalTasks == 0) return 100;
+        if (totalTasks == 0)
+            return 100;
         double completionRate = (double) doneCount / totalTasks * 100;
         double onTimeRate = (1.0 - (double) overdueCount / totalTasks) * 100;
         return (int) Math.round(completionRate * 0.6 + onTimeRate * 0.4);
     }
 
     private int computeMemberScore(long assigned, long completed, long overdue) {
-        if (assigned == 0) return 100;
+        if (assigned == 0)
+            return 100;
         double completionRate = (double) completed / assigned;
         double onTimeRate = Math.max(0.0, 1.0 - (double) overdue / assigned);
         return (int) Math.round((completionRate * 0.6 + onTimeRate * 0.4) * 100);

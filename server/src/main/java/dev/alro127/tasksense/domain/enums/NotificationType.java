@@ -25,7 +25,7 @@ public enum NotificationType {
     // COMMENT
     COMMENT_MENTION,
     COMMENT_REACTION,
-    COMMENT_TASK, 
+    COMMENT_TASK,
     TASK_UNASSIGNED,
     WORKFLOW_UPDATED,
 

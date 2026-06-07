@@ -64,7 +64,8 @@ public class SprintServiceImpl implements SprintService {
 
                 sprintRepository.save(sprint);
 
-                projectGuidanceService.reportAction(request.getProjectId(), GuidanceConditionType.SPRINT_CREATED, Map.of("sprintId", sprint.getId()));
+                projectGuidanceService.reportAction(request.getProjectId(), GuidanceConditionType.SPRINT_CREATED,
+                                Map.of("sprintId", sprint.getId()));
 
                 return SprintResponse.mapToResponse(sprint, 0L, 0L);
         }

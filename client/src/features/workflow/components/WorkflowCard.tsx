@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from "date-fns";
-import { ArrowRight, GitBranch, Sparkles } from "lucide-react";
+import { ArrowRight, GitBranch, Sparkles, LayoutPanelTop } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,13 @@ export function WorkflowCard({ workflow, onOpen }: WorkflowCardProps) {
         >
           {statusCfg.label}
         </span>
+      </div>
+
+      <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#444651]">
+        <LayoutPanelTop className="h-3 w-3" />
+        <span className="truncate max-w-[120px]">{workflow.workspaceName || "Unknown Workspace"}</span>
+        <span>/</span>
+        <span className="truncate max-w-[120px]">{workflow.projectName || "Unknown Project"}</span>
       </div>
 
       <h3 className="line-clamp-2 text-base font-bold text-[#1a1c1b]" style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}>

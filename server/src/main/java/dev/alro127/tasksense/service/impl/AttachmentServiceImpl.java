@@ -21,58 +21,57 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AttachmentServiceImpl implements AttachmentService {
 
-    private final AttachmentRepository attachmentRepository;
-    private final TaskRepository taskRepository;
-    private final SecurityService securityService;
+        private final AttachmentRepository attachmentRepository;
+        private final TaskRepository taskRepository;
+        private final SecurityService securityService;
 
-    @Override
-    @Transactional
-    public List<AttachmentResponse> createAttachments(CreateAttachmentsRequest request) {
+        @Override
+        @Transactional
+        public List<AttachmentResponse> createAttachments(CreateAttachmentsRequest request) {
 
-        TaskEntity task = taskRepository.findById(request.getTaskId())
-                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+                TaskEntity task = taskRepository.findById(request.getTaskId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        UserEntity uploader = securityService.getCurrentUser();
+                UserEntity uploader = securityService.getCurrentUser();
 
-        List<AttachmentEntity> attachments = request.getFiles()
-                .stream()
-                .map(file -> AttachmentEntity.builder()
-                        .task(task)
-                        .uploader(uploader)
-                        .fileUrl(file.getFileUrl())
-                        .fileType(file.getFileType())
-                        .fileSize(file.getFileSize())
-                        .build())
-                .toList();
+                List<AttachmentEntity> attachments = request.getFiles()
+                                .stream()
+                                .map(file -> AttachmentEntity.builder()
+                                                .task(task)
+                                                .uploader(uploader)
+                                                .fileUrl(file.getFileUrl())
+                                                .fileType(file.getFileType())
+                                                .fileSize(file.getFileSize())
+                                                .build())
+                                .toList();
 
-        attachmentRepository.saveAll(attachments);
+                attachmentRepository.saveAll(attachments);
 
-        return attachments.stream()
-                .map(AttachmentResponse::mapToResponse)
-                .toList();
-    }
-
-    @Override
-    public List<AttachmentResponse> getTaskAttachments(Long taskId) {
-
-        return attachmentRepository.findByTaskId(taskId)
-                .stream()
-                .map(AttachmentResponse::mapToResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional
-    public void deleteAttachments(List<Long> attachmentIds) {
-
-        List<AttachmentEntity> attachments =
-                attachmentRepository.findByIdIn(attachmentIds);
-
-        if (attachments.isEmpty()) {
-            throw new RuntimeException("Attachments not found");
+                return attachments.stream()
+                                .map(AttachmentResponse::mapToResponse)
+                                .toList();
         }
 
-        attachmentRepository.deleteAll(attachments);
-    }
+        @Override
+        public List<AttachmentResponse> getTaskAttachments(Long taskId) {
+
+                return attachmentRepository.findByTaskId(taskId)
+                                .stream()
+                                .map(AttachmentResponse::mapToResponse)
+                                .toList();
+        }
+
+        @Override
+        @Transactional
+        public void deleteAttachments(List<Long> attachmentIds) {
+
+                List<AttachmentEntity> attachments = attachmentRepository.findByIdIn(attachmentIds);
+
+                if (attachments.isEmpty()) {
+                        throw new RuntimeException("Attachments not found");
+                }
+
+                attachmentRepository.deleteAll(attachments);
+        }
 
 }

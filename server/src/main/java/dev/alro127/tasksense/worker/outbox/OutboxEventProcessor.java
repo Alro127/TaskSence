@@ -35,8 +35,7 @@ public class OutboxEventProcessor {
 
             Object message = objectMapper.readValue(
                     event.getPayload().toString(),
-                    Object.class
-            );
+                    Object.class);
 
             publisher.publish(message);
 

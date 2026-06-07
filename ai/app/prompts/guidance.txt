@@ -16,6 +16,7 @@ AVAILABLE INTERACTIVE CAPABILITIES:
 - NAVIGATE_TASK_BOARD: Navigation to the Kanban board view.
 - NAVIGATE_PROJECT_DETAIL: Navigation to the project overview page.
 - INVITE_MEMBER: Trigger to add users to the project.
+- PROJECT_GUIDANCE: The AI Guidance card where summary and tips are shown.
 - MANUAL: Use when a step requires manual confirmation without a specific UI target.
 
 INSTRUCTIONS:
@@ -31,9 +32,10 @@ INSTRUCTIONS:
    - action "CREATE_SPRINT" -> completionCondition type: "SPRINT_CREATED"
    - action "UPDATE_TASK_STATUS" -> completionCondition type: "TASK_STATUS_UPDATED"
    - action "MANUAL" -> completionCondition type: "MANUAL"
+   - action "PROJECT_GUIDANCE" -> completionCondition type: "MANUAL"
 
    ALLOWED VALUES:
-   - 'action' and 'uiTarget' MUST be one of: [CREATE_TASK, CREATE_SPRINT, UPDATE_TASK_STATUS, NAVIGATE_TASK_BOARD, NAVIGATE_PROJECT_DETAIL, INVITE_MEMBER, MANUAL]
+   - 'action' and 'uiTarget' MUST be one of: [CREATE_TASK, CREATE_SPRINT, UPDATE_TASK_STATUS, NAVIGATE_TASK_BOARD, NAVIGATE_PROJECT_DETAIL, INVITE_MEMBER, PROJECT_GUIDANCE, MANUAL]
    - 'completionCondition.type' MUST be one of: [TASK_CREATED, SPRINT_CREATED, TASK_STATUS_UPDATED, MANUAL]
 
 OUTPUT FORMAT:

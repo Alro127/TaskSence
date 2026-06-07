@@ -1,12 +1,13 @@
 package dev.alro127.tasksense.domain.entity;
 
-import dev.alro127.tasksense.domain.enums.TaskPriority;
-import dev.alro127.tasksense.domain.enums.TaskStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
+
+import dev.alro127.tasksense.domain.enums.TaskPriority;
+import dev.alro127.tasksense.domain.enums.TaskStatus;
 
 import java.time.OffsetDateTime;
 import java.util.HashSet;
@@ -73,11 +74,7 @@ public class TaskEntity {
     private Set<UserEntity> assignees = new HashSet<>();
 
     @ManyToMany
-    @JoinTable(
-            name = "task_tags",
-            joinColumns = @JoinColumn(name = "task_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id")
-    )
+    @JoinTable(name = "task_tags", joinColumns = @JoinColumn(name = "task_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private Set<TagEntity> tags = new HashSet<>();
 
     @CreationTimestamp

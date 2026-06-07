@@ -1,6 +1,7 @@
 package dev.alro127.tasksense.controller;
 
 import dev.alro127.tasksense.domain.entity.ProjectGuidanceProgressEntity;
+import dev.alro127.tasksense.domain.enums.GuidanceConditionType;
 import dev.alro127.tasksense.dto.common.ApiResponse;
 import dev.alro127.tasksense.service.ProjectGuidanceService;
 import lombok.RequiredArgsConstructor;
@@ -19,15 +20,16 @@ public class ProjectGuidanceController {
     @PreAuthorize("@perm.isProjectMember(#projectId)")
     public ResponseEntity<ApiResponse<ProjectGuidanceProgressEntity>> startGuidance(
             @PathVariable Long projectId,
-            @RequestParam Long workflowId) {
-        
-        ProjectGuidanceProgressEntity progress = projectGuidanceService.startGuidance(projectId, workflowId);
+            @RequestParam Long workflowId,
+            @RequestParam(required = false, defaultValue = "false") boolean force) {
+
+        ProjectGuidanceProgressEntity progress = projectGuidanceService.startGuidance(projectId, workflowId, force);
         ApiResponse<ProjectGuidanceProgressEntity> response = new ApiResponse<>(
                 "200",
                 "Guidance started successfully",
                 progress,
                 null);
-        
+
         return ResponseEntity.ok(response);
     }
 
@@ -40,7 +42,23 @@ public class ProjectGuidanceController {
                 "Get guidance progress successfully",
                 progress,
                 null);
-        
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/report")
+    @PreAuthorize("@perm.isProjectMember(#projectId)")
+    public ResponseEntity<ApiResponse<Void>> reportAction(
+            @PathVariable Long projectId,
+            @RequestParam GuidanceConditionType actionType) {
+
+        projectGuidanceService.reportAction(projectId, actionType, null);
+        ApiResponse<Void> response = new ApiResponse<>(
+                "200",
+                "Action reported successfully",
+                null,
+                null);
+
         return ResponseEntity.ok(response);
     }
 }

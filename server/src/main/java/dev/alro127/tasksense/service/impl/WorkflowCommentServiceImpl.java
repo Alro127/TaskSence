@@ -39,248 +39,249 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class WorkflowCommentServiceImpl implements WorkflowCommentService {
 
-    private final WorkflowCommentRepository workflowCommentRepository;
-    private final WorkflowCommentReactionRepository reactionRepository;
-    private final WorkflowCommentMentionRepository mentionRepository;
-    private final WorkflowRepository workflowRepository;
-    private final SecurityService securityService;
-    private final UserRepository userRepository;
+        private final WorkflowCommentRepository workflowCommentRepository;
+        private final WorkflowCommentReactionRepository reactionRepository;
+        private final WorkflowCommentMentionRepository mentionRepository;
+        private final WorkflowRepository workflowRepository;
+        private final SecurityService securityService;
+        private final UserRepository userRepository;
 
-    private WorkflowEntity getPublicWorkflowOrThrow(Long workflowId) {
-        return workflowRepository.findByIdAndStatus(workflowId, WorkflowStatus.PUBLIC)
-                .orElseThrow(() -> new ResourceNotFoundException("Workflow not found"));
-    }
-
-    private WorkflowCommentEntity getPublicCommentOrThrow(Long commentId) {
-        WorkflowCommentEntity comment = workflowCommentRepository.findById(commentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
-
-        if (comment.getWorkflow().getStatus() != WorkflowStatus.PUBLIC) {
-            throw new ResourceNotFoundException("Comment not found");
+        private WorkflowEntity getPublicWorkflowOrThrow(Long workflowId) {
+                return workflowRepository.findByIdAndStatus(workflowId, WorkflowStatus.PUBLIC)
+                                .orElseThrow(() -> new ResourceNotFoundException("Workflow not found"));
         }
 
-        return comment;
-    }
+        private WorkflowCommentEntity getPublicCommentOrThrow(Long commentId) {
+                WorkflowCommentEntity comment = workflowCommentRepository.findById(commentId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
 
-    private void checkOwner(WorkflowCommentEntity comment) {
-        UserEntity currentUser = securityService.getCurrentUser();
+                if (comment.getWorkflow().getStatus() != WorkflowStatus.PUBLIC) {
+                        throw new ResourceNotFoundException("Comment not found");
+                }
 
-        if (!comment.getUser().getId().equals(currentUser.getId())) {
-            throw new ForbiddenException("You are not allowed to take this action");
-        }
-    }
-
-    private void saveMentions(WorkflowCommentEntity comment, Set<Long> userIds) {
-        if (userIds == null || userIds.isEmpty()) return;
-
-        List<UserEntity> users = userRepository.findAllById(userIds);
-
-        List<WorkflowCommentMentionEntity> mentions = users.stream()
-                .map(user -> WorkflowCommentMentionEntity.builder()
-                        .comment(comment)
-                        .user(user)
-                        .build())
-                .toList();
-
-        mentionRepository.saveAll(mentions);
-    }
-
-    @Override
-    @Transactional
-    public WorkflowCommentResponse createComment(WorkflowCommentCreateRequest request) {
-        UserEntity currentUser = securityService.getCurrentUser();
-        WorkflowEntity workflow = getPublicWorkflowOrThrow(request.getWorkflowId());
-
-        WorkflowCommentEntity parent = null;
-        if (request.getParentCommentId() != null) {
-            parent = workflowCommentRepository.findById(request.getParentCommentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Parent comment not found"));
-
-            if (!parent.getWorkflow().getId().equals(workflow.getId())) {
-                throw new BadRequestException("Parent comment must belong to the same workflow");
-            }
-
-            if (parent.getWorkflow().getStatus() != WorkflowStatus.PUBLIC) {
-                throw new ResourceNotFoundException("Parent comment not found");
-            }
+                return comment;
         }
 
-        WorkflowCommentEntity comment = WorkflowCommentEntity.builder()
-                .workflow(workflow)
-                .user(currentUser)
-                .parentComment(parent)
-                .content(request.getContent())
-                .isEdited(false)
-                .build();
+        private void checkOwner(WorkflowCommentEntity comment) {
+                UserEntity currentUser = securityService.getCurrentUser();
 
-        workflowCommentRepository.save(comment);
-
-        Set<Long> mentionIds = Optional.ofNullable(request.getMentionUserIds())
-                .orElse(Collections.emptySet());
-        saveMentions(comment, mentionIds);
-
-        return WorkflowCommentResponse.mapToResponse(comment);
-    }
-
-    @Override
-    @Transactional
-    public WorkflowCommentResponse updateComment(Long commentId, UpdateWorkflowCommentRequest request) {
-        WorkflowCommentEntity comment = getPublicCommentOrThrow(commentId);
-        checkOwner(comment);
-
-        Set<Long> oldMentions = mentionRepository.findUserIdsByCommentId(commentId);
-        Set<Long> newMentions = Optional.ofNullable(request.getMentionUserIds())
-                .orElse(Collections.emptySet());
-
-        comment.setContent(request.getContent());
-        comment.setIsEdited(true);
-
-        mentionRepository.deleteByCommentId(commentId);
-        saveMentions(comment, newMentions);
-
-        Set<Long> addedMentions = new HashSet<>(newMentions);
-        addedMentions.removeAll(oldMentions);
-
-        return WorkflowCommentResponse.mapToResponse(comment);
-    }
-
-    @Override
-    @Transactional
-    public void deleteComment(Long commentId) {
-        WorkflowCommentEntity comment = getPublicCommentOrThrow(commentId);
-        checkOwner(comment);
-        comment.setDeletedAt(OffsetDateTime.now());
-    }
-
-    @Override
-    public List<WorkflowCommentResponse> getComments(Long workflowId, Long cursor, int limit, String sort) {
-        getPublicWorkflowOrThrow(workflowId);
-
-        String sortDir = sort != null && sort.equalsIgnoreCase("asc") ? "asc" : "desc";
-        PageRequest pageable = PageRequest.of(0, limit);
-        List<WorkflowCommentEntity> comments = workflowCommentRepository.findTopLevelComments(workflowId, cursor, sortDir, pageable);
-
-        if (comments.isEmpty()) {
-            return List.of();
+                if (!comment.getUser().getId().equals(currentUser.getId())) {
+                        throw new ForbiddenException("You are not allowed to take this action");
+                }
         }
 
-        List<Long> commentIds = comments.stream()
-                .map(WorkflowCommentEntity::getId)
-                .toList();
+        private void saveMentions(WorkflowCommentEntity comment, Set<Long> userIds) {
+                if (userIds == null || userIds.isEmpty())
+                        return;
 
-        Map<Long, List<WorkflowCommentReactionEntity>> reactionMap =
-                reactionRepository.findByCommentIdIn(commentIds)
-                        .stream()
-                        .collect(Collectors.groupingBy(r -> r.getComment().getId()));
+                List<UserEntity> users = userRepository.findAllById(userIds);
 
-        Map<Long, List<WorkflowCommentMentionEntity>> mentionMap =
-                mentionRepository.findByCommentIdIn(commentIds)
-                        .stream()
-                        .collect(Collectors.groupingBy(m -> m.getComment().getId()));
+                List<WorkflowCommentMentionEntity> mentions = users.stream()
+                                .map(user -> WorkflowCommentMentionEntity.builder()
+                                                .comment(comment)
+                                                .user(user)
+                                                .build())
+                                .toList();
 
-        Map<Long, Long> replyCountMap = workflowCommentRepository.countRepliesByParentIds(commentIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        row -> (Long) row[0],
-                        row -> (Long) row[1]
-                ));
-
-        return comments.stream()
-                .map(comment -> WorkflowCommentResponse.mapToResponse(
-                        comment,
-                        reactionMap.getOrDefault(comment.getId(), List.of()),
-                        mentionMap.getOrDefault(comment.getId(), List.of()),
-                        replyCountMap.getOrDefault(comment.getId(), 0L)
-                ))
-                .toList();
-    }
-
-    @Override
-    public List<WorkflowCommentResponse> getReplies(Long parentId, Long cursor, int limit) {
-        WorkflowCommentEntity parent = getPublicCommentOrThrow(parentId);
-
-        PageRequest pageable = PageRequest.of(0, limit);
-        List<WorkflowCommentEntity> replies = workflowCommentRepository.findReplies(parentId, cursor, pageable);
-
-        if (replies.isEmpty()) {
-            return List.of();
+                mentionRepository.saveAll(mentions);
         }
 
-        List<Long> replyIds = replies.stream()
-                .map(WorkflowCommentEntity::getId)
-                .toList();
+        @Override
+        @Transactional
+        public WorkflowCommentResponse createComment(WorkflowCommentCreateRequest request) {
+                UserEntity currentUser = securityService.getCurrentUser();
+                WorkflowEntity workflow = getPublicWorkflowOrThrow(request.getWorkflowId());
 
-        Map<Long, List<WorkflowCommentReactionEntity>> reactionMap =
-                reactionRepository.findByCommentIdIn(replyIds)
-                        .stream()
-                        .collect(Collectors.groupingBy(r -> r.getComment().getId()));
+                WorkflowCommentEntity parent = null;
+                if (request.getParentCommentId() != null) {
+                        parent = workflowCommentRepository.findById(request.getParentCommentId())
+                                        .orElseThrow(() -> new ResourceNotFoundException("Parent comment not found"));
 
-        Map<Long, List<WorkflowCommentMentionEntity>> mentionMap =
-                mentionRepository.findByCommentIdIn(replyIds)
-                        .stream()
-                        .collect(Collectors.groupingBy(m -> m.getComment().getId()));
+                        if (!parent.getWorkflow().getId().equals(workflow.getId())) {
+                                throw new BadRequestException("Parent comment must belong to the same workflow");
+                        }
 
-        return replies.stream()
-                .map(reply -> WorkflowCommentResponse.mapToResponse(
-                        reply,
-                        reactionMap.getOrDefault(reply.getId(), List.of()),
-                        mentionMap.getOrDefault(reply.getId(), List.of()),
-                        0L // Replies typically don't show reply counts for deep nesting in this UI
-                ))
-                .toList();
-    }
+                        if (parent.getWorkflow().getStatus() != WorkflowStatus.PUBLIC) {
+                                throw new ResourceNotFoundException("Parent comment not found");
+                        }
+                }
 
-    @Override
-    @Transactional
-    public void addReaction(Long commentId, CommentReactionRequest request) {
-        UserEntity currentUser = securityService.getCurrentUser();
-        WorkflowCommentEntity comment = getPublicCommentOrThrow(commentId);
+                WorkflowCommentEntity comment = WorkflowCommentEntity.builder()
+                                .workflow(workflow)
+                                .user(currentUser)
+                                .parentComment(parent)
+                                .content(request.getContent())
+                                .isEdited(false)
+                                .build();
 
-        boolean exists = reactionRepository
-                .findByCommentIdAndUserIdAndIcon(commentId, currentUser.getId(), request.getIcon())
-                .isPresent();
+                workflowCommentRepository.save(comment);
 
-        if (exists) return;
+                Set<Long> mentionIds = Optional.ofNullable(request.getMentionUserIds())
+                                .orElse(Collections.emptySet());
+                saveMentions(comment, mentionIds);
 
-        reactionRepository.save(WorkflowCommentReactionEntity.builder()
-                .comment(comment)
-                .user(currentUser)
-                .icon(request.getIcon())
-                .build());
-    }
+                return WorkflowCommentResponse.mapToResponse(comment);
+        }
 
-    @Override
-    @Transactional
-    public void updateReaction(Long commentId, CommentReactionRequest request) {
-        UserEntity currentUser = securityService.getCurrentUser();
-        WorkflowCommentEntity comment = getPublicCommentOrThrow(commentId);
+        @Override
+        @Transactional
+        public WorkflowCommentResponse updateComment(Long commentId, UpdateWorkflowCommentRequest request) {
+                WorkflowCommentEntity comment = getPublicCommentOrThrow(commentId);
+                checkOwner(comment);
 
-        WorkflowCommentReactionEntity reaction = reactionRepository
-                .findByCommentIdAndUserId(commentId, currentUser.getId())
-                .orElse(WorkflowCommentReactionEntity.builder()
-                        .comment(comment)
-                        .user(currentUser)
-                        .build());
+                Set<Long> oldMentions = mentionRepository.findUserIdsByCommentId(commentId);
+                Set<Long> newMentions = Optional.ofNullable(request.getMentionUserIds())
+                                .orElse(Collections.emptySet());
 
-        reaction.setIcon(request.getIcon());
-        reactionRepository.save(reaction);
-    }
+                comment.setContent(request.getContent());
+                comment.setIsEdited(true);
 
-    @Override
-    @Transactional
-    public void removeReaction(Long commentId, CommentReactionRequest request) {
-        Long currentUserId = securityService.getCurrentUserId();
-        getPublicCommentOrThrow(commentId);
+                mentionRepository.deleteByCommentId(commentId);
+                saveMentions(comment, newMentions);
 
-        reactionRepository.deleteByCommentIdAndUserIdAndIcon(commentId, currentUserId, request.getIcon());
-    }
+                Set<Long> addedMentions = new HashSet<>(newMentions);
+                addedMentions.removeAll(oldMentions);
 
-    @Override
-    public List<UserSummaryResponse> getReactions(Long commentId, String icon) {
-        getPublicCommentOrThrow(commentId);
-        return reactionRepository.findUsersByCommentIdAndIcon(commentId, icon)
-                .stream()
-                .map(UserSummaryResponse::mapToResponse)
-                .toList();
-    }
+                return WorkflowCommentResponse.mapToResponse(comment);
+        }
+
+        @Override
+        @Transactional
+        public void deleteComment(Long commentId) {
+                WorkflowCommentEntity comment = getPublicCommentOrThrow(commentId);
+                checkOwner(comment);
+                comment.setDeletedAt(OffsetDateTime.now());
+        }
+
+        @Override
+        public List<WorkflowCommentResponse> getComments(Long workflowId, Long cursor, int limit, String sort) {
+                getPublicWorkflowOrThrow(workflowId);
+
+                String sortDir = sort != null && sort.equalsIgnoreCase("asc") ? "asc" : "desc";
+                PageRequest pageable = PageRequest.of(0, limit);
+                List<WorkflowCommentEntity> comments = workflowCommentRepository.findTopLevelComments(workflowId,
+                                cursor, sortDir, pageable);
+
+                if (comments.isEmpty()) {
+                        return List.of();
+                }
+
+                List<Long> commentIds = comments.stream()
+                                .map(WorkflowCommentEntity::getId)
+                                .toList();
+
+                Map<Long, List<WorkflowCommentReactionEntity>> reactionMap = reactionRepository
+                                .findByCommentIdIn(commentIds)
+                                .stream()
+                                .collect(Collectors.groupingBy(r -> r.getComment().getId()));
+
+                Map<Long, List<WorkflowCommentMentionEntity>> mentionMap = mentionRepository
+                                .findByCommentIdIn(commentIds)
+                                .stream()
+                                .collect(Collectors.groupingBy(m -> m.getComment().getId()));
+
+                Map<Long, Long> replyCountMap = workflowCommentRepository.countRepliesByParentIds(commentIds)
+                                .stream()
+                                .collect(Collectors.toMap(
+                                                row -> (Long) row[0],
+                                                row -> (Long) row[1]));
+
+                return comments.stream()
+                                .map(comment -> WorkflowCommentResponse.mapToResponse(
+                                                comment,
+                                                reactionMap.getOrDefault(comment.getId(), List.of()),
+                                                mentionMap.getOrDefault(comment.getId(), List.of()),
+                                                replyCountMap.getOrDefault(comment.getId(), 0L)))
+                                .toList();
+        }
+
+        @Override
+        public List<WorkflowCommentResponse> getReplies(Long parentId, Long cursor, int limit) {
+                WorkflowCommentEntity parent = getPublicCommentOrThrow(parentId);
+
+                PageRequest pageable = PageRequest.of(0, limit);
+                List<WorkflowCommentEntity> replies = workflowCommentRepository.findReplies(parentId, cursor, pageable);
+
+                if (replies.isEmpty()) {
+                        return List.of();
+                }
+
+                List<Long> replyIds = replies.stream()
+                                .map(WorkflowCommentEntity::getId)
+                                .toList();
+
+                Map<Long, List<WorkflowCommentReactionEntity>> reactionMap = reactionRepository
+                                .findByCommentIdIn(replyIds)
+                                .stream()
+                                .collect(Collectors.groupingBy(r -> r.getComment().getId()));
+
+                Map<Long, List<WorkflowCommentMentionEntity>> mentionMap = mentionRepository.findByCommentIdIn(replyIds)
+                                .stream()
+                                .collect(Collectors.groupingBy(m -> m.getComment().getId()));
+
+                return replies.stream()
+                                .map(reply -> WorkflowCommentResponse.mapToResponse(
+                                                reply,
+                                                reactionMap.getOrDefault(reply.getId(), List.of()),
+                                                mentionMap.getOrDefault(reply.getId(), List.of()),
+                                                0L // Replies typically don't show reply counts for deep nesting in this
+                                                   // UI
+                                ))
+                                .toList();
+        }
+
+        @Override
+        @Transactional
+        public void addReaction(Long commentId, CommentReactionRequest request) {
+                UserEntity currentUser = securityService.getCurrentUser();
+                WorkflowCommentEntity comment = getPublicCommentOrThrow(commentId);
+
+                boolean exists = reactionRepository
+                                .findByCommentIdAndUserIdAndIcon(commentId, currentUser.getId(), request.getIcon())
+                                .isPresent();
+
+                if (exists)
+                        return;
+
+                reactionRepository.save(WorkflowCommentReactionEntity.builder()
+                                .comment(comment)
+                                .user(currentUser)
+                                .icon(request.getIcon())
+                                .build());
+        }
+
+        @Override
+        @Transactional
+        public void updateReaction(Long commentId, CommentReactionRequest request) {
+                UserEntity currentUser = securityService.getCurrentUser();
+                WorkflowCommentEntity comment = getPublicCommentOrThrow(commentId);
+
+                WorkflowCommentReactionEntity reaction = reactionRepository
+                                .findByCommentIdAndUserId(commentId, currentUser.getId())
+                                .orElse(WorkflowCommentReactionEntity.builder()
+                                                .comment(comment)
+                                                .user(currentUser)
+                                                .build());
+
+                reaction.setIcon(request.getIcon());
+                reactionRepository.save(reaction);
+        }
+
+        @Override
+        @Transactional
+        public void removeReaction(Long commentId, CommentReactionRequest request) {
+                Long currentUserId = securityService.getCurrentUserId();
+                getPublicCommentOrThrow(commentId);
+
+                reactionRepository.deleteByCommentIdAndUserIdAndIcon(commentId, currentUserId, request.getIcon());
+        }
+
+        @Override
+        public List<UserSummaryResponse> getReactions(Long commentId, String icon) {
+                getPublicCommentOrThrow(commentId);
+                return reactionRepository.findUsersByCommentIdAndIcon(commentId, icon)
+                                .stream()
+                                .map(UserSummaryResponse::mapToResponse)
+                                .toList();
+        }
 }

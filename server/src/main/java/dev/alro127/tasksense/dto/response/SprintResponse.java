@@ -1,12 +1,14 @@
 package dev.alro127.tasksense.dto.response;
 
-import dev.alro127.tasksense.domain.entity.SprintEntity;
-import dev.alro127.tasksense.domain.enums.SprintStatus;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+
+import dev.alro127.tasksense.domain.entity.SprintEntity;
+import dev.alro127.tasksense.domain.enums.SprintStatus;
+
 @Data
 @Builder
 public class SprintResponse {
@@ -38,8 +40,7 @@ public class SprintResponse {
     public static SprintResponse mapToResponse(
             SprintEntity sprint,
             Long taskCount,
-            Long completedTaskCount
-    ) {
+            Long completedTaskCount) {
         return SprintResponse.builder()
                 .id(sprint.getId())
                 .projectId(sprint.getProject().getId())

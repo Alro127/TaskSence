@@ -186,6 +186,29 @@ function createEditorState(workflow: WorkflowDraftResponse): EditorState {
   };
 }
 
+function moveItem<T>(list: T[], index: number, direction: "UP" | "DOWN"): T[] {
+  const next = [...list];
+  const targetIndex = direction === "UP" ? index - 1 : index + 1;
+  if (targetIndex < 0 || targetIndex >= next.length) {
+    return next;
+  }
+
+  const [removed] = next.splice(index, 1);
+  next.splice(targetIndex, 0, removed);
+  return next;
+}
+
+function createNewStep(position: number): UpdateWorkflowStepRequest {
+  return {
+    title: "",
+    description: "",
+    position,
+    sourceType: "RULE",
+    sourceSprintId: null,
+    taskIds: [],
+  };
+}
+
 export function WorkflowEditorPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -202,6 +225,12 @@ export function WorkflowEditorPage() {
     refetch,
   } = useGetMyWorkflowsQuery({ page: 0, size: 200 }, { skip: Number.isNaN(workflowId) });
 
+  const { data: guidanceData, isLoading: isGuidanceLoading } = useGetGuidanceByWorkflowQuery(
+    { workflowId },
+    { skip: Number.isNaN(workflowId) },
+  );
+  const guidance = guidanceData?.data;
+
   const workflow = useMemo(() => {
     const fromList = workflowListData?.data?.data.find((item) => item.id === workflowId);
     if (fromList) {
@@ -214,12 +243,6 @@ export function WorkflowEditorPage() {
 
     return null;
   }, [workflowFromState, workflowId, workflowListData?.data?.data]);
-
-  const { data: guidanceData, isLoading: isGuidanceLoading } = useGetGuidanceByWorkflowQuery(
-    { workflowId },
-    { skip: Number.isNaN(workflowId) }
-  );
-  const guidance = guidanceData?.data;
 
   const [editorStateById, setEditorStateById] = useState<Record<number, EditorState>>({});
   const [validation, setValidation] = useState<ValidationState>(emptyValidationState);
@@ -683,50 +706,116 @@ export function WorkflowEditorPage() {
         </section>
 
         <aside className="xl:col-span-5">
-          <div className="space-y-4 rounded-xl bg-[#f4f3f1] p-5 xl:sticky xl:top-24">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#1a1c1b]" style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}>
-                Snapshot Preview
-              </h3>
-              <Eye className="h-4 w-4 text-[#444651]" />
-            </div>
-            <p className="text-xs text-[#444651]">Read-only timeline of the current workflow structure.</p>
+          <div className="space-y-6 xl:sticky xl:top-24">
+            {/* Snapshot Preview Card */}
+            <div className="space-y-4 rounded-xl bg-[#f4f3f1] p-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-[#1a1c1b]" style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}>
+                  Snapshot Preview
+                </h3>
+                <Eye className="h-4 w-4 text-[#444651]" />
+              </div>
+              <p className="text-xs text-[#444651]">Read-only timeline of the current workflow structure.</p>
 
-            <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-              {effectiveEditorState.steps.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-[rgba(197,197,211,0.5)] bg-white p-4 text-xs text-[#444651]">
-                  No steps yet. Add your first stage.
+              <div className="max-h-[40vh] space-y-4 overflow-y-auto pr-1 hide-scrollbar">
+                {effectiveEditorState.steps.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-[rgba(197,197,211,0.5)] bg-white p-4 text-xs text-[#444651]">
+                    No steps yet. Add your first stage.
+                  </div>
+                ) : (
+                  effectiveEditorState.steps.map((step, index) => (
+                    <div key={`preview-${step.id ?? index}`} className="relative border-l-2 border-[rgba(35,58,135,0.2)] pl-4">
+                      <div className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[#233a87]" />
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444651]">
+                        Step {String(index + 1).padStart(2, "0")}
+                      </p>
+                      <h4 className="mt-1 text-sm font-semibold text-[#1a1c1b]">{step.title.trim() || "Untitled step"}</h4>
+                      <p className="mt-1 text-xs text-[#444651] line-clamp-2">{step.description?.trim() || "No description"}</p>
+
+                      <div className="mt-2 space-y-1">
+                        {step.taskIds.length === 0 ? (
+                          <p className="text-xs text-[#ba1a1a]">No linked tasks</p>
+                        ) : (
+                          step.taskIds.map((taskId) => {
+                            const task = taskCatalog.find((item) => item.id === taskId);
+                            if (!task) {
+                              return null;
+                            }
+
+                            return (
+                              <div key={task.id} className="rounded-md border border-[rgba(197,197,211,0.35)] bg-white px-2 py-1">
+                                <p className="line-clamp-1 text-xs text-[#1a1c1b]">{task.title}</p>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* AI Guidance Preview Card */}
+            <div className="space-y-4 rounded-xl bg-white p-5 border border-[#efeeec] shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-[#233a87]" />
+                  <h3 className="text-base font-bold text-[#1a1c1b]" style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}>
+                    AI Guidance Preview
+                  </h3>
+                </div>
+                {guidance ? (
+                  <span className="inline-flex items-center rounded-full bg-[rgba(0,106,97,0.08)] px-2 py-0.5 text-[10px] font-bold text-[#006a61]">
+                    GENERATED
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-[rgba(186,26,26,0.08)] px-2 py-0.5 text-[10px] font-bold text-[#ba1a1a]">
+                    MISSING
+                  </span>
+                )}
+              </div>
+
+              {isGuidanceLoading ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : !guidance ? (
+                <div className="rounded-lg border border-dashed border-[rgba(197,197,211,0.5)] bg-[#faf9f7] p-4 text-center">
+                  <p className="text-xs text-[#444651]">No guidance generated yet.</p>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="mt-1 h-auto p-0 text-[#233a87]"
+                    onClick={handleGenerateGuidance}
+                  >
+                    Generate now
+                  </Button>
                 </div>
               ) : (
-                effectiveEditorState.steps.map((step, index) => (
-                  <div key={`preview-${step.id ?? index}`} className="relative border-l-2 border-[rgba(35,58,135,0.2)] pl-4">
-                    <div className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[#233a87]" />
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444651]">
-                      Step {String(index + 1).padStart(2, "0")}
-                    </p>
-                    <h4 className="mt-1 text-sm font-semibold text-[#1a1c1b]">{step.title.trim() || "Untitled step"}</h4>
-                    <p className="mt-1 text-xs text-[#444651] line-clamp-2">{step.description?.trim() || "No description"}</p>
-
-                    <div className="mt-2 space-y-1">
-                      {step.taskIds.length === 0 ? (
-                        <p className="text-xs text-[#ba1a1a]">No linked tasks</p>
-                      ) : (
-                        step.taskIds.map((taskId) => {
-                          const task = taskCatalog.find((item) => item.id === taskId);
-                          if (!task) {
-                            return null;
-                          }
-
-                          return (
-                            <div key={task.id} className="rounded-md border border-[rgba(197,197,211,0.35)] bg-white px-2 py-1">
-                              <p className="line-clamp-1 text-xs text-[#1a1c1b]">{task.title}</p>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
+                <div className="space-y-4">
+                  <div className="rounded-lg bg-[rgba(35,58,135,0.04)] p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#233a87] mb-1">Onboarding Summary</p>
+                    <p className="text-xs text-[#444651] line-clamp-3">{guidance.summary.overview}</p>
                   </div>
-                ))
+
+                  <div className="max-h-[30vh] space-y-3 overflow-y-auto pr-1 hide-scrollbar">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#444651]">Interactive Steps</p>
+                    {guidance.interactiveSteps.map((step, idx) => (
+                      <div key={step.id} className="flex gap-3">
+                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#efeeec] text-[10px] font-bold text-[#444651]">
+                          {idx + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-[#1a1c1b] truncate">{step.title}</p>
+                          <p className="text-[10px] text-[#444651] line-clamp-1 italic">
+                            Action: {step.action}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           </div>

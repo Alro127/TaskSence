@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
 import type { WorkflowGuidanceDto, GuidanceStepDto } from "@/types/api";
+import { apiBaseUrl } from "@/config/config";
 
 interface GuidanceContextType {
   activeGuidance: WorkflowGuidanceDto | null;
@@ -48,33 +49,69 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
   const refreshProgress = useCallback(async () => {
     if (!activeProjectId) return;
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/projects/${activeProjectId}/guidance/progress`, {
+      const response = await fetch(`${apiBaseUrl}/projects/${activeProjectId}/guidance/progress`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         }
       });
       
       if (response.ok) {
         const result = await response.json();
         const progress = result.data;
-        setCurrentStepId(progress.currentStepId);
-        setCompletedStepIds(new Set(progress.completedStepIds));
+        if (progress && activeGuidance) {
+          const freshCompletedIds = new Set<string>(progress.completedStepIds);
+          setCompletedStepIds(freshCompletedIds);
+
+          const backendStepId = progress.currentStepId;
+          console.log("[Guidance] Polled progress:", { backendStepId, completedCount: freshCompletedIds.size });
+          
+          if (!currentStepId) {
+            console.log("[Guidance] Initializing currentStepId from backend:", backendStepId);
+            setCurrentStepId(backendStepId);
+          } else if (autoNavigate && backendStepId !== currentStepId) {
+            const steps = activeGuidance.interactiveSteps;
+            const localIdx = steps.findIndex(s => s.id === currentStepId);
+            const backendIdx = backendStepId ? steps.findIndex(s => s.id === backendStepId) : steps.length;
+            
+            if (backendIdx > localIdx) {
+              console.log(`[Guidance] Auto-navigating: ${currentStepId} -> ${backendStepId}`);
+              setCurrentStepId(backendStepId);
+            }
+          }
+        }
       }
     } catch (error) {
-      console.error("Failed to refresh guidance progress", error);
+      console.error("[Guidance] Failed to refresh progress:", error);
     }
-  }, [activeProjectId]);
+  }, [activeProjectId, autoNavigate, currentStepId, activeGuidance]);
 
   // Periodic polling for progress updates
   useEffect(() => {
     if (!isVisible || !activeGuidance || !activeProjectId) return;
     
     const interval = setInterval(() => {
-      refreshProgress(activeProjectId);
+      void refreshProgress();
     }, 3000); // Poll every 3 seconds
 
     return () => clearInterval(interval);
   }, [isVisible, activeGuidance, activeProjectId, refreshProgress]);
+
+  const reportAction = useCallback(async (actionType: string) => {
+    if (!activeProjectId) return;
+    try {
+      const token = localStorage.getItem('accessToken');
+      await fetch(`${apiBaseUrl}/projects/${activeProjectId}/guidance/report?actionType=${actionType}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+      // Optionally refresh after reporting
+      void refreshProgress();
+    } catch (error) {
+      console.error("[Guidance] Failed to report action:", error);
+    }
+  }, [activeProjectId, refreshProgress]);
 
   const startGuidance = useCallback(async (guidance: WorkflowGuidanceDto, projectId: number, workflowId: number, force = false) => {
     // If already active and not forced, don't restart
@@ -83,12 +120,22 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
     // If dismissed and not forced, don't start
     if (projectId && dismissedProjectIds.has(projectId) && !force) return;
 
+    if (!projectId || !workflowId || typeof workflowId === 'boolean') {
+      console.error("[Guidance] Cannot start guidance: invalid projectId or workflowId", { projectId, workflowId });
+      return;
+    }
+
     try {
       // Call backend to initialize progress
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/projects/${projectId}/guidance/start?workflowId=${workflowId}`, {
+      const url = `${apiBaseUrl}/projects/${projectId}/guidance/start?workflowId=${workflowId}${force ? '&force=true' : ''}`;
+      const token = localStorage.getItem('accessToken');
+      console.log("[Guidance] Starting guidance with URL:", url);
+      console.log("[Guidance] Access token present:", !!token);
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Authorization': `Bearer ${token}`,
         }
       });
       
@@ -96,14 +143,18 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
         const result = await response.json();
         const progress = result.data;
         
-        setActiveGuidance(guidance);
-        setActiveProjectId(projectId);
-        setCurrentStepId(progress.currentStepId);
-        setCompletedStepIds(new Set(progress.completedStepIds));
-        setIsVisible(true);
+        if (progress) {
+          setActiveGuidance(guidance);
+          setActiveProjectId(projectId);
+          setCurrentStepId(progress.currentStepId);
+          setCompletedStepIds(new Set(progress.completedStepIds));
+          setIsVisible(true);
+        }
+      } else {
+        console.error("[Guidance] Backend failed to start guidance:", response.status);
       }
     } catch (error) {
-      console.error("Failed to start guidance on backend", error);
+      console.error("[Guidance] Network error starting guidance:", error);
     }
   }, [activeGuidance, dismissedProjectIds]);
 
@@ -114,13 +165,28 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
 
   const nextStep = useCallback(() => {
     if (!activeGuidance || !currentStepId) return;
+    
+    // If current step is manual or we're skipping, we should report it to backend
+    if (currentStep?.completionCondition.type === 'MANUAL') {
+      console.log("[Guidance] Reporting manual completion for step:", currentStepId);
+      void reportAction('MANUAL');
+    }
+
     const currentIndex = activeGuidance.interactiveSteps.findIndex(s => s.id === currentStepId);
+    if (currentIndex === -1) {
+      console.warn("[Guidance] Current step ID not found in interactive steps:", currentStepId);
+      return;
+    }
+
     if (currentIndex < activeGuidance.interactiveSteps.length - 1) {
-      setCurrentStepId(activeGuidance.interactiveSteps[currentIndex + 1].id);
+      const nextId = activeGuidance.interactiveSteps[currentIndex + 1].id;
+      console.log(`[Guidance] Manually advancing: ${currentStepId} -> ${nextId}`);
+      setCurrentStepId(nextId);
     } else {
+      console.log("[Guidance] Last step reached. Closing overlay.");
       setIsVisible(false);
     }
-  }, [activeGuidance, currentStepId]);
+  }, [activeGuidance, currentStepId, currentStep, reportAction]);
 
   const prevStep = useCallback(() => {
     if (!activeGuidance || !currentStepId) return;
@@ -129,10 +195,6 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
       setCurrentStepId(activeGuidance.interactiveSteps[currentIndex - 1].id);
     }
   }, [activeGuidance, currentStepId]);
-
-  const reportAction = useCallback((_actionType: string) => {
-    // Backend now handles reporting through actual service actions
-  }, []);
 
   const isStepCompleted = useCallback((stepId: string) => {
     return completedStepIds.has(stepId);

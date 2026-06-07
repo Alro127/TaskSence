@@ -1,12 +1,12 @@
 package dev.alro127.tasksense.service.impl;
 
 import dev.alro127.tasksense.domain.entity.UserEntity;
+import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.dto.request.UpdateUserRequest;
 import dev.alro127.tasksense.dto.response.UserResponse;
 import dev.alro127.tasksense.exception.BadRequestException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.UserRepository;
-import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.event.EntityChangedEvent;
 import dev.alro127.tasksense.event.EntityChangedEvent.Operation;
 import dev.alro127.tasksense.service.SecurityService;
@@ -38,7 +38,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse getUser(Long userId) {
-        UserEntity user = userRepository.findById(userId).orElseThrow( () -> new ResourceNotFoundException("User not found"));
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return UserResponse.mapToResponse(user);
     }
 
@@ -99,18 +100,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserResponse> searchUsersWithCursor(String keyword,
-                                                    Long cursor,
-                                                    int limit) {
+            Long cursor,
+            int limit) {
 
         Pageable pageable = PageRequest.of(0, limit);
 
-        List<UserEntity> users =
-                userRepository.searchUsers(keyword, cursor, pageable);
+        List<UserEntity> users = userRepository.searchUsers(keyword, cursor, pageable);
 
         return users.stream()
                 .map(UserResponse::mapToResponse)
                 .toList();
     }
-
 
 }

@@ -21,8 +21,7 @@ public class EmailService {
                 OutboxEventType.EMAIL,
                 null,
                 null,
-                message
-        );
+                message);
 
         try {
 

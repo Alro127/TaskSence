@@ -4,6 +4,7 @@ import dev.alro127.tasksense.domain.entity.ProjectEntity;
 import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
 import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
+import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
 import dev.alro127.tasksense.dto.common.PageResponse;
@@ -15,14 +16,15 @@ import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.TaskRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
+import dev.alro127.tasksense.repository.jpa.WorkflowRepository;
 import dev.alro127.tasksense.security.permission.EffectivePermissionResolver;
-import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.event.EntityChangedEvent;
 import dev.alro127.tasksense.event.EntityChangedEvent.Operation;
 import dev.alro127.tasksense.service.ProjectService;
 import dev.alro127.tasksense.service.SearchIndexService;
 import dev.alro127.tasksense.service.SecurityService;
 
+import dev.alro127.tasksense.service.WorkflowService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,6 +48,7 @@ public class ProjectServiceImpl implements ProjectService {
     private final WorkspaceRepository workspaceRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final TaskRepository taskRepository;
+    private final WorkflowService workflowService;
     private final SecurityService securityService;
     private final EffectivePermissionResolver permissionResolver;
     private final ApplicationEventPublisher eventPublisher;
@@ -102,8 +105,7 @@ public class ProjectServiceImpl implements ProjectService {
         workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
-        Page<ProjectEntity> projectPage =
-                projectRepository.findAllByWorkspaceId(workspaceId, pageable);
+        Page<ProjectEntity> projectPage = projectRepository.findAllByWorkspaceId(workspaceId, pageable);
 
         List<ProjectEntity> projects = projectPage.getContent();
 
@@ -113,11 +115,9 @@ public class ProjectServiceImpl implements ProjectService {
                 .toList();
 
         // ✅ Batch query
-        Map<Long, Long> totalTaskMap =
-                toCountMap(taskRepository.countByProjectIds(projectIds));
+        Map<Long, Long> totalTaskMap = toCountMap(taskRepository.countByProjectIds(projectIds));
 
-        Map<Long, Long> doneTaskMap =
-                toCountMap(taskRepository.countDoneByProjectIds(projectIds, TaskStatus.DONE));
+        Map<Long, Long> doneTaskMap = toCountMap(taskRepository.countDoneByProjectIds(projectIds, TaskStatus.DONE));
 
         Long currentUserId = securityService.getCurrentUserId();
 
@@ -133,15 +133,12 @@ public class ProjectServiceImpl implements ProjectService {
                     res.setProgress(
                             total != 0
                                     ? (float) ((done * 100.0) / total)
-                                    : 0
-                    );
+                                    : 0);
 
                     res.setPermissions(
                             permissionResolver.resolveProjectPermissions(
                                     currentUserId,
-                                    project.getId()
-                            )
-                    );
+                                    project.getId()));
 
                     return res;
                 })
@@ -198,9 +195,10 @@ public class ProjectServiceImpl implements ProjectService {
 
         OffsetDateTime now = OffsetDateTime.now();
 
-        // Cascade soft delete: tasks → project members → project
+        // Cascade soft delete: tasks → project members → workflows → project
         taskRepository.softDeleteByProjectId(projectId, now);
         projectMemberRepository.softDeleteByProjectId(projectId, now);
+        workflowService.deleteWorkflowsByProjectIds(List.of(projectId), now);
 
         project.setDeletedAt(now);
         projectRepository.save(project);
@@ -236,7 +234,9 @@ public class ProjectServiceImpl implements ProjectService {
         ProjectResponse response = ProjectResponse.mapToResponse(project);
 
         Long taskCount = taskRepository.countByProjectId(project.getId());
-        response.setProgress(taskCount != 0 ? (taskRepository.countByProjectIdAndStatus(project.getId(), TaskStatus.DONE)/taskCount)*100 : 0);
+        response.setProgress(taskCount != 0
+                ? (taskRepository.countByProjectIdAndStatus(project.getId(), TaskStatus.DONE) / taskCount) * 100
+                : 0);
         response.setTaskCount(taskCount);
         response.setPermissions(permissionResolver.resolveProjectPermissions(currentUserId, project.getId()));
         return response;

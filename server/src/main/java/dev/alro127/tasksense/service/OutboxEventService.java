@@ -1,8 +1,9 @@
 package dev.alro127.tasksense.service;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import dev.alro127.tasksense.domain.enums.EntityType;
 import dev.alro127.tasksense.domain.enums.OutboxEventType;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
