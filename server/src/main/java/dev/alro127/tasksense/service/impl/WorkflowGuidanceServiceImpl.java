@@ -120,7 +120,8 @@ public class WorkflowGuidanceServiceImpl implements WorkflowGuidanceService {
                 Map<String, String> stepDescriptionMap = request.getInteractiveSteps().stream()
                                 .collect(Collectors.toMap(
                                                 UpdateWorkflowGuidanceRequest.UpdateGuidanceStepRequest::getId,
-                                                UpdateWorkflowGuidanceRequest.UpdateGuidanceStepRequest::getDescription));
+                                                UpdateWorkflowGuidanceRequest.UpdateGuidanceStepRequest::getDescription,
+                                                (existing, replacement) -> existing));
 
                 rawJson.getInteractiveSteps().forEach(step -> {
                         if (stepDescriptionMap.containsKey(step.getId())) {

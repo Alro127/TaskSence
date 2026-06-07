@@ -198,7 +198,8 @@ public class WorkflowServiceImpl implements WorkflowService {
             throw new BadRequestException("Some tasks do not belong to workflow project");
         }
 
-        Map<Long, TaskEntity> taskById = tasks.stream().collect(Collectors.toMap(TaskEntity::getId, task -> task));
+        Map<Long, TaskEntity> taskById = tasks.stream()
+                .collect(Collectors.toMap(TaskEntity::getId, task -> task, (existing, replacement) -> existing));
 
         Set<Long> sprintIds = request.getSteps().stream()
                 .map(UpdateWorkflowDraftRequest.UpdateWorkflowStepRequest::getSourceSprintId)
@@ -224,6 +225,8 @@ public class WorkflowServiceImpl implements WorkflowService {
             List<Long> existingStepIds = existingSteps.stream().map(WorkflowStepEntity::getId).toList();
             workflowStepTaskRepository.deleteByWorkflowStepIdIn(existingStepIds);
             workflowStepRepository.deleteByWorkflowId(workflowId);
+            workflowStepTaskRepository.flush();
+            workflowStepRepository.flush();
         }
 
         List<WorkflowStepResponse> stepResponses = new ArrayList<>();
@@ -242,6 +245,7 @@ public class WorkflowServiceImpl implements WorkflowService {
                     .build());
 
             List<TaskEntity> stepTasks = stepRequest.getTaskIds().stream()
+                    .distinct()
                     .map(taskById::get)
                     .toList();
 
