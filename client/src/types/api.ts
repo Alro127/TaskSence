@@ -253,6 +253,7 @@ export interface Project {
   endDate: string | null;
   createdAt: string;
   updatedAt: string;
+  workflowId?: number;
 }
 
 export interface CreateProjectRequest {
@@ -398,6 +399,56 @@ export interface CreateWorkflowFromProjectRequest {
   includeSubtasks?: boolean;
   includeCompletedTasks?: boolean;
   useAiRefinement?: boolean;
+}
+
+// ─── Project Guidance ───────────────────────────────────────────────────────
+export type StepType = "REQUIRED" | "OPTIONAL" | "CONDITIONAL";
+
+export interface StepCompletionConditionDto {
+  type: string; // e.g., TASK_CREATED, MANUAL
+  count?: number;
+}
+
+export interface GuidanceStepDto {
+  id: string;
+  title: string;
+  description: string;
+  action: string;
+  uiTarget: string;
+  type: StepType;
+  dependsOn: string[];
+  completionCondition: StepCompletionConditionDto;
+}
+
+export interface GuidanceSummaryDto {
+  overview: string;
+  bestPractices: string[];
+  risks: string[];
+}
+
+export interface WorkflowGuidanceDto {
+  summary: GuidanceSummaryDto;
+  interactiveSteps: GuidanceStepDto[];
+}
+
+export interface GenerateGuidanceRequest {
+  userInstructions?: string;
+}
+
+export interface UpdateGuidanceStepRequest {
+  id: string;
+  description: string;
+}
+
+export interface UpdateWorkflowGuidanceRequest {
+  summary: GuidanceSummaryDto;
+  interactiveSteps: UpdateGuidanceStepRequest[];
+}
+
+export interface CreateProjectFromWorkflowRequest {
+  name: string;
+  description?: string;
+  workspaceId?: number;
 }
 
 // ─── Workspace Join Request ───────────────────────────────────────────────────

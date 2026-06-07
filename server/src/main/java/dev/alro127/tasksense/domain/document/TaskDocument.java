@@ -1,13 +1,14 @@
 package dev.alro127.tasksense.domain.document;
 
-import dev.alro127.tasksense.domain.enums.TaskPriority;
-import dev.alro127.tasksense.domain.enums.TaskStatus;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+
+import dev.alro127.tasksense.domain.enums.TaskPriority;
+import dev.alro127.tasksense.domain.enums.TaskStatus;
 
 import java.time.OffsetDateTime;
 import java.util.List;

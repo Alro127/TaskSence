@@ -25,8 +25,7 @@ public class EmailPublisher implements Publisher {
 
             redisTemplate.convertAndSend(
                     RedisKeys.AUTH_EMAIL_CHANNEL,
-                    message
-            );
+                    message);
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to publish notification", e);

@@ -1,12 +1,13 @@
 package dev.alro127.tasksense.dto.request;
 
-import dev.alro127.tasksense.domain.enums.TaskPriority;
-import dev.alro127.tasksense.domain.enums.TaskStatus;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+
+import dev.alro127.tasksense.domain.enums.TaskPriority;
+import dev.alro127.tasksense.domain.enums.TaskStatus;
 
 @Data
 public class UpdateTaskRequest {

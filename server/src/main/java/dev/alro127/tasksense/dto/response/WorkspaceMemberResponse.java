@@ -1,12 +1,13 @@
 package dev.alro127.tasksense.dto.response;
 
-import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
-import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.OffsetDateTime;
 import java.util.Set;
+
+import dev.alro127.tasksense.domain.entity.WorkspaceMemberEntity;
+import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 
 @Data
 @Builder

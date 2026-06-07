@@ -1,9 +1,9 @@
 package dev.alro127.tasksense.mcp;
 
+import dev.alro127.tasksense.dto.agent.AgentProjectWithTasksResponse;
 import dev.alro127.tasksense.domain.enums.ProjectStatus;
 import dev.alro127.tasksense.domain.enums.TaskPriority;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
-import dev.alro127.tasksense.dto.agent.AgentProjectWithTasksResponse;
 import dev.alro127.tasksense.dto.agent.AgentConfirmationRequiredResponse;
 import dev.alro127.tasksense.dto.agent.AgentResolutionResponse;
 import dev.alro127.tasksense.dto.agent.AgentResolutionStatus;
@@ -81,7 +81,8 @@ public class TaskSenseMcpTools {
     }
 
     @Tool(name = "create_project", description = "Create a project inside an authorized TaskSense workspace.")
-    public ProjectResponse createProject(@ToolParam(description = "create_project request") CreateProjectToolRequest toolRequest) {
+    public ProjectResponse createProject(
+            @ToolParam(description = "create_project request") CreateProjectToolRequest toolRequest) {
         Long workspaceId = requireId(toolRequest.getWorkspaceId(), "workspaceId is required for create_project");
         if (!permissionChecker.workspace(workspaceId, WorkspacePermission.CREATE_PROJECT.name())) {
             throw new UnauthorizedException("You do not have CREATE_PROJECT permission on this workspace");
@@ -100,7 +101,8 @@ public class TaskSenseMcpTools {
     }
 
     @Tool(name = "create_workspace", description = "Create a new TaskSense workspace for the authenticated user.")
-    public WorkspaceResponse createWorkspace(@ToolParam(description = "create_workspace request") CreateWorkspaceToolRequest toolRequest) {
+    public WorkspaceResponse createWorkspace(
+            @ToolParam(description = "create_workspace request") CreateWorkspaceToolRequest toolRequest) {
         CreateWorkspaceRequest request = new CreateWorkspaceRequest();
         request.setName(requireNonBlank(toolRequest.getName(), "name is required for create_workspace"));
         request.setDescription(trimToNull(toolRequest.getDescription()));
@@ -112,8 +114,10 @@ public class TaskSenseMcpTools {
     }
 
     @Tool(name = "create_workflow_from_project", description = "Create a workflow draft from an existing authorized TaskSense project using the current stable workflow logic.")
-    public WorkflowDraftResponse createWorkflowFromProject(@ToolParam(description = "create_workflow_from_project request") CreateWorkflowFromProjectToolRequest toolRequest) {
-        Long projectId = requireId(toolRequest.getProjectId(), "projectId is required for create_workflow_from_project");
+    public WorkflowDraftResponse createWorkflowFromProject(
+            @ToolParam(description = "create_workflow_from_project request") CreateWorkflowFromProjectToolRequest toolRequest) {
+        Long projectId = requireId(toolRequest.getProjectId(),
+                "projectId is required for create_workflow_from_project");
         permissionChecker.requireProjectPermission(projectId, ProjectPermission.VIEW_TASKS);
 
         CreateWorkflowFromProjectRequest request = new CreateWorkflowFromProjectRequest();
@@ -127,7 +131,8 @@ public class TaskSenseMcpTools {
     }
 
     @Tool(name = "update_task_status", description = "Update a task status inside an authorized TaskSense project.")
-    public TaskResponse updateTaskStatus(@ToolParam(description = "update_task_status request") UpdateTaskStatusToolRequest toolRequest) {
+    public TaskResponse updateTaskStatus(
+            @ToolParam(description = "update_task_status request") UpdateTaskStatusToolRequest toolRequest) {
         Long projectId = requireId(toolRequest.getProjectId(), "projectId is required for update_task_status");
         Long taskId = requireId(toolRequest.getTaskId(), "taskId is required for update_task_status");
         permissionChecker.requireProjectPermission(projectId, ProjectPermission.UPDATE_TASK_STATUS);
@@ -139,12 +144,14 @@ public class TaskSenseMcpTools {
         request.setStatus(toolRequest.getStatus());
 
         TaskResponse result = taskService.updateTaskStatus(projectId, taskId, request);
-        log.info("[mcp-tool] update_task_status projectId={} taskId={} status={}", projectId, taskId, result.getStatus());
+        log.info("[mcp-tool] update_task_status projectId={} taskId={} status={}", projectId, taskId,
+                result.getStatus());
         return result;
     }
 
     @Tool(name = "resolve_workspace", description = "Resolve an authorized TaskSense workspace by id or name for a required workspace permission.")
-    public AgentResolutionResponse<AgentResolvedWorkspace> resolveWorkspace(@ToolParam(description = "resolve_workspace request") ResolveWorkspaceToolRequest toolRequest) {
+    public AgentResolutionResponse<AgentResolvedWorkspace> resolveWorkspace(
+            @ToolParam(description = "resolve_workspace request") ResolveWorkspaceToolRequest toolRequest) {
         WorkspacePermission permission = toolRequest.getRequiredPermission() != null
                 ? toolRequest.getRequiredPermission()
                 : WorkspacePermission.VIEW;
@@ -155,7 +162,8 @@ public class TaskSenseMcpTools {
     }
 
     @Tool(name = "resolve_project", description = "Resolve an authorized TaskSense project by id, name, and optional workspace context for a required project permission.")
-    public AgentResolutionResponse<AgentResolvedProject> resolveProject(@ToolParam(description = "resolve_project request") ResolveProjectToolRequest toolRequest) {
+    public AgentResolutionResponse<AgentResolvedProject> resolveProject(
+            @ToolParam(description = "resolve_project request") ResolveProjectToolRequest toolRequest) {
         ProjectPermission permission = toolRequest.getRequiredPermission() != null
                 ? toolRequest.getRequiredPermission()
                 : ProjectPermission.VIEW;
@@ -168,7 +176,8 @@ public class TaskSenseMcpTools {
     }
 
     @Tool(name = "resolve_task", description = "Resolve an authorized TaskSense task by id or title with project/workspace context.")
-    public AgentResolutionResponse<AgentResolvedTask> resolveTask(@ToolParam(description = "resolve_task request") ResolveTaskToolRequest toolRequest) {
+    public AgentResolutionResponse<AgentResolvedTask> resolveTask(
+            @ToolParam(description = "resolve_task request") ResolveTaskToolRequest toolRequest) {
         ProjectPermission permission = toolRequest.getRequiredProjectPermission() != null
                 ? toolRequest.getRequiredProjectPermission()
                 : ProjectPermission.VIEW_TASKS;
@@ -183,7 +192,8 @@ public class TaskSenseMcpTools {
     }
 
     @Tool(name = "create_task_natural", description = "Create a task by resolving project/workspace names when projectId is not provided.")
-    public Object createTaskNatural(@ToolParam(description = "create_task_natural request") CreateTaskNaturalToolRequest toolRequest) {
+    public Object createTaskNatural(
+            @ToolParam(description = "create_task_natural request") CreateTaskNaturalToolRequest toolRequest) {
         Long projectId = toolRequest.getProjectId();
         if (projectId == null) {
             AgentResolutionResponse<AgentResolvedProject> resolution = agentEntityResolverService.resolveProject(
@@ -214,8 +224,10 @@ public class TaskSenseMcpTools {
     }
 
     @Tool(name = "create_project_natural", description = "Create a project by resolving the target workspace from id or name.")
-    public Object createProjectNatural(@ToolParam(description = "create_project_natural request") CreateProjectNaturalToolRequest toolRequest) {
-        Long workspaceId = resolveWorkspaceForCreateProject(toolRequest.getWorkspaceId(), toolRequest.getWorkspaceName());
+    public Object createProjectNatural(
+            @ToolParam(description = "create_project_natural request") CreateProjectNaturalToolRequest toolRequest) {
+        Long workspaceId = resolveWorkspaceForCreateProject(toolRequest.getWorkspaceId(),
+                toolRequest.getWorkspaceName());
         if (workspaceId == null) {
             return agentEntityResolverService.resolveWorkspace(
                     null,
@@ -235,8 +247,10 @@ public class TaskSenseMcpTools {
 
     @Tool(name = "create_project_with_tasks", description = "Create a project and initial tasks from a free-form project plan. Maximum 20 tasks.")
     @Transactional
-    public Object createProjectWithTasks(@ToolParam(description = "create_project_with_tasks request") CreateProjectWithTasksToolRequest toolRequest) {
-        Long workspaceId = resolveWorkspaceForCreateProject(toolRequest.getWorkspaceId(), toolRequest.getWorkspaceName());
+    public Object createProjectWithTasks(
+            @ToolParam(description = "create_project_with_tasks request") CreateProjectWithTasksToolRequest toolRequest) {
+        Long workspaceId = resolveWorkspaceForCreateProject(toolRequest.getWorkspaceId(),
+                toolRequest.getWorkspaceName());
         if (workspaceId == null) {
             return agentEntityResolverService.resolveWorkspace(
                     null,
@@ -278,7 +292,8 @@ public class TaskSenseMcpTools {
     }
 
     @Tool(name = "create_workflow_from_project_natural", description = "Create a workflow draft by resolving project/workspace names when projectId is not provided.")
-    public Object createWorkflowFromProjectNatural(@ToolParam(description = "create_workflow_from_project_natural request") CreateWorkflowFromProjectNaturalToolRequest toolRequest) {
+    public Object createWorkflowFromProjectNatural(
+            @ToolParam(description = "create_workflow_from_project_natural request") CreateWorkflowFromProjectNaturalToolRequest toolRequest) {
         Long projectId = toolRequest.getProjectId();
         if (projectId == null) {
             AgentResolutionResponse<AgentResolvedProject> resolution = agentEntityResolverService.resolveProject(
@@ -302,8 +317,10 @@ public class TaskSenseMcpTools {
     }
 
     @Tool(name = "update_task_natural", description = "Preview or update a task after explicit confirmation. This tool never updates unless confirmed=true.")
-    public Object updateTaskNatural(@ToolParam(description = "update_task_natural request") UpdateTaskNaturalToolRequest toolRequest) {
-        AgentResolutionResponse<AgentResolvedTask> resolution = resolveTaskForMutation(toolRequest, ProjectPermission.UPDATE_TASK);
+    public Object updateTaskNatural(
+            @ToolParam(description = "update_task_natural request") UpdateTaskNaturalToolRequest toolRequest) {
+        AgentResolutionResponse<AgentResolvedTask> resolution = resolveTaskForMutation(toolRequest,
+                ProjectPermission.UPDATE_TASK);
         if (!resolution.isResolved()) {
             return resolution;
         }
@@ -333,8 +350,10 @@ public class TaskSenseMcpTools {
     }
 
     @Tool(name = "delete_task_natural", description = "Preview or delete a task after explicit confirmation. This tool never deletes unless confirmed=true.")
-    public Object deleteTaskNatural(@ToolParam(description = "delete_task_natural request") DeleteTaskNaturalToolRequest toolRequest) {
-        AgentResolutionResponse<AgentResolvedTask> resolution = resolveTaskForMutation(toolRequest, ProjectPermission.DELETE_TASK);
+    public Object deleteTaskNatural(
+            @ToolParam(description = "delete_task_natural request") DeleteTaskNaturalToolRequest toolRequest) {
+        AgentResolutionResponse<AgentResolvedTask> resolution = resolveTaskForMutation(toolRequest,
+                ProjectPermission.DELETE_TASK);
         if (!resolution.isResolved()) {
             return resolution;
         }
@@ -351,7 +370,8 @@ public class TaskSenseMcpTools {
     }
 
     @Tool(name = "delete_project_natural", description = "Preview or delete a project after explicit confirmation. This tool never deletes unless confirmed=true.")
-    public Object deleteProjectNatural(@ToolParam(description = "delete_project_natural request") DeleteProjectNaturalToolRequest toolRequest) {
+    public Object deleteProjectNatural(
+            @ToolParam(description = "delete_project_natural request") DeleteProjectNaturalToolRequest toolRequest) {
         AgentResolutionResponse<AgentResolvedProject> resolution = agentEntityResolverService.resolveProject(
                 toolRequest.getProjectId(),
                 toolRequest.getProjectName(),
@@ -369,11 +389,13 @@ public class TaskSenseMcpTools {
         agentConfirmationService.consume(toolRequest.getConfirmationToken(), "delete_project_natural", target, null);
         permissionChecker.requireProjectPermission(target.getProjectId(), ProjectPermission.DELETE);
         projectService.deleteProject(target.getWorkspaceId(), target.getProjectId());
-        log.info("[mcp-tool] delete_project_natural workspaceId={} projectId={}", target.getWorkspaceId(), target.getProjectId());
+        log.info("[mcp-tool] delete_project_natural workspaceId={} projectId={}", target.getWorkspaceId(),
+                target.getProjectId());
         return target;
     }
 
-    private AgentResolutionResponse<AgentResolvedTask> resolveTaskForMutation(TaskTargetToolRequest toolRequest, ProjectPermission permission) {
+    private AgentResolutionResponse<AgentResolvedTask> resolveTaskForMutation(TaskTargetToolRequest toolRequest,
+            ProjectPermission permission) {
         return agentEntityResolverService.resolveTask(
                 toolRequest.getTaskId(),
                 toolRequest.getTaskTitle(),
@@ -384,7 +406,8 @@ public class TaskSenseMcpTools {
                 permission);
     }
 
-    private AgentConfirmationRequiredResponse confirmationRequired(String action, String message, Object target, Object changes) {
+    private AgentConfirmationRequiredResponse confirmationRequired(String action, String message, Object target,
+            Object changes) {
         AgentConfirmationService.ConfirmationTicket ticket = agentConfirmationService.issue(action, target, changes);
         return AgentConfirmationRequiredResponse.builder()
                 .status("CONFIRMATION_REQUIRED")

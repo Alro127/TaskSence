@@ -1,13 +1,14 @@
 package dev.alro127.tasksense.domain.entity;
 
-import dev.alro127.tasksense.domain.enums.DeliveryStatus;
-import dev.alro127.tasksense.domain.enums.EntityType;
-import dev.alro127.tasksense.domain.enums.OutboxEventType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+
+import dev.alro127.tasksense.domain.enums.DeliveryStatus;
+import dev.alro127.tasksense.domain.enums.EntityType;
+import dev.alro127.tasksense.domain.enums.OutboxEventType;
 
 import java.time.OffsetDateTime;
 import java.util.Map;

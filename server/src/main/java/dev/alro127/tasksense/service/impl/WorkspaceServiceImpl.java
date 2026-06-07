@@ -15,8 +15,10 @@ import dev.alro127.tasksense.repository.jpa.TaskRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceInviteRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
+import dev.alro127.tasksense.repository.jpa.WorkflowRepository;
 import dev.alro127.tasksense.security.permission.EffectivePermissionResolver;
 import dev.alro127.tasksense.service.SecurityService;
+import dev.alro127.tasksense.service.WorkflowService;
 import dev.alro127.tasksense.service.WorkspaceService;
 import lombok.RequiredArgsConstructor;
 
@@ -41,6 +43,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private final ProjectMemberRepository projectMemberRepository;
     private final TaskRepository taskRepository;
     private final WorkspaceInviteRepository workspaceInviteRepository;
+    private final WorkflowService workflowService;
     private final SecurityService securityService;
     private final EffectivePermissionResolver permissionResolver;
 
@@ -82,8 +85,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     public PageResponse<WorkspaceResponse> getMyWorkspaces(Pageable pageable) {
         UserEntity currentUser = securityService.getCurrentUser();
 
-        Page<WorkspaceEntity> workspacePage =
-                workspaceRepository.findAllByMemberUserId(currentUser.getId(), pageable);
+        Page<WorkspaceEntity> workspacePage = workspaceRepository.findAllByMemberUserId(currentUser.getId(), pageable);
 
         // ✅ Lấy list ID
         List<Long> workspaceIds = workspacePage.getContent()
@@ -93,8 +95,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         // ✅ Query 1 lần
         Map<Long, Long> countMap = toCountMap(
-                projectRepository.countByWorkspaceIds(workspaceIds)
-        );
+                projectRepository.countByWorkspaceIds(workspaceIds));
 
         // ✅ Map sang response
         Page<WorkspaceResponse> responsePage = workspacePage.map(workspace -> {
@@ -105,9 +106,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             res.setPermissions(
                     permissionResolver.resolveWorkspacePermissions(
                             securityService.getCurrentUserId(),
-                            workspace.getId()
-                    )
-            );
+                            workspace.getId()));
 
             return res;
         });
@@ -154,12 +153,14 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         OffsetDateTime now = OffsetDateTime.now();
 
-        // Cascade soft delete: tasks → project members → projects → workspace members →
+        // Cascade soft delete: tasks → project members → workflows → projects →
+        // workspace members →
         // invites → workspace
         List<Long> projectIds = projectRepository.findIdsByWorkspaceId(id);
         if (!projectIds.isEmpty()) {
             taskRepository.softDeleteByProjectIds(projectIds, now);
             projectMemberRepository.softDeleteByProjectIds(projectIds, now);
+            workflowService.deleteWorkflowsByProjectIds(projectIds, now);
         }
         projectRepository.softDeleteByWorkspaceId(id, now);
         workspaceMemberRepository.softDeleteByWorkspaceId(id, now);
@@ -209,8 +210,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         Long currentUserId = securityService.getCurrentUserId();
         WorkspaceResponse response = WorkspaceResponse.mapToResponse(workspace);
         response.setProjectCount(
-                projectRepository.countByWorkspaceId(workspace.getId())
-        );
+                projectRepository.countByWorkspaceId(workspace.getId()));
         response.setPermissions(permissionResolver.resolveWorkspacePermissions(currentUserId, workspace.getId()));
         return response;
     }

@@ -11,6 +11,9 @@ import dev.alro127.tasksense.dto.response.WorkflowRatingResponse;
 import dev.alro127.tasksense.dto.response.WorkflowRatingSummaryResponse;
 import org.springframework.data.domain.Pageable;
 
+import java.time.OffsetDateTime;
+import java.util.List;
+
 public interface WorkflowService {
 
     WorkflowDraftResponse createWorkflowFromProject(Long projectId, CreateWorkflowFromProjectRequest request);
@@ -18,6 +21,8 @@ public interface WorkflowService {
     WorkflowDraftResponse updateWorkflowDraft(Long workflowId, UpdateWorkflowDraftRequest request);
 
     WorkflowDraftResponse publishWorkflow(Long workflowId);
+
+    WorkflowDraftResponse unpublishWorkflow(Long workflowId);
 
     PageResponse<WorkflowDraftResponse> getMyWorkflows(WorkflowStatus status, Pageable pageable);
 
@@ -32,4 +37,8 @@ public interface WorkflowService {
     WorkflowRatingSummaryResponse getWorkflowRatingSummary(Long workflowId);
 
     WorkflowFavoriteToggleResponse toggleWorkflowFavorite(Long workflowId);
+
+    void deleteWorkflowDraft(Long workflowId);
+
+    void deleteWorkflowsByProjectIds(List<Long> projectIds, OffsetDateTime now);
 }

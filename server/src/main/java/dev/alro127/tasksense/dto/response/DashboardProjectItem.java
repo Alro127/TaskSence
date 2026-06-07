@@ -1,10 +1,11 @@
 package dev.alro127.tasksense.dto.response;
 
-import dev.alro127.tasksense.domain.enums.ProjectStatus;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDate;
+
+import dev.alro127.tasksense.domain.enums.ProjectStatus;
 
 @Data
 @Builder

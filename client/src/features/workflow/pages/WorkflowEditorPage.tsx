@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { AlertTriangle, ArrowLeft, Eye, Loader2, Plus, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Eye, Loader2, Plus, Sparkles, Trash2, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,9 +24,13 @@ import type {
 import {
   useGetMyWorkflowsQuery,
   usePublishWorkflowMutation,
+  useUnpublishWorkflowMutation,
   useUpdateWorkflowDraftMutation,
+  useDeleteWorkflowDraftMutation,
+  useGenerateGuidanceMutation,
+  useGetGuidanceByWorkflowQuery,
 } from "../api/workflowApi";
-import { WorkflowEditorStepCard } from "../components";
+import { RegenerateGuidanceDialog, WorkflowEditorStepCard } from "../components";
 
 interface TaskOption {
   id: number;
@@ -182,6 +186,29 @@ function createEditorState(workflow: WorkflowDraftResponse): EditorState {
   };
 }
 
+function moveItem<T>(list: T[], index: number, direction: "UP" | "DOWN"): T[] {
+  const next = [...list];
+  const targetIndex = direction === "UP" ? index - 1 : index + 1;
+  if (targetIndex < 0 || targetIndex >= next.length) {
+    return next;
+  }
+
+  const [removed] = next.splice(index, 1);
+  next.splice(targetIndex, 0, removed);
+  return next;
+}
+
+function createNewStep(position: number): UpdateWorkflowStepRequest {
+  return {
+    title: "",
+    description: "",
+    position,
+    sourceType: "RULE",
+    sourceSprintId: null,
+    taskIds: [],
+  };
+}
+
 export function WorkflowEditorPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -197,6 +224,12 @@ export function WorkflowEditorPage() {
     isError,
     refetch,
   } = useGetMyWorkflowsQuery({ page: 0, size: 200 }, { skip: Number.isNaN(workflowId) });
+
+  const { data: guidanceData, isLoading: isGuidanceLoading } = useGetGuidanceByWorkflowQuery(
+    { workflowId },
+    { skip: Number.isNaN(workflowId) },
+  );
+  const guidance = guidanceData?.data;
 
   const workflow = useMemo(() => {
     const fromList = workflowListData?.data?.data.find((item) => item.id === workflowId);
@@ -214,9 +247,36 @@ export function WorkflowEditorPage() {
   const [editorStateById, setEditorStateById] = useState<Record<number, EditorState>>({});
   const [validation, setValidation] = useState<ValidationState>(emptyValidationState);
   const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const [isUnpublishDialogOpen, setIsUnpublishDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isGuidanceDialogOpen, setIsGuidanceDialogOpen] = useState(false);
 
   const [updateWorkflowDraft, { isLoading: isSaving }] = useUpdateWorkflowDraftMutation();
   const [publishWorkflow, { isLoading: isPublishing }] = usePublishWorkflowMutation();
+  const [unpublishWorkflow, { isLoading: isUnpublishing }] = useUnpublishWorkflowMutation();
+  const [deleteWorkflowDraft, { isLoading: isDeleting }] = useDeleteWorkflowDraftMutation();
+  const [generateGuidance, { isLoading: isGeneratingGuidance }] = useGenerateGuidanceMutation();
+
+  const handleGenerateGuidance = () => {
+    setIsGuidanceDialogOpen(true);
+  };
+
+  const handleConfirmRegenerate = async (userInstructions: string) => {
+    if (!workflow) {
+      return;
+    }
+
+    try {
+      await generateGuidance({
+        workflowId: workflow.id,
+        body: userInstructions.trim() ? { userInstructions } : undefined,
+      }).unwrap();
+      toast.success("AI Guidance generated successfully");
+      setIsGuidanceDialogOpen(false);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to generate guidance."));
+    }
+  };
 
   const taskCatalog = useMemo(() => (workflow ? extractTaskOptions(workflow) : []), [workflow]);
   const baselineEditorState = useMemo(() => (workflow ? createEditorState(workflow) : null), [workflow]);
@@ -241,7 +301,7 @@ export function WorkflowEditorPage() {
     );
   }, [effectiveEditorState, currentPayload]);
 
-  const isReadOnly = effectiveEditorState?.status === "PUBLIC" || isPublishing;
+  const isReadOnly = effectiveEditorState?.status === "PUBLIC" || isPublishing || isDeleting || isUnpublishing;
 
   const updateEditorState = (
     updater: (prev: EditorState) => EditorState,
@@ -325,6 +385,36 @@ export function WorkflowEditorPage() {
     }
   };
 
+  const handleConfirmUnpublish = async () => {
+    if (!workflow || isUnpublishing) {
+      return;
+    }
+
+    try {
+      const response = await unpublishWorkflow({ workflowId: workflow.id }).unwrap();
+      applyWorkflow(response.data);
+      setIsUnpublishDialogOpen(false);
+      toast.success("Workflow unpublished successfully. You can now edit it again.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to unpublish workflow."));
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!workflow || isReadOnly) {
+      return;
+    }
+
+    try {
+      await deleteWorkflowDraft({ workflowId: workflow.id }).unwrap();
+      setIsDeleteDialogOpen(false);
+      toast.success("Workflow draft deleted");
+      navigate("/workflows");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to delete workflow draft."));
+    }
+  };
+
   if (Number.isNaN(workflowId)) {
     return (
       <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 text-center">
@@ -363,9 +453,9 @@ export function WorkflowEditorPage() {
   const statusCfg = WORKFLOW_STATUS_CONFIG[effectiveEditorState.status];
 
   return (
-    <div className="space-y-6">
-      <header className="sticky top-0 z-20 -mx-4 border-b border-[#efeeec] bg-[#faf9f7]/95 px-4 py-3 backdrop-blur-sm md:-mx-8 md:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-col">
+      <header className="sticky top-[-1rem] z-20 -mx-4 -mt-4 mb-6 border-b border-[#efeeec] bg-[#faf9f7]/95 pb-3 pt-7 backdrop-blur-sm md:top-[-2rem] md:-mx-8 md:-mt-8 md:pb-3 md:pt-11">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate("/workflows")}>
               <ArrowLeft className="h-4 w-4" />
@@ -387,10 +477,48 @@ export function WorkflowEditorPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {!isReadOnly && effectiveEditorState.status === "DRAFT" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 text-[#ba1a1a] hover:bg-[rgba(186,26,26,0.08)] hover:text-[#ba1a1a]"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                disabled={isDeleting || isSaving}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Draft
+              </Button>
+            )}
+
+            {effectiveEditorState.status === "PUBLIC" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 border-[#444651] text-[#444651] hover:bg-[rgba(68,70,81,0.04)]"
+                onClick={() => setIsUnpublishDialogOpen(true)}
+                disabled={isUnpublishing}
+              >
+                {isUnpublishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+                Unpublish
+              </Button>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 border-[#233a87] text-[#233a87] hover:bg-[rgba(35,58,135,0.04)]"
+              disabled={isGeneratingGuidance || isGuidanceLoading}
+              onClick={() => void handleGenerateGuidance()}
+            >
+              {isGeneratingGuidance ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+              {guidance ? "Regenerate AI Guidance" : "Generate AI Guidance"}
+            </Button>
+
             <Button variant="outline" onClick={handleSave} disabled={isReadOnly || isSaving || !isDirty}>
               {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
               Save
             </Button>
+
             <Button
               className="bg-[#233a87] text-white hover:opacity-90"
               disabled={isReadOnly || isSaving || isDirty}
@@ -405,7 +533,7 @@ export function WorkflowEditorPage() {
 
       {effectiveEditorState.status === "PUBLIC" && (
         <div className="rounded-xl border border-[rgba(0,106,97,0.2)] bg-[rgba(0,106,97,0.08)] px-4 py-3 text-sm text-[#006a61]">
-          This workflow is published and now read-only.
+          This workflow is published and now read-only. Click "Unpublish" to resume editing.
         </div>
       )}
 
@@ -578,50 +706,116 @@ export function WorkflowEditorPage() {
         </section>
 
         <aside className="xl:col-span-5">
-          <div className="space-y-4 rounded-xl bg-[#f4f3f1] p-5 xl:sticky xl:top-24">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#1a1c1b]" style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}>
-                Snapshot Preview
-              </h3>
-              <Eye className="h-4 w-4 text-[#444651]" />
-            </div>
-            <p className="text-xs text-[#444651]">Read-only timeline of the current workflow structure.</p>
+          <div className="space-y-6 xl:sticky xl:top-24">
+            {/* Snapshot Preview Card */}
+            <div className="space-y-4 rounded-xl bg-[#f4f3f1] p-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-[#1a1c1b]" style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}>
+                  Snapshot Preview
+                </h3>
+                <Eye className="h-4 w-4 text-[#444651]" />
+              </div>
+              <p className="text-xs text-[#444651]">Read-only timeline of the current workflow structure.</p>
 
-            <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-              {effectiveEditorState.steps.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-[rgba(197,197,211,0.5)] bg-white p-4 text-xs text-[#444651]">
-                  No steps yet. Add your first stage.
+              <div className="max-h-[40vh] space-y-4 overflow-y-auto pr-1 hide-scrollbar">
+                {effectiveEditorState.steps.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-[rgba(197,197,211,0.5)] bg-white p-4 text-xs text-[#444651]">
+                    No steps yet. Add your first stage.
+                  </div>
+                ) : (
+                  effectiveEditorState.steps.map((step, index) => (
+                    <div key={`preview-${step.id ?? index}`} className="relative border-l-2 border-[rgba(35,58,135,0.2)] pl-4">
+                      <div className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[#233a87]" />
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444651]">
+                        Step {String(index + 1).padStart(2, "0")}
+                      </p>
+                      <h4 className="mt-1 text-sm font-semibold text-[#1a1c1b]">{step.title.trim() || "Untitled step"}</h4>
+                      <p className="mt-1 text-xs text-[#444651] line-clamp-2">{step.description?.trim() || "No description"}</p>
+
+                      <div className="mt-2 space-y-1">
+                        {step.taskIds.length === 0 ? (
+                          <p className="text-xs text-[#ba1a1a]">No linked tasks</p>
+                        ) : (
+                          step.taskIds.map((taskId) => {
+                            const task = taskCatalog.find((item) => item.id === taskId);
+                            if (!task) {
+                              return null;
+                            }
+
+                            return (
+                              <div key={task.id} className="rounded-md border border-[rgba(197,197,211,0.35)] bg-white px-2 py-1">
+                                <p className="line-clamp-1 text-xs text-[#1a1c1b]">{task.title}</p>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* AI Guidance Preview Card */}
+            <div className="space-y-4 rounded-xl bg-white p-5 border border-[#efeeec] shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-[#233a87]" />
+                  <h3 className="text-base font-bold text-[#1a1c1b]" style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}>
+                    AI Guidance Preview
+                  </h3>
+                </div>
+                {guidance ? (
+                  <span className="inline-flex items-center rounded-full bg-[rgba(0,106,97,0.08)] px-2 py-0.5 text-[10px] font-bold text-[#006a61]">
+                    GENERATED
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-[rgba(186,26,26,0.08)] px-2 py-0.5 text-[10px] font-bold text-[#ba1a1a]">
+                    MISSING
+                  </span>
+                )}
+              </div>
+
+              {isGuidanceLoading ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : !guidance ? (
+                <div className="rounded-lg border border-dashed border-[rgba(197,197,211,0.5)] bg-[#faf9f7] p-4 text-center">
+                  <p className="text-xs text-[#444651]">No guidance generated yet.</p>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="mt-1 h-auto p-0 text-[#233a87]"
+                    onClick={handleGenerateGuidance}
+                  >
+                    Generate now
+                  </Button>
                 </div>
               ) : (
-                effectiveEditorState.steps.map((step, index) => (
-                  <div key={`preview-${step.id ?? index}`} className="relative border-l-2 border-[rgba(35,58,135,0.2)] pl-4">
-                    <div className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[#233a87]" />
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444651]">
-                      Step {String(index + 1).padStart(2, "0")}
-                    </p>
-                    <h4 className="mt-1 text-sm font-semibold text-[#1a1c1b]">{step.title.trim() || "Untitled step"}</h4>
-                    <p className="mt-1 text-xs text-[#444651] line-clamp-2">{step.description?.trim() || "No description"}</p>
-
-                    <div className="mt-2 space-y-1">
-                      {step.taskIds.length === 0 ? (
-                        <p className="text-xs text-[#ba1a1a]">No linked tasks</p>
-                      ) : (
-                        step.taskIds.map((taskId) => {
-                          const task = taskCatalog.find((item) => item.id === taskId);
-                          if (!task) {
-                            return null;
-                          }
-
-                          return (
-                            <div key={task.id} className="rounded-md border border-[rgba(197,197,211,0.35)] bg-white px-2 py-1">
-                              <p className="line-clamp-1 text-xs text-[#1a1c1b]">{task.title}</p>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
+                <div className="space-y-4">
+                  <div className="rounded-lg bg-[rgba(35,58,135,0.04)] p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#233a87] mb-1">Onboarding Summary</p>
+                    <p className="text-xs text-[#444651] line-clamp-3">{guidance.summary.overview}</p>
                   </div>
-                ))
+
+                  <div className="max-h-[30vh] space-y-3 overflow-y-auto pr-1 hide-scrollbar">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#444651]">Interactive Steps</p>
+                    {guidance.interactiveSteps.map((step, idx) => (
+                      <div key={step.id} className="flex gap-3">
+                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#efeeec] text-[10px] font-bold text-[#444651]">
+                          {idx + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-[#1a1c1b] truncate">{step.title}</p>
+                          <p className="text-[10px] text-[#444651] line-clamp-1 italic">
+                            Action: {step.action}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -652,6 +846,68 @@ export function WorkflowEditorPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isUnpublishDialogOpen} onOpenChange={setIsUnpublishDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Unpublish workflow</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to unpublish <span className="font-semibold text-[#1a1c1b]">{effectiveEditorState.name || workflow.name}</span>?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-lg border border-[rgba(68,70,81,0.2)] bg-[rgba(68,70,81,0.08)] px-3 py-2 text-xs text-[#444651]">
+            This will revert the workflow to a draft status, making it invisible to the public but allowing you to edit it again.
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUnpublishDialogOpen(false)} disabled={isUnpublishing}>
+              Cancel
+            </Button>
+            <Button className="bg-[#233a87] text-white hover:opacity-90" onClick={handleConfirmUnpublish} disabled={isUnpublishing}>
+              {isUnpublishing && <Loader2 className="h-4 w-4 animate-spin" />}
+              Confirm unpublish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#ba1a1a]">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Workflow Draft
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <span className="font-semibold text-[#1a1c1b]">{effectiveEditorState.name || workflow.name}</span>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="bg-[#ba1a1a] text-white hover:bg-[#931515]"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <RegenerateGuidanceDialog
+        open={isGuidanceDialogOpen}
+        onOpenChange={setIsGuidanceDialogOpen}
+        onConfirm={handleConfirmRegenerate}
+        isLoading={isGeneratingGuidance}
+        isRegenerating={!!guidance}
+      />
     </div>
   );
 }

@@ -1,7 +1,8 @@
 package dev.alro127.tasksense.repository.jpa;
 
-import dev.alro127.tasksense.domain.entity.TagEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import dev.alro127.tasksense.domain.entity.TagEntity;
 
 import java.util.List;
 import java.util.Optional;

@@ -1,11 +1,12 @@
 package dev.alro127.tasksense.dto.response;
 
-import dev.alro127.tasksense.domain.entity.WorkspaceJoinRequestEntity;
-import dev.alro127.tasksense.domain.enums.JoinRequestStatus;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.OffsetDateTime;
+
+import dev.alro127.tasksense.domain.entity.WorkspaceJoinRequestEntity;
+import dev.alro127.tasksense.domain.enums.JoinRequestStatus;
 
 @Data
 @Builder

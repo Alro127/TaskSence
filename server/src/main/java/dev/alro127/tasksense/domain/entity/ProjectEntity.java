@@ -1,11 +1,12 @@
 package dev.alro127.tasksense.domain.entity;
 
-import dev.alro127.tasksense.domain.enums.ProjectStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
+
+import dev.alro127.tasksense.domain.enums.ProjectStatus;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -44,6 +45,10 @@ public class ProjectEntity {
 
     @Column(name = "end_date")
     private LocalDate endDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_workflow_id")
+    private WorkflowEntity sourceWorkflow;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

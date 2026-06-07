@@ -28,6 +28,8 @@ import { clearWorkspace } from "@/features/workspace/workspaceSlice";
 import { NotificationDropdown } from "@/features/notification/components/NotificationDropdown";
 import { useNotificationSocket } from "@/features/notification/hooks/useNotificationSocket";
 import { clearNotifications } from "@/features/notification/notificationSlice";
+import { GuidanceOverlay } from "@/features/guidance/components/GuidanceOverlay";
+import { GuidanceNavigator } from "@/features/guidance/components/GuidanceNavigator";
 
 const topNavItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -346,6 +348,9 @@ export function MainLayout() {
           </main>
         </div>
       </div>
+
+      <GuidanceOverlay />
+      <GuidanceNavigator />
 
       {/* ── Profile Drawer ── */}
       {isProfileDrawerOpen && (

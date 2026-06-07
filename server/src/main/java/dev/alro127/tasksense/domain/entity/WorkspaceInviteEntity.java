@@ -1,11 +1,13 @@
 package dev.alro127.tasksense.domain.entity;
 
-import dev.alro127.tasksense.domain.enums.InviteStatus;
-import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+
+import dev.alro127.tasksense.domain.enums.InviteStatus;
+import dev.alro127.tasksense.domain.enums.WorkspaceRole;
+
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;

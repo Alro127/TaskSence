@@ -174,11 +174,14 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
         public void leaveWorkspace(Long workspaceId) {
                 UserEntity currentUser = securityService.getCurrentUser();
 
-                WorkspaceMemberEntity member = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, currentUser.getId())
-                                .orElseThrow(() -> new ResourceNotFoundException("You are not a member of this workspace"));
+                WorkspaceMemberEntity member = workspaceMemberRepository
+                                .findByWorkspaceIdAndUserId(workspaceId, currentUser.getId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "You are not a member of this workspace"));
 
                 if (member.getRole() == WorkspaceRole.OWNER) {
-                        long ownerCount = workspaceMemberRepository.countByWorkspaceIdAndRole(workspaceId, WorkspaceRole.OWNER);
+                        long ownerCount = workspaceMemberRepository.countByWorkspaceIdAndRole(workspaceId,
+                                        WorkspaceRole.OWNER);
                         if (ownerCount <= 1) {
                                 throw new ConflictException("Cannot leave: you are the only workspace owner.");
                         }
@@ -191,7 +194,8 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
                 permissionResolver.evictAllPermissionCache();
 
                 workspaceMemberRepository
-                                .findByWorkspaceIdAndRoleIn(workspaceId, List.of(WorkspaceRole.OWNER, WorkspaceRole.MANAGER))
+                                .findByWorkspaceIdAndRoleIn(workspaceId,
+                                                List.of(WorkspaceRole.OWNER, WorkspaceRole.MANAGER))
                                 .stream()
                                 .filter(m -> !m.getUser().getId().equals(currentUser.getId()))
                                 .forEach(m -> notificationService.saveAndPublish(NotificationMessage.builder()
@@ -200,7 +204,8 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
                                                 .type(NotificationType.WORKSPACE_LEAVE)
                                                 .referenceType(EntityType.WORKSPACE)
                                                 .referenceId(workspaceId)
-                                                .payload(Map.of("actorName", currentUser.getFullName(), "referenceName", member.getWorkspace().getName()))
+                                                .payload(Map.of("actorName", currentUser.getFullName(), "referenceName",
+                                                                member.getWorkspace().getName()))
                                                 .build()));
         }
 }

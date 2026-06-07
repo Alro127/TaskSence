@@ -92,8 +92,6 @@ public class AuthServiceImpl implements AuthService {
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-
-
             UserEntity user = userRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
             String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail(), user.getId());

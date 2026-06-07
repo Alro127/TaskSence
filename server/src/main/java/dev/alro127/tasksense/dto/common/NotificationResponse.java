@@ -1,8 +1,5 @@
 package dev.alro127.tasksense.dto.common;
 
-import dev.alro127.tasksense.domain.entity.NotificationEntity;
-import dev.alro127.tasksense.domain.enums.EntityType;
-import dev.alro127.tasksense.domain.enums.NotificationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -10,6 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
+
+import dev.alro127.tasksense.domain.entity.NotificationEntity;
+import dev.alro127.tasksense.domain.enums.EntityType;
+import dev.alro127.tasksense.domain.enums.NotificationType;
 
 @Getter
 @Builder
@@ -34,8 +35,7 @@ public class NotificationResponse {
     private OffsetDateTime createdAt;
 
     public static NotificationResponse mapToResponse(
-            NotificationEntity entity
-    ) {
+            NotificationEntity entity) {
         return NotificationResponse.builder()
                 .id(entity.getId())
                 .type(entity.getType())

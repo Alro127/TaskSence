@@ -23,6 +23,7 @@ import {
 } from "@/features/tag/api";
 import { TAG_COLOR_PRESETS, isValidHexColor } from "@/features/tag/constants/tagPalette";
 import { TagBadge } from "@/features/tag/components";
+import { useGuidance } from "@/features/guidance/context/GuidanceContext";
 
 interface ProjectTagsTabProps {
   projectId: number;
@@ -133,6 +134,8 @@ export function ProjectTagsTab({ projectId, isManager }: ProjectTagsTabProps) {
     [tags],
   );
 
+  const { reportAction } = useGuidance();
+
   async function handleCreate() {
     const normalizedName = normalizeTagInput(newName);
     if (!normalizedName) {
@@ -150,6 +153,7 @@ export function ProjectTagsTab({ projectId, isManager }: ProjectTagsTabProps) {
       }).unwrap();
 
       toast.success("Tag created");
+      reportAction("TAG_CREATED");
       setNewName("");
       setNewColor(TAG_COLOR_PRESETS[0].value);
     } catch (err) {

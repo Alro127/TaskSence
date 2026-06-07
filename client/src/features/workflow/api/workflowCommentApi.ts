@@ -27,18 +27,32 @@ export const workflowCommentApi = createApi({
   endpoints: (builder) => ({
     getWorkflowComments: builder.query<
       ApiResponse<WorkflowCommentResponse[]>,
-      { workflowId: number; cursor?: number; limit?: number }
+      { workflowId: number; cursor?: number; limit?: number; sort?: "asc" | "desc" }
     >({
-      query: ({ workflowId, cursor, limit = 20 }) => ({
+      query: ({ workflowId, cursor, limit = 20, sort = "desc" }) => ({
         url: `/workflow-comments/workflow/${workflowId}`,
         params: {
           ...(cursor !== undefined ? { cursor } : {}),
           limit,
+          sort,
         },
       }),
       providesTags: (_result, _error, { workflowId }) => [
         { type: "WorkflowComment", id: `WORKFLOW_${workflowId}` },
       ],
+    }),
+
+    getWorkflowCommentReplies: builder.query<
+      ApiResponse<WorkflowCommentResponse[]>,
+      { commentId: number; cursor?: number; limit?: number }
+    >({
+      query: ({ commentId, cursor, limit = 10 }) => ({
+        url: `/workflow-comments/${commentId}/replies`,
+        params: {
+          ...(cursor !== undefined ? { cursor } : {}),
+          limit,
+        },
+      }),
     }),
 
     createWorkflowComment: builder.mutation<
@@ -146,4 +160,5 @@ export const {
   useRemoveWorkflowCommentReactionMutation,
   useGetWorkflowCommentReactionUsersQuery,
   useLazyGetWorkflowCommentReactionUsersQuery,
+  useLazyGetWorkflowCommentRepliesQuery,
 } = workflowCommentApi;
