@@ -19,6 +19,7 @@ import dev.alro127.tasksense.repository.jpa.WorkflowCommentMentionRepository;
 import dev.alro127.tasksense.repository.jpa.WorkflowCommentReactionRepository;
 import dev.alro127.tasksense.repository.jpa.WorkflowCommentRepository;
 import dev.alro127.tasksense.repository.jpa.WorkflowRepository;
+import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.WorkflowCommentService;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,7 @@ public class WorkflowCommentServiceImpl implements WorkflowCommentService {
         private final WorkflowRepository workflowRepository;
         private final SecurityService securityService;
         private final UserRepository userRepository;
+        private final NotificationService notificationService;
 
         private WorkflowEntity getPublicWorkflowOrThrow(Long workflowId) {
                 return workflowRepository.findByIdAndStatus(workflowId, WorkflowStatus.PUBLIC)
@@ -84,6 +86,23 @@ public class WorkflowCommentServiceImpl implements WorkflowCommentService {
                                 .toList();
 
                 mentionRepository.saveAll(mentions);
+
+                UserEntity currentUser = securityService.getCurrentUser();
+                for (UserEntity user : users) {
+                        if (user.getId().equals(currentUser.getId()))
+                                continue;
+
+                        notificationService.saveAndPublish(dev.alro127.tasksense.dto.message.NotificationMessage.builder()
+                                        .receiverId(user.getId())
+                                        .actorId(currentUser.getId())
+                                        .type(dev.alro127.tasksense.domain.enums.NotificationType.WORKFLOW_COMMENT_MENTION)
+                                        .referenceType(dev.alro127.tasksense.domain.enums.EntityType.WORKFLOW)
+                                        .referenceId(comment.getWorkflow().getId())
+                                        .payload(Map.of(
+                                                        "workflowName", comment.getWorkflow().getName(),
+                                                        "commentId", comment.getId()))
+                                        .build());
+                }
         }
 
         @Override
@@ -119,6 +138,36 @@ public class WorkflowCommentServiceImpl implements WorkflowCommentService {
                 Set<Long> mentionIds = Optional.ofNullable(request.getMentionUserIds())
                                 .orElse(Collections.emptySet());
                 saveMentions(comment, mentionIds);
+
+                // Notify workflow owner
+                if (!workflow.getCreatedBy().getId().equals(currentUser.getId())) {
+                        notificationService.saveAndPublish(dev.alro127.tasksense.dto.message.NotificationMessage.builder()
+                                        .receiverId(workflow.getCreatedBy().getId())
+                                        .actorId(currentUser.getId())
+                                        .type(dev.alro127.tasksense.domain.enums.NotificationType.WORKFLOW_COMMENT)
+                                        .referenceType(dev.alro127.tasksense.domain.enums.EntityType.WORKFLOW)
+                                        .referenceId(workflow.getId())
+                                        .payload(Map.of(
+                                                        "workflowName", workflow.getName(),
+                                                        "commentId", comment.getId()))
+                                        .build());
+                }
+
+                // Notify parent comment owner if it's a reply
+                if (parent != null && !parent.getUser().getId().equals(currentUser.getId())
+                                && !parent.getUser().getId().equals(workflow.getCreatedBy().getId())) {
+                        notificationService.saveAndPublish(dev.alro127.tasksense.dto.message.NotificationMessage.builder()
+                                        .receiverId(parent.getUser().getId())
+                                        .actorId(currentUser.getId())
+                                        .type(dev.alro127.tasksense.domain.enums.NotificationType.WORKFLOW_COMMENT)
+                                        .referenceType(dev.alro127.tasksense.domain.enums.EntityType.WORKFLOW)
+                                        .referenceId(workflow.getId())
+                                        .payload(Map.of(
+                                                        "workflowName", workflow.getName(),
+                                                        "commentId", comment.getId(),
+                                                        "isReply", true))
+                                        .build());
+                }
 
                 return WorkflowCommentResponse.mapToResponse(comment);
         }
@@ -243,11 +292,26 @@ public class WorkflowCommentServiceImpl implements WorkflowCommentService {
                 if (exists)
                         return;
 
-                reactionRepository.save(WorkflowCommentReactionEntity.builder()
+                WorkflowCommentReactionEntity reaction = reactionRepository.save(WorkflowCommentReactionEntity.builder()
                                 .comment(comment)
                                 .user(currentUser)
                                 .icon(request.getIcon())
                                 .build());
+
+                // Notify comment owner
+                if (!comment.getUser().getId().equals(currentUser.getId())) {
+                        notificationService.saveAndPublish(dev.alro127.tasksense.dto.message.NotificationMessage.builder()
+                                        .receiverId(comment.getUser().getId())
+                                        .actorId(currentUser.getId())
+                                        .type(dev.alro127.tasksense.domain.enums.NotificationType.WORKFLOW_COMMENT_REACTION)
+                                        .referenceType(dev.alro127.tasksense.domain.enums.EntityType.WORKFLOW)
+                                        .referenceId(comment.getWorkflow().getId())
+                                        .payload(Map.of(
+                                                        "workflowName", comment.getWorkflow().getName(),
+                                                        "commentId", comment.getId(),
+                                                        "icon", request.getIcon()))
+                                        .build());
+                }
         }
 
         @Override

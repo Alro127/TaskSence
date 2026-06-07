@@ -2,11 +2,14 @@ package dev.alro127.tasksense.service.impl;
 
 import dev.alro127.tasksense.client.AiServiceClient;
 import dev.alro127.tasksense.domain.entity.*;
+import dev.alro127.tasksense.domain.enums.EntityType;
+import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
 import dev.alro127.tasksense.domain.enums.WorkflowGenerationSource;
 import dev.alro127.tasksense.domain.enums.WorkflowStatus;
 import dev.alro127.tasksense.dto.guidance.GuidanceGenerationContextDto;
 import dev.alro127.tasksense.dto.guidance.WorkflowGuidanceDto;
+import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.dto.request.CreateProjectFromWorkflowRequest;
 import dev.alro127.tasksense.dto.request.CreateWorkspaceRequest;
 import dev.alro127.tasksense.dto.request.GenerateGuidanceRequest;
@@ -17,6 +20,7 @@ import dev.alro127.tasksense.exception.BadRequestException;
 import dev.alro127.tasksense.exception.ForbiddenException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.*;
+import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.WorkflowGuidanceService;
 import dev.alro127.tasksense.service.WorkspaceService;
@@ -45,6 +49,7 @@ public class WorkflowGuidanceServiceImpl implements WorkflowGuidanceService {
         private final ProjectMemberRepository projectMemberRepository;
         private final AiServiceClient aiServiceClient;
         private final SecurityService securityService;
+        private final NotificationService notificationService;
 
         @Override
         @Transactional
@@ -238,6 +243,26 @@ public class WorkflowGuidanceServiceImpl implements WorkflowGuidanceService {
                         }
                 }
 
+                notifyWorkflowOwner(workflow, currentUser, project);
+
                 return ProjectResponse.mapToResponse(project);
+        }
+
+        private void notifyWorkflowOwner(WorkflowEntity workflow, UserEntity actor, ProjectEntity project) {
+                if (workflow.getCreatedBy().getId().equals(actor.getId())) {
+                        return;
+                }
+
+                notificationService.saveAndPublish(NotificationMessage.builder()
+                                .receiverId(workflow.getCreatedBy().getId())
+                                .actorId(actor.getId())
+                                .type(NotificationType.WORKFLOW_USED)
+                                .referenceType(EntityType.WORKFLOW)
+                                .referenceId(workflow.getId())
+                                .payload(Map.of(
+                                                "workflowName", workflow.getName(),
+                                                "projectName", project.getName(),
+                                                "projectId", project.getId()))
+                                .build());
         }
 }

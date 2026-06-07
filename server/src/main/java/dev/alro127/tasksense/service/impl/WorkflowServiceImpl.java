@@ -425,6 +425,18 @@ public class WorkflowServiceImpl implements WorkflowService {
         rating.setReviewText(reviewText);
 
         WorkflowRatingEntity saved = workflowRatingRepository.save(rating);
+
+        notificationService.saveAndPublish(NotificationMessage.builder()
+                .receiverId(workflow.getCreatedBy().getId())
+                .actorId(currentUser.getId())
+                .type(NotificationType.WORKFLOW_RATED)
+                .referenceType(EntityType.WORKFLOW)
+                .referenceId(workflow.getId())
+                .payload(Map.of(
+                        "workflowName", workflow.getName(),
+                        "stars", saved.getStars()))
+                .build());
+
         return toWorkflowRatingResponse(saved);
     }
 
@@ -461,6 +473,15 @@ public class WorkflowServiceImpl implements WorkflowService {
         workflowFavoriteRepository.save(WorkflowFavoriteEntity.builder()
                 .workflow(workflow)
                 .user(currentUser)
+                .build());
+
+        notificationService.saveAndPublish(NotificationMessage.builder()
+                .receiverId(workflow.getCreatedBy().getId())
+                .actorId(currentUser.getId())
+                .type(NotificationType.WORKFLOW_FAVORITED)
+                .referenceType(EntityType.WORKFLOW)
+                .referenceId(workflow.getId())
+                .payload(Map.of("workflowName", workflow.getName()))
                 .build());
 
         return WorkflowFavoriteToggleResponse.builder()
