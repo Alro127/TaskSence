@@ -69,6 +69,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 .build();
 
         workspaceMemberRepository.save(member);
+        permissionResolver.evictAllPermissionCache();
 
         return toResponse(saved);
     }
