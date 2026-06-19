@@ -13,6 +13,7 @@ import type {
   WorkflowRatingSummaryResponse,
   WorkflowStatus,
   WorkflowGuidanceDto,
+  GenerateGuidanceRequest,
   UpdateWorkflowGuidanceRequest,
   Project,
   CreateProjectFromWorkflowRequest,

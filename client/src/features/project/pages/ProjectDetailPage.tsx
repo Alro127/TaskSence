@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -378,7 +378,6 @@ export function ProjectDetailPage() {
   const canManageTags =
     hasProjectPermission("MANAGE_TAG", "CREATE_TAG", "UPDATE_TAG", "DELETE_TAG");
   const canCreateWorkflowDraft = hasProjectPermission("VIEW_TASKS");
-  const isProjectOwner = currentUserMember?.role === "MANAGER";
 
   const { data: joinRequestsData, isLoading: isJoinRequestsLoading } =
     useGetJoinRequestsQuery(
@@ -415,8 +414,7 @@ export function ProjectDetailPage() {
   const [createWorkflowDraftFromProject, { isLoading: isCreatingWorkflowDraft }] =
     useCreateWorkflowDraftFromProjectMutation();
 
-  const { startGuidance, currentStep, currentStepIndex } = useGuidance();
-  const lastStepIndexRef = useRef(-1);
+  const { startGuidance, currentStep } = useGuidance();
 
   useEffect(() => {
     if (currentStep?.uiTarget) {

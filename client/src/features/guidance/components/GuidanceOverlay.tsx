@@ -1,4 +1,4 @@
-import { useEffect, useState, useLayoutEffect, useMemo } from "react";
+import { useEffect, useState, useLayoutEffect } from "react";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, X, ChevronRight, ChevronLeft, CheckCircle2, RefreshCw, Settings2 } from "lucide-react";
@@ -20,8 +20,7 @@ export function GuidanceOverlay() {
     isStepCompleted, 
     autoNavigate, 
     toggleAutoNavigate, 
-    refreshProgress,
-    completedStepIds 
+    refreshProgress
   } = useGuidance();
   const { projectId: projectIdStr } = useParams<{ projectId: string }>();
   const projectId = projectIdStr ? Number(projectIdStr) : undefined;
@@ -88,7 +87,7 @@ export function GuidanceOverlay() {
     const found = updatePosition();
     
     // Setup a retry interval (helps with tab transitions and delayed rendering)
-    let retryInterval: NodeJS.Timeout | null = null;
+    let retryInterval: ReturnType<typeof setInterval> | null = null;
     if (!found) {
       let attempts = 0;
       retryInterval = setInterval(() => {

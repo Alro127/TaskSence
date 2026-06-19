@@ -40,7 +40,7 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
   });
 
   const toggleAutoNavigate = useCallback(() => {
-    setAutoNavigate(prev => {
+    setAutoNavigate((prev: boolean) => {
       const next = !prev;
       localStorage.setItem("task_sense_guidance_auto_nav", JSON.stringify(next));
       return next;

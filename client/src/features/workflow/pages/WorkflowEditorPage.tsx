@@ -186,29 +186,6 @@ function createEditorState(workflow: WorkflowDraftResponse): EditorState {
   };
 }
 
-function moveItem<T>(list: T[], index: number, direction: "UP" | "DOWN"): T[] {
-  const next = [...list];
-  const targetIndex = direction === "UP" ? index - 1 : index + 1;
-  if (targetIndex < 0 || targetIndex >= next.length) {
-    return next;
-  }
-
-  const [removed] = next.splice(index, 1);
-  next.splice(targetIndex, 0, removed);
-  return next;
-}
-
-function createNewStep(position: number): UpdateWorkflowStepRequest {
-  return {
-    title: "",
-    description: "",
-    position,
-    sourceType: "RULE",
-    sourceSprintId: null,
-    taskIds: [],
-  };
-}
-
 export function WorkflowEditorPage() {
   const navigate = useNavigate();
   const location = useLocation();
