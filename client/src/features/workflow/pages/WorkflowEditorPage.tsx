@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AlertTriangle, ArrowLeft, Eye, Loader2, Plus, Sparkles, Trash2, RotateCcw } from "lucide-react";
+
+import { useAppSelector } from "@/app/hooks";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -191,6 +193,7 @@ export function WorkflowEditorPage() {
   const location = useLocation();
   const { workflowId: workflowIdParam } = useParams<{ workflowId: string }>();
   const workflowId = Number(workflowIdParam);
+  const currentUserId = useAppSelector((state) => state.user.currentUser?.id);
 
   const workflowFromState =
     ((location.state as { workflow?: WorkflowDraftResponse } | null)?.workflow ?? null);
@@ -220,6 +223,12 @@ export function WorkflowEditorPage() {
 
     return null;
   }, [workflowFromState, workflowId, workflowListData?.data?.data]);
+
+  useEffect(() => {
+    if (workflow && currentUserId && workflow.createdBy !== currentUserId) {
+      navigate(`/explore/${workflow.id}`, { replace: true });
+    }
+  }, [workflow, currentUserId, navigate]);
 
   const [editorStateById, setEditorStateById] = useState<Record<number, EditorState>>({});
   const [validation, setValidation] = useState<ValidationState>(emptyValidationState);

@@ -299,20 +299,29 @@ export function PublicWorkflowDetailPage() {
                 Use this Template
               </Button>
               
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    handleRequireAuth();
-                    return;
-                  }
-                  setIsRatingDialogOpen(true);
-                }}
-              >
-                Rate this Workflow
-              </Button>
-              {isOwner && <p className="text-xs text-[#ba1a1a]">You cannot rate your own workflow.</p>}
+              {isOwner ? (
+                <Button
+                  variant="outline"
+                  className="w-full border-[#233a87] text-[#233a87] hover:bg-[rgba(35,58,135,0.04)]"
+                  onClick={() => navigate(`/workflows/${workflow.id}`, { state: { workflow } })}
+                >
+                  Manage Template
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      handleRequireAuth();
+                      return;
+                    }
+                    setIsRatingDialogOpen(true);
+                  }}
+                >
+                  Rate this Workflow
+                </Button>
+              )}
             </div>
           </div>
 
