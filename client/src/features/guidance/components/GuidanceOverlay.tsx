@@ -7,6 +7,7 @@ import { capabilityRegistry } from "../utils/CapabilityRegistry";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export function GuidanceOverlay() {
   const { 
@@ -29,6 +30,7 @@ export function GuidanceOverlay() {
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [targetFound, setTargetFound] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // Detect modals to hide spotlight
   useEffect(() => {
@@ -51,7 +53,7 @@ export function GuidanceOverlay() {
   };
 
   const handleDismiss = () => {
-    dismiss(projectId);
+    setShowConfirm(true);
   };
 
   // Re-calculate target position when registry changes or step changes
@@ -327,6 +329,31 @@ export function GuidanceOverlay() {
           </div>
         )}
       </AnimatePresence>
+
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent className="sm:max-w-md pointer-events-auto">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 font-bold flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-emerald-600 shrink-0" />
+              End Onboarding Tour?
+            </DialogTitle>
+            <DialogDescription className="text-slate-600 mt-2">
+              Are you sure you want to end the project guidance tour? You can restart it later from the project overview page.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 gap-2 flex sm:justify-end">
+            <Button variant="outline" onClick={() => setShowConfirm(false)} className="border-slate-200 text-slate-700 hover:bg-slate-50">
+              Cancel
+            </Button>
+            <Button onClick={async () => {
+              setShowConfirm(false);
+              await dismiss(projectId);
+            }} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              End Tour
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

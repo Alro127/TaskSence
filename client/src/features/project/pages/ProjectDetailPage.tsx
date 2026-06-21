@@ -414,10 +414,10 @@ export function ProjectDetailPage() {
   const [createWorkflowDraftFromProject, { isLoading: isCreatingWorkflowDraft }] =
     useCreateWorkflowDraftFromProjectMutation();
 
-  const { startGuidance, currentStep } = useGuidance();
+  const { startGuidance, currentStep, isVisible } = useGuidance();
 
   useEffect(() => {
-    if (currentStep?.uiTarget) {
+    if (isVisible && currentStep?.uiTarget) {
       const targetToTab: Record<string, string> = {
         CREATE_SPRINT: "sprints",
         NAVIGATE_SPRINTS: "sprints",
@@ -440,7 +440,7 @@ export function ProjectDetailPage() {
         setActiveTab(targetTab);
       }
     }
-  }, [currentStep, activeTab]);
+  }, [currentStep, activeTab, isVisible]);
 
   const { data: guidanceData } = useGetGuidanceByProjectQuery(
     { projectId },
