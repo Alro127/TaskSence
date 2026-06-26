@@ -26,22 +26,31 @@ public class TagServiceImpl implements TagService {
     @Override
     public TagResponse createTag(Long projectId, CreateTagRequest request) {
 
-        if (tagRepository.existsByProjectIdAndName(projectId, request.getName())) {
-            throw new IllegalArgumentException("Tag name already exists in project");
-        }
+        return tagRepository.findByNameIncludingDeleted(projectId, request.getName())
+                .map(existingTag -> {
+                    if (existingTag.getDeletedAt() == null) {
+                        throw new IllegalArgumentException("Tag name already exists in project");
+                    }
+                    // Reactivate soft-deleted tag
+                    existingTag.setDeletedAt(null);
+                    existingTag.setColor(request.getColor());
+                    tagRepository.save(existingTag);
+                    return TagResponse.mapToResponse(existingTag);
+                })
+                .orElseGet(() -> {
+                    ProjectEntity project = projectRepository.findById(projectId)
+                            .orElseThrow(() -> new EntityNotFoundException("Project not found"));
 
-        ProjectEntity project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new EntityNotFoundException("Project not found"));
+                    TagEntity tag = TagEntity.builder()
+                            .name(request.getName())
+                            .color(request.getColor())
+                            .project(project)
+                            .build();
 
-        TagEntity tag = TagEntity.builder()
-                .name(request.getName())
-                .color(request.getColor())
-                .project(project)
-                .build();
+                    tagRepository.save(tag);
 
-        tagRepository.save(tag);
-
-        return TagResponse.mapToResponse(tag);
+                    return TagResponse.mapToResponse(tag);
+                });
     }
 
     @Override
@@ -53,6 +62,14 @@ public class TagServiceImpl implements TagService {
         if (!tag.getProject().getId().equals(projectId)) {
             throw new ResourceNotFoundException("Tag not found");
         }
+
+        // Check if new name conflicts with another tag (active or deleted)
+        tagRepository.findByNameIncludingDeleted(projectId, request.getName())
+                .ifPresent(existing -> {
+                    if (!existing.getId().equals(tagId)) {
+                        throw new IllegalArgumentException("Tag name already exists in project");
+                    }
+                });
 
         tag.setName(request.getName());
         tag.setColor(request.getColor());

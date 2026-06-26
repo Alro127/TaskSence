@@ -1,6 +1,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { ArrowRight, GitBranch, Sparkles, LayoutPanelTop } from "lucide-react";
 
+import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { WorkflowDraftResponse } from "@/types/api";
@@ -22,6 +23,9 @@ interface WorkflowCardProps {
 }
 
 export function WorkflowCard({ workflow, onOpen }: WorkflowCardProps) {
+  const currentUserId = useAppSelector((state) => state.user.currentUser?.id);
+  const isOwner = workflow.createdBy === currentUserId;
+
   const statusCfg = WORKFLOW_STATUS_CONFIG[workflow.status];
   const stepCount = workflow.steps.length;
   const taskCount = workflow.steps.reduce((acc, step) => acc + step.tasks.length, 0);
@@ -79,7 +83,7 @@ export function WorkflowCard({ workflow, onOpen }: WorkflowCardProps) {
         className="mt-4 w-full bg-[#233a87] text-white hover:opacity-90"
         onClick={() => onOpen(workflow.id)}
       >
-        Open editor
+        {isOwner ? "Open editor" : "View workflow"}
         <ArrowRight className="h-4 w-4" />
       </Button>
     </article>

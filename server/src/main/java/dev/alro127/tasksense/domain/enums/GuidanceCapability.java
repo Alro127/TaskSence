@@ -20,6 +20,9 @@ public enum GuidanceCapability {
     // Team & Collaboration
     INVITE_MEMBER("Invite Member Button", "Button to add new users to the project"),
 
+    // Guidance Card
+    PROJECT_GUIDANCE("Project Guidance Card", "The AI Guidance card where summary and tips are shown"),
+
     // Fallback
     MANUAL("Manual Action", "A step that requires manual user confirmation");
 

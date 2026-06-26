@@ -13,7 +13,7 @@ interface GuidanceContextType {
   startGuidance: (guidance: WorkflowGuidanceDto, projectId: number, workflowId: number, force?: boolean) => Promise<void>;
   nextStep: () => void;
   prevStep: () => void;
-  dismiss: (projectId?: number) => void;
+  dismiss: (projectId?: number) => Promise<void>;
   toggleAutoNavigate: () => void;
   refreshProgress: () => Promise<void>;
   currentStep: GuidanceStepDto | null;
@@ -40,7 +40,7 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
   });
 
   const toggleAutoNavigate = useCallback(() => {
-    setAutoNavigate(prev => {
+    setAutoNavigate((prev: boolean) => {
       const next = !prev;
       localStorage.setItem("task_sense_guidance_auto_nav", JSON.stringify(next));
       return next;
@@ -165,6 +165,12 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
         
         if (progress) {
           console.log("[Guidance] Guidance started/resumed. Current step:", progress.currentStepId);
+          
+          if (progress.isActive === false && !force) {
+            console.log("[Guidance] Guidance is inactive on backend, skipping start.");
+            return;
+          }
+
           setActiveGuidance(guidance);
           setActiveProjectId(projectId);
           
@@ -232,12 +238,24 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
     return completedStepIds.has(stepId);
   }, [completedStepIds]);
 
-  const dismiss = useCallback((projectId?: number) => {
+  const dismiss = useCallback(async (projectId?: number) => {
     console.log("[Guidance] Dismissing guidance for project:", projectId);
     setIsVisible(false);
     // Don't clear activeGuidance here so it can be resumed later
     
     if (projectId) {
+      try {
+        const token = localStorage.getItem('accessToken');
+        await fetch(`${apiBaseUrl}/projects/${projectId}/guidance/dismiss`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          }
+        });
+      } catch (error) {
+        console.error("[Guidance] Failed to dismiss guidance on backend:", error);
+      }
+
       setDismissedProjectIds(prev => {
         const next = new Set(prev);
         next.add(projectId);

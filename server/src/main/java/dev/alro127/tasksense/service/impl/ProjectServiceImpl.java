@@ -81,6 +81,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         projectRepository.save(project);
         projectMemberRepository.save(owner);
+        permissionResolver.evictAllPermissionCache();
 
         eventPublisher.publishEvent(new EntityChangedEvent(EntityType.PROJECT, project.getId(), Operation.UPSERT));
         return toResponse(project);

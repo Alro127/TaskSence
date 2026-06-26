@@ -22,4 +22,9 @@ public interface ProjectGuidanceService {
      * Gets the current progress of guidance for a project.
      */
     ProjectGuidanceProgressEntity getProgress(Long projectId);
+
+    /**
+     * Dismisses the guidance for a project by setting isActive = false.
+     */
+    ProjectGuidanceProgressEntity dismissGuidance(Long projectId);
 }

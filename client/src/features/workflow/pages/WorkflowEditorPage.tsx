@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AlertTriangle, ArrowLeft, Eye, Loader2, Plus, Sparkles, Trash2, RotateCcw } from "lucide-react";
+
+import { useAppSelector } from "@/app/hooks";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -186,34 +188,12 @@ function createEditorState(workflow: WorkflowDraftResponse): EditorState {
   };
 }
 
-function moveItem<T>(list: T[], index: number, direction: "UP" | "DOWN"): T[] {
-  const next = [...list];
-  const targetIndex = direction === "UP" ? index - 1 : index + 1;
-  if (targetIndex < 0 || targetIndex >= next.length) {
-    return next;
-  }
-
-  const [removed] = next.splice(index, 1);
-  next.splice(targetIndex, 0, removed);
-  return next;
-}
-
-function createNewStep(position: number): UpdateWorkflowStepRequest {
-  return {
-    title: "",
-    description: "",
-    position,
-    sourceType: "RULE",
-    sourceSprintId: null,
-    taskIds: [],
-  };
-}
-
 export function WorkflowEditorPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { workflowId: workflowIdParam } = useParams<{ workflowId: string }>();
   const workflowId = Number(workflowIdParam);
+  const currentUserId = useAppSelector((state) => state.user.currentUser?.id);
 
   const workflowFromState =
     ((location.state as { workflow?: WorkflowDraftResponse } | null)?.workflow ?? null);
@@ -243,6 +223,12 @@ export function WorkflowEditorPage() {
 
     return null;
   }, [workflowFromState, workflowId, workflowListData?.data?.data]);
+
+  useEffect(() => {
+    if (workflow && currentUserId && workflow.createdBy !== currentUserId) {
+      navigate(`/explore/${workflow.id}`, { replace: true });
+    }
+  }, [workflow, currentUserId, navigate]);
 
   const [editorStateById, setEditorStateById] = useState<Record<number, EditorState>>({});
   const [validation, setValidation] = useState<ValidationState>(emptyValidationState);

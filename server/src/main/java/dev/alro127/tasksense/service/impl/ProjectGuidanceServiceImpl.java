@@ -162,4 +162,13 @@ public class ProjectGuidanceServiceImpl implements ProjectGuidanceService {
         return progressRepository.findByProjectId(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("No guidance progress found for this project"));
     }
+
+    @Override
+    @Transactional
+    public ProjectGuidanceProgressEntity dismissGuidance(Long projectId) {
+        ProjectGuidanceProgressEntity progress = progressRepository.findByProjectId(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("No guidance progress found for this project"));
+        progress.setIsActive(false);
+        return progressRepository.save(progress);
+    }
 }

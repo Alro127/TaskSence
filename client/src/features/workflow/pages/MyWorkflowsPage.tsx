@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useAppSelector } from "@/app/hooks";
 import type { WorkflowDraftResponse, WorkflowStatus } from "@/types/api";
 
 import { useGetMyFavoriteWorkflowsQuery, useGetMyWorkflowsQuery } from "../api/workflowApi";
@@ -57,6 +58,7 @@ export function MyWorkflowsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [aiOnly, setAiOnly] = useState(false);
+  const currentUserId = useAppSelector((state) => state.user.currentUser?.id);
 
   const activeTab = parseWorkflowTab(searchParams.get("tab"));
   const isFavoriteTab = activeTab === "FAVORITE";
@@ -97,7 +99,11 @@ export function MyWorkflowsPage() {
   const hasFilters = search.trim().length > 0 || aiOnly;
 
   const handleOpenWorkflow = (workflow: WorkflowDraftResponse) => {
-    navigate(`/workflows/${workflow.id}`, { state: { workflow } });
+    if (workflow.createdBy === currentUserId) {
+      navigate(`/workflows/${workflow.id}`, { state: { workflow } });
+    } else {
+      navigate(`/explore/${workflow.id}`);
+    }
   };
 
   const clearFilters = () => {

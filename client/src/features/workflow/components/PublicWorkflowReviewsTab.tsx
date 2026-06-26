@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
-import { ChevronDown, ChevronUp, Loader2, MessageSquare, Reply, Send, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronUp, Loader2, MessageSquare, Reply, Send, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 

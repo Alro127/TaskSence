@@ -352,6 +352,8 @@ export interface WorkflowDraftResponse {
   updatedAt: string;
   favorited: boolean;
   steps: WorkflowStepResponse[];
+  workspaceName?: string;
+  projectName?: string;
 }
 
 export interface UpsertWorkflowRatingRequest {
@@ -704,6 +706,7 @@ export interface WorkflowCommentResponse {
   user: UserSummaryResponse;
   mentions: UserSummaryResponse[];
   reactions: Record<string, number>;
+  replyCount: number;
 }
 
 export interface WorkflowCommentCreateRequest {

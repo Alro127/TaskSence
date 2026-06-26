@@ -61,4 +61,19 @@ public class ProjectGuidanceController {
 
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/dismiss")
+    @PreAuthorize("@perm.isProjectMember(#projectId)")
+    public ResponseEntity<ApiResponse<ProjectGuidanceProgressEntity>> dismissGuidance(
+            @PathVariable Long projectId) {
+
+        ProjectGuidanceProgressEntity progress = projectGuidanceService.dismissGuidance(projectId);
+        ApiResponse<ProjectGuidanceProgressEntity> response = new ApiResponse<>(
+                "200",
+                "Guidance dismissed successfully",
+                progress,
+                null);
+
+        return ResponseEntity.ok(response);
+    }
 }

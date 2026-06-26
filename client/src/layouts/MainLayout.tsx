@@ -5,7 +5,6 @@ import {
   Globe,
   LayoutDashboard,
   LogOut,
-  Settings,
   User,
   X,
   BookOpen,
@@ -14,6 +13,7 @@ import {
   PanelLeftOpen,
   Menu,
   Bot,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,10 +38,11 @@ const topNavItems = [
   { label: "Community", to: "/community", icon: Globe },
   { label: "AI Assistant", to: "/agent", icon: Bot },
   { label: "Profile", to: "/profile", icon: User },
+  { label: "Team Templates", to: "/team-templates", icon: Users },
 ];
 
-const bottomNavItems = [
-  { label: "Settings", to: "/settings", icon: Settings },
+const bottomNavItems: Array<{ label: string; to: string; icon: any }> = [
+  // { label: "Settings", to: "/settings", icon: Settings },
 ];
 
 // ---------------------------------------------------------------------------
