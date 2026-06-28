@@ -31,6 +31,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -138,6 +139,24 @@ public class TaskServiceImpl implements TaskService {
         return sprint;
     }
 
+    private void validateTaskDatesWithSprint(OffsetDateTime taskStartDate, OffsetDateTime taskDueDate, SprintEntity sprint) {
+        if (sprint == null) return;
+        
+        LocalDate sprintStart = sprint.getStartDate();
+        LocalDate sprintEnd = sprint.getEndDate();
+
+        LocalDate taskStart = taskStartDate != null ? taskStartDate.toLocalDate() : null;
+        LocalDate taskDue = taskDueDate != null ? taskDueDate.toLocalDate() : null;
+
+        if (taskStart != null && (taskStart.isBefore(sprintStart) || taskStart.isAfter(sprintEnd))) {
+            throw new BadRequestException("Task start date must be within sprint dates");
+        }
+        
+        if (taskDue != null && (taskDue.isBefore(sprintStart) || taskDue.isAfter(sprintEnd))) {
+            throw new BadRequestException("Task due date must be within sprint dates");
+        }
+    }
+
     // ===== CRUD =====
 
     @Override
@@ -166,6 +185,8 @@ public class TaskServiceImpl implements TaskService {
             TaskEntity parent = getTaskOrThrow(projectId, request.getParentTaskId());
             task.setParentTask(parent);
         }
+
+        validateTaskDatesWithSprint(task.getStartDate(), task.getDueDate(), task.getSprint());
 
         TaskEntity saved = taskRepository.save(task);
         WorkspaceEntity workspace = project.getWorkspace();
@@ -364,6 +385,8 @@ public class TaskServiceImpl implements TaskService {
                 task.setCompletedAt(null);
             }
         }
+
+        validateTaskDatesWithSprint(task.getStartDate(), task.getDueDate(), task.getSprint());
 
         TaskEntity saved = taskRepository.save(task);
 
