@@ -2,6 +2,7 @@ package dev.alro127.tasksense.repository.jpa;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -27,6 +28,21 @@ public interface CommentRepository extends JpaRepository<CommentEntity, Long> {
             Long taskId,
             Long cursor,
             Pageable pageable);
+
+    // ===== Cascade soft-delete =====
+
+    /**
+     * Soft-deletes all direct replies of the given parent comment that have not
+     * yet been deleted.  Uses a native query to bypass the
+     * {@code @SQLRestriction("deleted_at IS NULL")} filter on the entity so we
+     * can always reach the rows regardless of their current state.
+     */
+    @Modifying
+    @Query(
+        value = "UPDATE comments SET deleted_at = :now WHERE parent_comment_id = :parentId AND deleted_at IS NULL",
+        nativeQuery = true
+    )
+    void softDeleteRepliesByParentId(@Param("parentId") Long parentId, @Param("now") OffsetDateTime now);
 
     // ===== ES sync queries =====
 
