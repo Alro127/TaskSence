@@ -4,9 +4,11 @@ import { capabilityRegistry } from "../utils/CapabilityRegistry";
 interface GuidanceTargetProps {
   capability: string;
   children: React.ReactNode;
+  /** Extra classes applied to the wrapper span. Defaults keep w-fit h-fit. */
+  className?: string;
 }
 
-export function GuidanceTarget({ capability, children }: GuidanceTargetProps) {
+export function GuidanceTarget({ capability, children, className }: GuidanceTargetProps) {
   const ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
@@ -24,7 +26,7 @@ export function GuidanceTarget({ capability, children }: GuidanceTargetProps) {
   }, [capability]);
 
   return (
-    <span ref={ref} className="block w-fit h-fit">
+    <span ref={ref} className={className ?? "block w-fit h-fit"}>
       {children}
     </span>
   );
