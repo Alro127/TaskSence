@@ -172,7 +172,7 @@ public class TaskServiceImpl implements TaskService {
                 .title(request.getTitle().trim())
                 .description(request.getDescription())
                 .priority(request.getPriority())
-                .status(request.getStatus())
+                .status(request.getStatus() != null ? request.getStatus() : TaskStatus.TODO)
                 .startDate(request.getStartDate())
                 .dueDate(request.getDueDate())
                 .sprint(resolveSprint(projectId, request.getSprintId()))

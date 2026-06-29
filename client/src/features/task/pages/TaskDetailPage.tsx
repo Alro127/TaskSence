@@ -184,7 +184,7 @@ export function TaskDetailPage() {
     { projectId, taskId: parentTaskId ?? 0 },
     { skip: parentTaskId == null },
   );
-  const parentTask = parentTaskData?.data ?? null;
+  const parentTask = parentTaskId == null ? null : (parentTaskData?.data ?? null);
 
   const [updateTask] = useUpdateTaskMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
