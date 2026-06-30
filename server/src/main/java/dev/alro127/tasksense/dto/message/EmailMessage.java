@@ -1,9 +1,10 @@
 package dev.alro127.tasksense.dto.message;
 
-import dev.alro127.tasksense.domain.enums.EmailType;
 import lombok.*;
 
 import java.util.Map;
+
+import dev.alro127.tasksense.domain.enums.EmailType;
 
 @Builder
 @Getter

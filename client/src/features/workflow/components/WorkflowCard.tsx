@@ -1,6 +1,7 @@
 import { formatDistanceToNow } from "date-fns";
-import { ArrowRight, GitBranch, Sparkles } from "lucide-react";
+import { ArrowRight, GitBranch, Sparkles, LayoutPanelTop } from "lucide-react";
 
+import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { WorkflowDraftResponse } from "@/types/api";
@@ -22,6 +23,9 @@ interface WorkflowCardProps {
 }
 
 export function WorkflowCard({ workflow, onOpen }: WorkflowCardProps) {
+  const currentUserId = useAppSelector((state) => state.user.currentUser?.id);
+  const isOwner = workflow.createdBy === currentUserId;
+
   const statusCfg = WORKFLOW_STATUS_CONFIG[workflow.status];
   const stepCount = workflow.steps.length;
   const taskCount = workflow.steps.reduce((acc, step) => acc + step.tasks.length, 0);
@@ -44,6 +48,13 @@ export function WorkflowCard({ workflow, onOpen }: WorkflowCardProps) {
         >
           {statusCfg.label}
         </span>
+      </div>
+
+      <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#444651]">
+        <LayoutPanelTop className="h-3 w-3" />
+        <span className="truncate max-w-[120px]">{workflow.workspaceName || "Unknown Workspace"}</span>
+        <span>/</span>
+        <span className="truncate max-w-[120px]">{workflow.projectName || "Unknown Project"}</span>
       </div>
 
       <h3 className="line-clamp-2 text-base font-bold text-[#1a1c1b]" style={{ fontFamily: "'Epilogue', 'Inter', sans-serif" }}>
@@ -72,7 +83,7 @@ export function WorkflowCard({ workflow, onOpen }: WorkflowCardProps) {
         className="mt-4 w-full bg-[#233a87] text-white hover:opacity-90"
         onClick={() => onOpen(workflow.id)}
       >
-        Open editor
+        {isOwner ? "Open editor" : "View workflow"}
         <ArrowRight className="h-4 w-4" />
       </Button>
     </article>

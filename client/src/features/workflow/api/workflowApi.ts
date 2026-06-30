@@ -12,6 +12,11 @@ import type {
   WorkflowRatingResponse,
   WorkflowRatingSummaryResponse,
   WorkflowStatus,
+  WorkflowGuidanceDto,
+  GenerateGuidanceRequest,
+  UpdateWorkflowGuidanceRequest,
+  Project,
+  CreateProjectFromWorkflowRequest,
 } from "@/types/api";
 import { apiBaseUrl } from "@/config/config";
 
@@ -138,6 +143,25 @@ export const workflowApi = createApi({
         { type: "Workflow", id: workflowId },
         { type: "Workflow", id: "LIST" },
       ],
+    }),
+
+    unpublishWorkflow: builder.mutation<ApiResponse<WorkflowDraftResponse>, { workflowId: number }>({
+      query: ({ workflowId }) => ({
+        url: `/workflows/${workflowId}/unpublish`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, { workflowId }) => [
+        { type: "Workflow", id: workflowId },
+        { type: "Workflow", id: "LIST" },
+      ],
+    }),
+
+    deleteWorkflowDraft: builder.mutation<ApiResponse<void>, { workflowId: number }>({
+      query: ({ workflowId }) => ({
+        url: `/workflows/${workflowId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [{ type: "Workflow", id: "LIST" }],
     }),
 
     createWorkflowDraftFromProject: builder.mutation<
@@ -399,6 +423,51 @@ export const workflowApi = createApi({
         }
       },
     }),
+
+    generateGuidance: builder.mutation<ApiResponse<WorkflowGuidanceDto>, { workflowId: number; body?: GenerateGuidanceRequest }>({
+      query: ({ workflowId, body }) => ({
+        url: `/workflows/${workflowId}/guidance/generate`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { workflowId }) => [{ type: "Workflow", id: workflowId }],
+    }),
+
+    updateGuidance: builder.mutation<
+      ApiResponse<WorkflowGuidanceDto>,
+      { workflowId: number; body: UpdateWorkflowGuidanceRequest }
+    >({
+      query: ({ workflowId, body }) => ({
+        url: `/workflows/${workflowId}/guidance`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { workflowId }) => [{ type: "Workflow", id: workflowId }],
+    }),
+
+    getGuidanceByProject: builder.query<ApiResponse<WorkflowGuidanceDto>, { projectId: number }>({
+      query: ({ projectId }) => ({
+        url: `/projects/${projectId}/guidance`,
+      }),
+    }),
+
+    getGuidanceByWorkflow: builder.query<ApiResponse<WorkflowGuidanceDto>, { workflowId: number }>({
+      query: ({ workflowId }) => ({
+        url: `/workflows/${workflowId}/guidance`,
+      }),
+      providesTags: (_result, _error, { workflowId }) => [{ type: "Workflow", id: workflowId }],
+    }),
+
+    createProjectFromWorkflow: builder.mutation<
+      ApiResponse<Project>,
+      { workflowId: number; body: CreateProjectFromWorkflowRequest }
+    >({
+      query: ({ workflowId, body }) => ({
+        url: `/workflows/${workflowId}/projects`,
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -409,8 +478,15 @@ export const {
   useGetWorkflowDetailQuery,
   useUpdateWorkflowDraftMutation,
   usePublishWorkflowMutation,
+  useUnpublishWorkflowMutation,
+  useDeleteWorkflowDraftMutation,
   useCreateWorkflowDraftFromProjectMutation,
   useUpsertWorkflowRatingMutation,
   useGetWorkflowRatingSummaryQuery,
   useToggleWorkflowFavoriteMutation,
+  useGenerateGuidanceMutation,
+  useUpdateGuidanceMutation,
+  useGetGuidanceByProjectQuery,
+  useGetGuidanceByWorkflowQuery,
+  useCreateProjectFromWorkflowMutation,
 } = workflowApi;

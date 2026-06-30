@@ -146,13 +146,13 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
 
                 for (AddProjectMemberResultItem r : results) {
                         notificationService.saveAndPublish(NotificationMessage.builder()
-                                .receiverId(r.getUserId())
-                                .actorId(securityService.getCurrentUserId())
-                                .type(NotificationType.PROJECT_ADD_MEMBER)
-                                .referenceType(EntityType.PROJECT)
-                                .referenceId(projectId)
-                                .payload(Map.of("referenceName", project.getName()))
-                                .build());
+                                        .receiverId(r.getUserId())
+                                        .actorId(securityService.getCurrentUserId())
+                                        .type(NotificationType.PROJECT_ADD_MEMBER)
+                                        .referenceType(EntityType.PROJECT)
+                                        .referenceId(projectId)
+                                        .payload(Map.of("referenceName", project.getName()))
+                                        .build());
                 }
 
                 return results;
@@ -186,7 +186,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 // @PreAuthorize đã kiểm tra MANAGE_MEMBERS permission
 
                 ProjectEntity project = projectRepository.findById(projectId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+                                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
                 ProjectMemberEntity member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project member not found"));
@@ -200,13 +200,13 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 response.setPermissions(permissionResolver.resolveProjectPermissions(currentUserId, projectId));
 
                 notificationService.saveAndPublish(NotificationMessage.builder()
-                        .receiverId(userId)
-                        .actorId(securityService.getCurrentUserId())
-                        .type(NotificationType.PROJECT_ROLE_CHANGE)
-                        .referenceType(EntityType.PROJECT)
-                        .referenceId(projectId)
-                        .payload(Map.of("referenceName", project.getName()))
-                        .build());
+                                .receiverId(userId)
+                                .actorId(securityService.getCurrentUserId())
+                                .type(NotificationType.PROJECT_ROLE_CHANGE)
+                                .referenceType(EntityType.PROJECT)
+                                .referenceId(projectId)
+                                .payload(Map.of("referenceName", project.getName()))
+                                .build());
 
                 return response;
         }
@@ -217,7 +217,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 // @PreAuthorize đã kiểm tra MANAGE_MEMBERS permission
 
                 ProjectEntity project = projectRepository.findById(projectId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+                                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
                 ProjectMemberEntity member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Project member not found"));
@@ -231,13 +231,13 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 permissionResolver.evictAllPermissionCache();
 
                 notificationService.saveAndPublish(NotificationMessage.builder()
-                        .receiverId(userId)
-                        .actorId(securityService.getCurrentUserId())
-                        .type(NotificationType.PROJECT_REMOVE_MEMBER)
-                        .referenceType(EntityType.PROJECT)
-                        .referenceId(projectId)
-                        .payload(Map.of("referenceName", project.getName()))
-                        .build());
+                                .receiverId(userId)
+                                .actorId(securityService.getCurrentUserId())
+                                .type(NotificationType.PROJECT_REMOVE_MEMBER)
+                                .referenceType(EntityType.PROJECT)
+                                .referenceId(projectId)
+                                .payload(Map.of("referenceName", project.getName()))
+                                .build());
         }
 
         @Override
@@ -245,13 +245,17 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         public void leaveProject(Long projectId) {
                 UserEntity currentUser = securityService.getCurrentUser();
 
-                ProjectMemberEntity member = projectMemberRepository.findByProjectIdAndUserId(projectId, currentUser.getId())
-                                .orElseThrow(() -> new ResourceNotFoundException("You are not a member of this project"));
+                ProjectMemberEntity member = projectMemberRepository
+                                .findByProjectIdAndUserId(projectId, currentUser.getId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "You are not a member of this project"));
 
                 if (member.getRole() == ProjectMemberRole.MANAGER) {
-                        long managerCount = projectMemberRepository.countByProjectIdAndRole(projectId, ProjectMemberRole.MANAGER);
+                        long managerCount = projectMemberRepository.countByProjectIdAndRole(projectId,
+                                        ProjectMemberRole.MANAGER);
                         if (managerCount <= 1) {
-                                throw new ConflictException("Cannot leave: you are the only project manager. Transfer the role first.");
+                                throw new ConflictException(
+                                                "Cannot leave: you are the only project manager. Transfer the role first.");
                         }
                 }
 
@@ -267,7 +271,8 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                                                 .type(NotificationType.PROJECT_LEAVE)
                                                 .referenceType(EntityType.PROJECT)
                                                 .referenceId(projectId)
-                                                .payload(Map.of("actorName", currentUser.getFullName(),"referenceName", member.getProject().getName()))
+                                                .payload(Map.of("actorName", currentUser.getFullName(), "referenceName",
+                                                                member.getProject().getName()))
                                                 .build()));
         }
 

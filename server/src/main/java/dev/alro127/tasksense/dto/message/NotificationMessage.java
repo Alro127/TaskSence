@@ -1,9 +1,10 @@
 package dev.alro127.tasksense.dto.message;
 
-import dev.alro127.tasksense.domain.enums.EntityType;
-import dev.alro127.tasksense.domain.enums.NotificationType;
 import lombok.*;
 import org.checkerframework.checker.units.qual.A;
+
+import dev.alro127.tasksense.domain.enums.EntityType;
+import dev.alro127.tasksense.domain.enums.NotificationType;
 
 import java.util.Map;
 

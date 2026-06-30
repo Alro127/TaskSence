@@ -1,6 +1,7 @@
 package dev.alro127.tasksense.service.subcriber;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import dev.alro127.tasksense.domain.enums.EmailType;
 import dev.alro127.tasksense.dto.message.EmailMessage;
 import jakarta.mail.internet.MimeMessage;
@@ -28,8 +29,7 @@ public class EmailSubscriber implements MessageListener {
 
             String body = new String(message.getBody());
 
-            EmailMessage emailMessage =
-                    objectMapper.readValue(body, EmailMessage.class);
+            EmailMessage emailMessage = objectMapper.readValue(body, EmailMessage.class);
 
             switch (emailMessage.getType()) {
 
@@ -52,8 +52,7 @@ public class EmailSubscriber implements MessageListener {
 
         MimeMessage mimeMessage = mailSender.createMimeMessage();
 
-        MimeMessageHelper helper =
-                new MimeMessageHelper(mimeMessage, true, "UTF-8");
+        MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
         helper.setTo(emailMessage.getTo());
         helper.setSubject(emailMessage.getSubject());

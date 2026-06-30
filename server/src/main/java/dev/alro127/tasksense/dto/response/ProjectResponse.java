@@ -1,13 +1,14 @@
 package dev.alro127.tasksense.dto.response;
 
-import dev.alro127.tasksense.domain.entity.ProjectEntity;
-import dev.alro127.tasksense.domain.enums.ProjectStatus;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Set;
+
+import dev.alro127.tasksense.domain.entity.ProjectEntity;
+import dev.alro127.tasksense.domain.enums.ProjectStatus;
 
 @Data
 @Builder
@@ -37,6 +38,8 @@ public class ProjectResponse {
 
     private Set<String> permissions;
 
+    private Long workflowId;
+
     public static ProjectResponse mapToResponse(ProjectEntity project) {
         return ProjectResponse.builder()
                 .id(project.getId())
@@ -48,6 +51,7 @@ public class ProjectResponse {
                 .endDate(project.getEndDate())
                 .createdAt(project.getCreatedAt())
                 .updatedAt(project.getUpdatedAt())
+                .workflowId(project.getSourceWorkflow() != null ? project.getSourceWorkflow().getId() : null)
                 .build();
     }
 }

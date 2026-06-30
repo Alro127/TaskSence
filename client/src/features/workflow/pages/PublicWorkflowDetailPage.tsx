@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CopyPlus, Loader2, RefreshCw, Star } from "lucide-react";
+import { ArrowLeft, Loader2, RefreshCw, Star } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAppSelector } from "@/app/hooks";
@@ -9,12 +9,15 @@ import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/utils";
 
 import {
-  useCreateWorkflowDraftFromProjectMutation,
   useGetWorkflowDetailQuery,
   useGetWorkflowRatingSummaryQuery,
   useUpsertWorkflowRatingMutation,
+  useGenerateGuidanceMutation,
+  useGetGuidanceByWorkflowQuery,
+  useCreateProjectFromWorkflowMutation,
 } from "../api/workflowApi";
-import { PublicWorkflowReviewsTab, PublicWorkflowStepsTab, RatingDialog } from "../components";
+import { PublicWorkflowReviewsTab, PublicWorkflowStepsTab, RatingDialog, RegenerateGuidanceDialog } from "../components";
+import { Sparkles, LayoutPanelTop, CheckCircle2 } from "lucide-react";
 
 function deriveEstimatedMinutes(stepCount: number): number {
   const safeCount = Math.max(1, stepCount);
@@ -32,6 +35,7 @@ export function PublicWorkflowDetailPage() {
   const currentUserId = useAppSelector((state) => state.user.currentUser?.id ?? null);
 
   const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
+  const [isGuidanceDialogOpen, setIsGuidanceDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>("steps");
 
   const {
@@ -42,6 +46,12 @@ export function PublicWorkflowDetailPage() {
   } = useGetWorkflowDetailQuery({ workflowId }, { skip: Number.isNaN(workflowId) });
   const workflow = workflowData?.data;
 
+  const { data: guidanceData, isLoading: isGuidanceLoading } = useGetGuidanceByWorkflowQuery(
+    { workflowId },
+    { skip: Number.isNaN(workflowId) }
+  );
+  const guidance = guidanceData?.data;
+
   const {
     data: ratingSummaryData,
     isLoading: isSummaryLoading,
@@ -49,9 +59,9 @@ export function PublicWorkflowDetailPage() {
   } = useGetWorkflowRatingSummaryQuery({ workflowId }, { skip: Number.isNaN(workflowId) });
   const ratingSummary = ratingSummaryData?.data;
 
-  const [createWorkflowDraftFromProject, { isLoading: isCloning }] =
-    useCreateWorkflowDraftFromProjectMutation();
   const [upsertWorkflowRating, { isLoading: isSubmittingRating }] = useUpsertWorkflowRatingMutation();
+  const [generateGuidance, { isLoading: isGeneratingGuidance }] = useGenerateGuidanceMutation();
+  const [createProjectFromWorkflow, { isLoading: isCreatingProject }] = useCreateProjectFromWorkflowMutation();
 
   const isOwner = useMemo(() => {
     if (!workflow || !currentUserId) {
@@ -65,22 +75,47 @@ export function PublicWorkflowDetailPage() {
     navigate("/auth/login");
   };
 
-  const handleCloneDraft = async () => {
+  const handleGenerateGuidance = () => {
+    setIsGuidanceDialogOpen(true);
+  };
+
+  const handleConfirmRegenerate = async (userInstructions: string) => {
     if (!workflow) {
       return;
     }
 
+    try {
+      await generateGuidance({
+        workflowId: workflow.id,
+        body: userInstructions.trim() ? { userInstructions } : undefined,
+      }).unwrap();
+      toast.success("AI Guidance generated successfully");
+      setIsGuidanceDialogOpen(false);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to generate guidance."));
+    }
+  };
+
+  const handleCreateProject = async () => {
+    if (!workflow) return;
     if (!isAuthenticated) {
       handleRequireAuth();
       return;
     }
 
     try {
-      const response = await createWorkflowDraftFromProject({ projectId: workflow.projectId }).unwrap();
-      toast.success("Draft created successfully.");
-      navigate(`/workflows/${response.data.id}`, { state: { workflow: response.data } });
+      const response = await createProjectFromWorkflow({
+        workflowId: workflow.id,
+        body: {
+          name: `${workflow.name} Project`,
+          description: workflow.description || undefined,
+        }
+      }).unwrap();
+      toast.success("Project created successfully from template!");
+      // Navigate to the new project detail page
+      navigate(`/workspaces/${response.data.workspaceId}/projects/${response.data.id}`);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to clone workflow as draft."));
+      toast.error(getApiErrorMessage(error, "Failed to create project from template."));
     }
   };
 
@@ -225,6 +260,7 @@ export function PublicWorkflowDetailPage() {
               estimatedMinutes={estimatedMinutes}
               progressPercent={progressPercent}
               activeStepIndex={currentStepIndex}
+              guidance={guidance}
             />
           ) : (
             <PublicWorkflowReviewsTab workflowId={workflow.id} />
@@ -254,30 +290,74 @@ export function PublicWorkflowDetailPage() {
 
             <div className="mt-5 space-y-2">
               <Button
-                className="w-full bg-[#233a87] text-white hover:opacity-90"
-                disabled={isCloning}
-                onClick={() => void handleCloneDraft()}
+                className="w-full bg-[#006a61] text-white hover:opacity-90"
+                disabled={isCreatingProject}
+                onClick={() => void handleCreateProject()}
               >
-                {isCloning && <Loader2 className="h-4 w-4 animate-spin" />}
-                <CopyPlus className="h-4 w-4" />
-                Clone as Draft
+                {isCreatingProject && <Loader2 className="h-4 w-4 animate-spin" />}
+                <LayoutPanelTop className="h-4 w-4" />
+                Use this Template
               </Button>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    handleRequireAuth();
-                    return;
-                  }
-                  setIsRatingDialogOpen(true);
-                }}
-              >
-                Rate this Workflow
-              </Button>
-              {isOwner && <p className="text-xs text-[#ba1a1a]">You cannot rate your own workflow.</p>}
+              
+              {isOwner ? (
+                <Button
+                  variant="outline"
+                  className="w-full border-[#233a87] text-[#233a87] hover:bg-[rgba(35,58,135,0.04)]"
+                  onClick={() => navigate(`/workflows/${workflow.id}`, { state: { workflow } })}
+                >
+                  Manage Template
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      handleRequireAuth();
+                      return;
+                    }
+                    setIsRatingDialogOpen(true);
+                  }}
+                >
+                  Rate this Workflow
+                </Button>
+              )}
             </div>
           </div>
+
+          {workflow.status === "PUBLIC" && (
+            <div className="ghost-border rounded-xl bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#444651]">AI Guidance</h2>
+                {guidance ? (
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-[#006a61]">
+                    <CheckCircle2 className="h-3 w-3" /> READY
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold text-[#ba1a1a]">NONE</span>
+                )}
+              </div>
+              
+              <p className="mt-2 text-xs text-[#444651]">
+                {guidance 
+                  ? "This template includes interactive AI-powered onboarding guidance."
+                  : "No AI guidance generated yet for this template."}
+              </p>
+
+              {isOwner && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 w-full gap-2 border-[#233a87] text-[#233a87] hover:bg-[rgba(35,58,135,0.04)]"
+                  disabled={isGeneratingGuidance || isGuidanceLoading}
+                  onClick={() => void handleGenerateGuidance()}
+                >
+                  {isGeneratingGuidance ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                  {guidance ? "Regenerate Guidance" : "Generate Guidance"}
+                </Button>
+              )}
+            </div>
+          )}
 
           <div className="rounded-xl bg-[#f4f3f1] p-5">
             <h3 className="text-xs font-bold uppercase tracking-widest text-[#444651]">Workflow metadata</h3>
@@ -334,6 +414,14 @@ export function PublicWorkflowDetailPage() {
         isSubmitting={isSubmittingRating}
         isGuest={!isAuthenticated}
         isOwner={isOwner}
+      />
+
+      <RegenerateGuidanceDialog
+        open={isGuidanceDialogOpen}
+        onOpenChange={setIsGuidanceDialogOpen}
+        onConfirm={handleConfirmRegenerate}
+        isLoading={isGeneratingGuidance}
+        isRegenerating={!!guidance}
       />
     </div>
   );

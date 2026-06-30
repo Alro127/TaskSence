@@ -1,13 +1,14 @@
 package dev.alro127.tasksense.repository.jpa;
 
-import dev.alro127.tasksense.domain.entity.WorkspaceInviteEntity;
-import dev.alro127.tasksense.domain.enums.InviteStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import dev.alro127.tasksense.domain.entity.WorkspaceInviteEntity;
+import dev.alro127.tasksense.domain.enums.InviteStatus;
 
 import java.time.OffsetDateTime;
 import java.util.List;

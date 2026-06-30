@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
-import { Loader2, MessageSquare, Reply, Send, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronUp, Loader2, MessageSquare, Reply, Send, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -14,6 +14,7 @@ import {
   useDeleteWorkflowCommentMutation,
   useLazyGetWorkflowCommentReactionUsersQuery,
   useLazyGetWorkflowCommentsQuery,
+  useLazyGetWorkflowCommentRepliesQuery,
   useRemoveWorkflowCommentReactionMutation,
   useUpdateWorkflowCommentMutation,
   useUpdateWorkflowCommentReactionMutation,
@@ -21,6 +22,7 @@ import {
 
 const QUICK_EMOJIS = ["👍", "❤️", "🔥", "✅", "🎯"];
 const PAGE_LIMIT = 15;
+const REPLIES_LIMIT = 10;
 
 interface PublicWorkflowReviewsTabProps {
   workflowId: number;
@@ -105,6 +107,355 @@ function ReactionBadge({ commentId, icon, count, isActive, onClick }: ReactionBa
   );
 }
 
+interface CommentItemProps {
+  comment: WorkflowCommentResponse;
+  isReply?: boolean;
+  currentUserId: number | null;
+  isAuthenticated: boolean;
+  onCommentAction: () => void;
+  workflowId: number;
+  handleToggleReaction: (commentId: number, icon: string) => Promise<void>;
+  myReactions: Record<number, string>;
+  editingCommentId: number | null;
+  setEditingCommentId: (id: number | null) => void;
+  editingContent: string;
+  setEditingContent: (content: string) => void;
+  handleUpdateComment: (commentId: number) => Promise<void>;
+  isUpdatingComment: boolean;
+  handleDeleteComment: (commentId: number) => Promise<void>;
+  isDeletingComment: boolean;
+  replyingTo: number | null;
+  setReplyingTo: (id: number | null) => void;
+  replyContent: string;
+  setReplyContent: (content: string) => void;
+  handlePostReply: (parentCommentId: number, mentionUserId?: number) => Promise<WorkflowCommentResponse | undefined>;
+  isCreatingComment: boolean;
+  handleRequireAuth: () => void;
+  rootId?: number;
+  onReplyPosted?: (newComment: WorkflowCommentResponse) => void;
+}
+
+function CommentItem({
+  comment,
+  isReply = false,
+  currentUserId,
+  isAuthenticated,
+  onCommentAction,
+  workflowId,
+  handleToggleReaction,
+  myReactions,
+  editingCommentId,
+  setEditingCommentId,
+  editingContent,
+  setEditingContent,
+  handleUpdateComment,
+  isUpdatingComment,
+  handleDeleteComment,
+  isDeletingComment,
+  replyingTo,
+  setReplyingTo,
+  replyContent,
+  setReplyContent,
+  handlePostReply,
+  isCreatingComment,
+  handleRequireAuth,
+  rootId,
+  onReplyPosted,
+}: CommentItemProps) {
+  // Use the provided rootId, or the current comment's id if it's a top-level comment
+  const activeRootId = rootId ?? comment.id;
+
+  const [replies, setReplies] = useState<WorkflowCommentResponse[]>([]);
+  const [isRepliesLoaded, setIsRepliesLoaded] = useState(false);
+  const [isRepliesVisible, setIsRepliesVisible] = useState(false);
+  const [repliesCursor, setRepliesCursor] = useState<number | undefined>(undefined);
+  const [hasMoreReplies, setHasMoreReplies] = useState(false);
+  
+  const [fetchReplies, { isFetching: isFetchingReplies }] = useLazyGetWorkflowCommentRepliesQuery();
+
+  const handleLoadReplies = async (initial = false) => {
+    try {
+      const result = await fetchReplies({
+        commentId: activeRootId,
+        cursor: initial ? undefined : repliesCursor,
+        limit: REPLIES_LIMIT
+      }, false).unwrap();
+      
+      if (initial) {
+        setReplies(result.data);
+        setIsRepliesLoaded(true);
+      } else {
+        setReplies(prev => {
+          const combined = [...prev, ...result.data];
+          return combined
+            .filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
+            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        });
+      }
+      
+      setHasMoreReplies(result.data.length >= REPLIES_LIMIT);
+      if (result.data.length > 0) {
+        setRepliesCursor(result.data[result.data.length - 1].id);
+      }
+      setIsRepliesVisible(true);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to load replies."));
+    }
+  };
+
+  const handleReplyPostedLocal = (newComment: WorkflowCommentResponse) => {
+    const sortFn = (a: WorkflowCommentResponse, b: WorkflowCommentResponse) => 
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+
+    if (!isRepliesLoaded) {
+      void handleLoadReplies(true).then(() => {
+        setReplies(prev => {
+          if (prev.some(c => c.id === newComment.id)) return prev;
+          return [...prev, newComment].sort(sortFn);
+        });
+        setIsRepliesVisible(true);
+      });
+    } else {
+      setReplies(prev => {
+        if (prev.some(c => c.id === newComment.id)) return prev;
+        return [...prev, newComment].sort(sortFn);
+      });
+      setIsRepliesVisible(true);
+    }
+  };
+
+  const isOwner = comment.user.id === currentUserId;
+
+  return (
+    <div className={`group/comment ${isReply ? "mt-4" : ""}`}>
+      <div className="flex gap-3">
+        <div className={`flex shrink-0 items-center justify-center rounded-full bg-[rgba(35,58,135,0.08)] font-bold text-[#233a87] ${isReply ? "h-7 w-7 text-[10px]" : "h-9 w-9 text-xs"}`}>
+          {getInitial(comment)}
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className={`${isReply ? "text-xs" : "text-sm"} font-semibold text-[#1a1c1b]`}>{getDisplayName(comment)}</h3>
+            <span className="text-xs text-[#444651]">{formatTime(comment.createdAt)}</span>
+            {comment.isEdited && <span className="text-xs text-[#444651]">(edited)</span>}
+          </div>
+
+          {editingCommentId === comment.id ? (
+            <div className="space-y-2">
+              <textarea
+                rows={3}
+                value={editingContent}
+                onChange={(event) => setEditingContent(event.target.value)}
+                className="w-full resize-none rounded-md border border-[rgba(197,197,211,0.35)] bg-[#faf9f7] px-3 py-2 text-sm text-[#1a1c1b] focus:outline-none focus:ring-2 focus:ring-[rgba(35,58,135,0.2)]"
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditingCommentId(null);
+                    setEditingContent("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-[#233a87] text-white hover:opacity-90"
+                  disabled={isUpdatingComment || !editingContent.trim()}
+                  onClick={() => void handleUpdateComment(comment.id).then(onCommentAction)}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className={`${isReply ? "text-xs" : "text-sm"} leading-relaxed text-[#444651]`}>{comment.content}</p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {Object.entries(comment.reactions)
+              .filter(([, count]) => count > 0)
+              .map(([icon, count]) => (
+                <ReactionBadge
+                  key={`${comment.id}-${icon}`}
+                  commentId={comment.id}
+                  icon={icon}
+                  count={count}
+                  isActive={myReactions[comment.id] === icon}
+                  onClick={() => void handleToggleReaction(comment.id, icon).then(onCommentAction)}
+                />
+              ))}
+
+            {QUICK_EMOJIS.map((emoji) => (
+              <button
+                key={`${comment.id}-quick-${emoji}`}
+                type="button"
+                className="rounded-md border border-[rgba(197,197,211,0.35)] bg-white px-2 py-1 text-xs text-[#444651] hover:bg-[#f4f3f1]"
+                onClick={() => void handleToggleReaction(comment.id, emoji).then(onCommentAction)}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3 text-xs">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 font-semibold text-[#233a87] hover:underline"
+              onClick={() => {
+                if (!isAuthenticated) {
+                  handleRequireAuth();
+                  return;
+                }
+                setReplyingTo(comment.id);
+                setReplyContent("");
+              }}
+            >
+              <Reply className="h-3.5 w-3.5" />
+              Reply
+            </button>
+
+            {isOwner && editingCommentId !== comment.id && (
+              <button
+                type="button"
+                className="font-semibold text-[#444651] hover:text-[#233a87]"
+                onClick={() => {
+                  setEditingCommentId(comment.id);
+                  setEditingContent(comment.content);
+                }}
+              >
+                Edit
+              </button>
+            )}
+
+            {isOwner && (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 font-semibold text-[#ba1a1a] hover:underline"
+                disabled={isDeletingComment}
+                onClick={() => void handleDeleteComment(comment.id).then(onCommentAction)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </button>
+            )}
+          </div>
+
+          {replyingTo === comment.id && (
+            <div className="rounded-md border border-[rgba(197,197,211,0.35)] bg-[#faf9f7] p-3">
+              <textarea
+                rows={2}
+                value={replyContent}
+                onChange={(event) => setReplyContent(event.target.value)}
+                placeholder={`Reply to ${getDisplayName(comment)}`}
+                className="w-full resize-none rounded-md border border-[rgba(197,197,211,0.35)] bg-white px-3 py-2 text-sm text-[#1a1c1b] placeholder:text-[#444651] focus:outline-none focus:ring-2 focus:ring-[rgba(35,58,135,0.2)]"
+              />
+              <div className="mt-2 flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setReplyingTo(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-[#233a87] text-white hover:opacity-90"
+                  disabled={isCreatingComment || !replyContent.trim()}
+                  onClick={() => {
+                    // Always use activeRootId as the parent for flat threading
+                    void handlePostReply(activeRootId, comment.user.id).then((newComment) => {
+                      if (newComment) {
+                        if (isReply && onReplyPosted) {
+                          onReplyPosted(newComment);
+                        } else {
+                          handleReplyPostedLocal(newComment);
+                        }
+                      }
+                    });
+                  }}
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  Reply
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {!isReply && (comment.replyCount > 0 || replies.length > 0) && (
+            <div className="mt-2">
+              {!isRepliesVisible ? (
+                <button
+                  type="button"
+                  className="flex items-center gap-1 text-xs font-bold text-[#233a87] hover:underline"
+                  onClick={() => !isRepliesLoaded ? void handleLoadReplies(true) : setIsRepliesVisible(true)}
+                  disabled={isFetchingReplies}
+                >
+                  <Reply className="h-3.5 w-3.5 rotate-180" />
+                  View {Math.max(comment.replyCount, replies.length)} {Math.max(comment.replyCount, replies.length) === 1 ? "reply" : "replies"}
+                  {isFetchingReplies && <Loader2 className="ml-1 h-3 w-3 animate-spin" />}
+                </button>
+              ) : (
+                <div className="space-y-4 border-l-2 border-[#efeeec] pl-4">
+                  {replies.map((reply) => (
+                    <CommentItem
+                      key={reply.id}
+                      comment={reply}
+                      isReply={true}
+                      currentUserId={currentUserId}
+                      isAuthenticated={isAuthenticated}
+                      onCommentAction={() => {
+                        void handleLoadReplies(true);
+                      }}
+                      onReplyPosted={handleReplyPostedLocal}
+                      workflowId={workflowId}
+                      handleToggleReaction={handleToggleReaction}
+                      myReactions={myReactions}
+                      editingCommentId={editingCommentId}
+                      setEditingCommentId={setEditingCommentId}
+                      editingContent={editingContent}
+                      setEditingContent={setEditingContent}
+                      handleUpdateComment={handleUpdateComment}
+                      isUpdatingComment={isUpdatingComment}
+                      handleDeleteComment={handleDeleteComment}
+                      isDeletingComment={isDeletingComment}
+                      replyingTo={replyingTo}
+                      setReplyingTo={setReplyingTo}
+                      replyContent={replyContent}
+                      setReplyContent={setReplyContent}
+                      handlePostReply={handlePostReply}
+                      isCreatingComment={isCreatingComment}
+                      handleRequireAuth={handleRequireAuth}
+                      rootId={activeRootId}
+                    />
+                  ))}
+                  
+                  {hasMoreReplies && (
+                    <button
+                      type="button"
+                      className="text-xs font-bold text-[#444651] hover:text-[#233a87] hover:underline"
+                      onClick={() => void handleLoadReplies()}
+                      disabled={isFetchingReplies}
+                    >
+                      Show more replies
+                      {isFetchingReplies && <Loader2 className="ml-1 h-3 w-3 animate-spin" />}
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 text-xs font-bold text-[#444651] hover:underline"
+                    onClick={() => setIsRepliesVisible(false)}
+                  >
+                    <ChevronUp className="h-3 w-3" />
+                    Hide replies
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PublicWorkflowReviewsTab({ workflowId }: PublicWorkflowReviewsTabProps) {
   const navigate = useNavigate();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
@@ -119,6 +470,7 @@ export function PublicWorkflowReviewsTab({ workflowId }: PublicWorkflowReviewsTa
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState("");
   const [myReactions, setMyReactions] = useState<Record<number, string>>({});
+  const [sortBy, setSortBy] = useState<"asc" | "desc">("desc");
 
   const [fetchComments, { isFetching }] = useLazyGetWorkflowCommentsQuery();
   const [createComment, { isLoading: isCreatingComment }] = useCreateWorkflowCommentMutation();
@@ -129,36 +481,18 @@ export function PublicWorkflowReviewsTab({ workflowId }: PublicWorkflowReviewsTa
 
   const loadInitial = useCallback(async () => {
     try {
-      const result = await fetchComments({ workflowId, limit: PAGE_LIMIT }, false).unwrap();
+      const result = await fetchComments({ workflowId, limit: PAGE_LIMIT, sort: sortBy }, false).unwrap();
       setComments(result.data);
       setHasMore(result.data.length >= PAGE_LIMIT);
       setNextCursor(result.data.length > 0 ? result.data[result.data.length - 1].id : undefined);
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to load workflow comments."));
     }
-  }, [fetchComments, workflowId]);
+  }, [fetchComments, workflowId, sortBy]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadInitial();
   }, [loadInitial]);
-
-  const topLevelComments = useMemo(
-    () => comments.filter((comment) => comment.parentCommentId === null),
-    [comments],
-  );
-
-  const repliesMap = useMemo(
-    () =>
-      comments
-        .filter((comment) => comment.parentCommentId !== null)
-        .reduce<Record<number, WorkflowCommentResponse[]>>((acc, comment) => {
-          const parentId = comment.parentCommentId as number;
-          acc[parentId] = [...(acc[parentId] ?? []), comment];
-          return acc;
-        }, {}),
-    [comments],
-  );
 
   const handleRequireAuth = () => {
     toast.error("Please sign in to comment or react.");
@@ -185,22 +519,24 @@ export function PublicWorkflowReviewsTab({ workflowId }: PublicWorkflowReviewsTa
     }
   };
 
-  const handlePostReply = async (parentCommentId: number) => {
+  const handlePostReply = async (parentCommentId: number, mentionUserId?: number): Promise<WorkflowCommentResponse | undefined> => {
     const content = replyContent.trim();
     if (!content) {
       return;
     }
 
-    if (!isAuthenticated) {
-      handleRequireAuth();
-      return;
-    }
-
     try {
-      await createComment({ workflowId, parentCommentId, content }).unwrap();
+      const mentionUserIds = mentionUserId ? [mentionUserId] : [];
+
+      const result = await createComment({
+        workflowId,
+        parentCommentId,
+        content,
+        mentionUserIds,
+      }).unwrap();
       setReplyingTo(null);
       setReplyContent("");
-      await loadInitial();
+      return result.data;
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to post reply."));
     }
@@ -216,7 +552,6 @@ export function PublicWorkflowReviewsTab({ workflowId }: PublicWorkflowReviewsTa
       await updateComment({ commentId, workflowId, content }).unwrap();
       setEditingCommentId(null);
       setEditingContent("");
-      await loadInitial();
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to update comment."));
     }
@@ -225,7 +560,6 @@ export function PublicWorkflowReviewsTab({ workflowId }: PublicWorkflowReviewsTa
   const handleDeleteComment = async (commentId: number) => {
     try {
       await deleteComment({ commentId, workflowId }).unwrap();
-      await loadInitial();
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to delete comment."));
     }
@@ -251,6 +585,8 @@ export function PublicWorkflowReviewsTab({ workflowId }: PublicWorkflowReviewsTa
         await updateReaction({ commentId, workflowId, icon }).unwrap();
         setMyReactions((prev) => ({ ...prev, [commentId]: icon }));
       }
+      // Re-fetch only this comment or re-fetch all?
+      // Re-fetching all for now
       await loadInitial();
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to update reaction."));
@@ -264,7 +600,7 @@ export function PublicWorkflowReviewsTab({ workflowId }: PublicWorkflowReviewsTa
 
     try {
       const result = await fetchComments(
-        { workflowId, cursor: nextCursor, limit: PAGE_LIMIT },
+        { workflowId, cursor: nextCursor, limit: PAGE_LIMIT, sort: sortBy },
         false,
       ).unwrap();
       setComments((prev) => [...prev, ...result.data]);
@@ -277,11 +613,21 @@ export function PublicWorkflowReviewsTab({ workflowId }: PublicWorkflowReviewsTa
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between border-y border-[#efeeec] py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-y border-[#efeeec] py-3">
         <span className="text-sm font-semibold text-[#1a1c1b]">
-          {comments.length} comment{comments.length !== 1 ? "s" : ""}
+          {comments.length} top-level comment{comments.length !== 1 ? "s" : ""}
         </span>
-        <span className="text-xs text-[#444651]">Sorted by newest</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-[#444651]">Sort by:</span>
+          <select 
+            className="bg-transparent text-xs font-semibold text-[#1a1c1b] focus:outline-none"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "asc" | "desc")}
+          >
+            <option value="desc">Newest first</option>
+            <option value="asc">Oldest first</option>
+          </select>
+        </div>
       </div>
 
       <div className="ghost-border rounded-xl bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
@@ -308,179 +654,43 @@ export function PublicWorkflowReviewsTab({ workflowId }: PublicWorkflowReviewsTa
         <div className="flex items-center justify-center py-6">
           <Loader2 className="h-5 w-5 animate-spin text-[#444651]" />
         </div>
-      ) : topLevelComments.length === 0 ? (
+      ) : comments.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[rgba(197,197,211,0.5)] bg-[#faf9f7] p-6 text-center text-sm text-[#444651]">
           No comments yet. Start the discussion for this workflow.
         </div>
       ) : (
         <div className="space-y-4">
-          {topLevelComments.map((comment) => {
-            const commentReplies = repliesMap[comment.id] ?? [];
-            const isOwner = comment.user.id === currentUserId;
-
-            return (
-              <article
-                key={comment.id}
-                className="ghost-border rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.06)]"
-              >
-                <div className="flex gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[rgba(35,58,135,0.08)] text-xs font-bold text-[#233a87]">
-                    {getInitial(comment)}
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-sm font-semibold text-[#1a1c1b]">{getDisplayName(comment)}</h3>
-                      <span className="text-xs text-[#444651]">{formatTime(comment.createdAt)}</span>
-                      {comment.isEdited && <span className="text-xs text-[#444651]">(edited)</span>}
-                    </div>
-
-                    {editingCommentId === comment.id ? (
-                      <div className="space-y-2">
-                        <textarea
-                          rows={3}
-                          value={editingContent}
-                          onChange={(event) => setEditingContent(event.target.value)}
-                          className="w-full resize-none rounded-md border border-[rgba(197,197,211,0.35)] bg-[#faf9f7] px-3 py-2 text-sm text-[#1a1c1b] focus:outline-none focus:ring-2 focus:ring-[rgba(35,58,135,0.2)]"
-                        />
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setEditingCommentId(null);
-                              setEditingContent("");
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-[#233a87] text-white hover:opacity-90"
-                            disabled={isUpdatingComment || !editingContent.trim()}
-                            onClick={() => void handleUpdateComment(comment.id)}
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm leading-relaxed text-[#444651]">{comment.content}</p>
-                    )}
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      {Object.entries(comment.reactions)
-                        .filter(([, count]) => count > 0)
-                        .map(([icon, count]) => (
-                          <ReactionBadge
-                            key={`${comment.id}-${icon}`}
-                            commentId={comment.id}
-                            icon={icon}
-                            count={count}
-                            isActive={myReactions[comment.id] === icon}
-                            onClick={() => void handleToggleReaction(comment.id, icon)}
-                          />
-                        ))}
-
-                      {QUICK_EMOJIS.map((emoji) => (
-                        <button
-                          key={`${comment.id}-quick-${emoji}`}
-                          type="button"
-                          className="rounded-md border border-[rgba(197,197,211,0.35)] bg-white px-2 py-1 text-xs text-[#444651] hover:bg-[#f4f3f1]"
-                          onClick={() => void handleToggleReaction(comment.id, emoji)}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center gap-3 text-xs">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 font-semibold text-[#233a87] hover:underline"
-                        onClick={() => {
-                          setReplyingTo(comment.id);
-                          setReplyContent("");
-                        }}
-                      >
-                        <Reply className="h-3.5 w-3.5" />
-                        Reply
-                      </button>
-
-                      {isOwner && editingCommentId !== comment.id && (
-                        <button
-                          type="button"
-                          className="font-semibold text-[#444651] hover:text-[#233a87]"
-                          onClick={() => {
-                            setEditingCommentId(comment.id);
-                            setEditingContent(comment.content);
-                          }}
-                        >
-                          Edit
-                        </button>
-                      )}
-
-                      {isOwner && (
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 font-semibold text-[#ba1a1a] hover:underline"
-                          disabled={isDeletingComment}
-                          onClick={() => void handleDeleteComment(comment.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </button>
-                      )}
-                    </div>
-
-                    {replyingTo === comment.id && (
-                      <div className="rounded-md border border-[rgba(197,197,211,0.35)] bg-[#faf9f7] p-3">
-                        <textarea
-                          rows={2}
-                          value={replyContent}
-                          onChange={(event) => setReplyContent(event.target.value)}
-                          placeholder={`Reply to ${getDisplayName(comment)}`}
-                          className="w-full resize-none rounded-md border border-[rgba(197,197,211,0.35)] bg-white px-3 py-2 text-sm text-[#1a1c1b] placeholder:text-[#444651] focus:outline-none focus:ring-2 focus:ring-[rgba(35,58,135,0.2)]"
-                        />
-                        <div className="mt-2 flex justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setReplyingTo(null)}>
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-[#233a87] text-white hover:opacity-90"
-                            disabled={isCreatingComment || !replyContent.trim()}
-                            onClick={() => void handlePostReply(comment.id)}
-                          >
-                            <Send className="h-3.5 w-3.5" />
-                            Reply
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {commentReplies.length > 0 && (
-                      <div className="space-y-3 border-l-2 border-[#efeeec] pl-4">
-                        {commentReplies.map((reply) => (
-                          <div key={reply.id} className="flex gap-3">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[rgba(35,58,135,0.08)] text-[10px] font-bold text-[#233a87]">
-                              {getInitial(reply)}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="text-xs font-semibold text-[#1a1c1b]">{getDisplayName(reply)}</p>
-                                <span className="text-xs text-[#444651]">{formatTime(reply.createdAt)}</span>
-                              </div>
-                              <p className="mt-1 text-sm text-[#444651]">{reply.content}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </article>
-            );
-          })}
+          {comments.map((comment) => (
+            <article
+              key={comment.id}
+              className="ghost-border rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.06)]"
+            >
+              <CommentItem
+                comment={comment}
+                currentUserId={currentUserId}
+                isAuthenticated={isAuthenticated}
+                onCommentAction={() => void loadInitial()}
+                workflowId={workflowId}
+                handleToggleReaction={handleToggleReaction}
+                myReactions={myReactions}
+                editingCommentId={editingCommentId}
+                setEditingCommentId={setEditingCommentId}
+                editingContent={editingContent}
+                setEditingContent={setEditingContent}
+                handleUpdateComment={handleUpdateComment}
+                isUpdatingComment={isUpdatingComment}
+                handleDeleteComment={handleDeleteComment}
+                isDeletingComment={isDeletingComment}
+                replyingTo={replyingTo}
+                setReplyingTo={setReplyingTo}
+                replyContent={replyContent}
+                setReplyContent={setReplyContent}
+                handlePostReply={handlePostReply}
+                isCreatingComment={isCreatingComment}
+                handleRequireAuth={handleRequireAuth}
+              />
+            </article>
+          ))}
         </div>
       )}
 

@@ -5,7 +5,6 @@ import {
   Globe,
   LayoutDashboard,
   LogOut,
-  Settings,
   User,
   X,
   BookOpen,
@@ -14,6 +13,7 @@ import {
   PanelLeftOpen,
   Menu,
   Bot,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,6 +28,8 @@ import { clearWorkspace } from "@/features/workspace/workspaceSlice";
 import { NotificationDropdown } from "@/features/notification/components/NotificationDropdown";
 import { useNotificationSocket } from "@/features/notification/hooks/useNotificationSocket";
 import { clearNotifications } from "@/features/notification/notificationSlice";
+import { GuidanceOverlay } from "@/features/guidance/components/GuidanceOverlay";
+import { GuidanceNavigator } from "@/features/guidance/components/GuidanceNavigator";
 
 const topNavItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -36,10 +38,11 @@ const topNavItems = [
   { label: "Community", to: "/community", icon: Globe },
   { label: "AI Assistant", to: "/agent", icon: Bot },
   { label: "Profile", to: "/profile", icon: User },
+  { label: "Team Templates", to: "/team-templates", icon: Users },
 ];
 
-const bottomNavItems = [
-  { label: "Settings", to: "/settings", icon: Settings },
+const bottomNavItems: Array<{ label: string; to: string; icon: any }> = [
+  // { label: "Settings", to: "/settings", icon: Settings },
 ];
 
 // ---------------------------------------------------------------------------
@@ -346,6 +349,9 @@ export function MainLayout() {
           </main>
         </div>
       </div>
+
+      <GuidanceOverlay />
+      <GuidanceNavigator />
 
       {/* ── Profile Drawer ── */}
       {isProfileDrawerOpen && (

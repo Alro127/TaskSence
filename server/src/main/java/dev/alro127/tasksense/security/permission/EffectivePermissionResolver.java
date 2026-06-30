@@ -88,17 +88,21 @@ public class EffectivePermissionResolver {
 
         // 2. Inherited from workspace role
         Optional<ProjectEntity> projectOpt = projectRepository.findById(projectId);
-        if (projectOpt.isEmpty()) return null;
+        if (projectOpt.isEmpty())
+            return null;
 
         Long workspaceId = projectOpt.get().getWorkspace().getId();
-        Optional<WorkspaceMemberEntity> wsMemberOpt =
-                workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, userId);
+        Optional<WorkspaceMemberEntity> wsMemberOpt = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId,
+                userId);
 
-        if (wsMemberOpt.isEmpty()) return null;
+        if (wsMemberOpt.isEmpty())
+            return null;
 
         WorkspaceRole wsRole = wsMemberOpt.get().getRole();
-        if (wsRole == WorkspaceRole.OWNER) return ProjectMemberRole.MANAGER;
-        if (wsRole == WorkspaceRole.MANAGER) return ProjectMemberRole.VIEWER;
+        if (wsRole == WorkspaceRole.OWNER)
+            return ProjectMemberRole.MANAGER;
+        if (wsRole == WorkspaceRole.MANAGER)
+            return ProjectMemberRole.VIEWER;
 
         return null;
     }
@@ -150,13 +154,15 @@ public class EffectivePermissionResolver {
 
     private Set<String> resolveInheritedProjectPermissions(Long userId, Long projectId) {
         Optional<ProjectEntity> projectOpt = projectRepository.findById(projectId);
-        if (projectOpt.isEmpty()) return Set.of();
+        if (projectOpt.isEmpty())
+            return Set.of();
 
         Long workspaceId = projectOpt.get().getWorkspace().getId();
-        Optional<WorkspaceMemberEntity> wsMemberOpt =
-                workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, userId);
+        Optional<WorkspaceMemberEntity> wsMemberOpt = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId,
+                userId);
 
-        if (wsMemberOpt.isEmpty()) return Set.of();
+        if (wsMemberOpt.isEmpty())
+            return Set.of();
 
         WorkspaceRole wsRole = wsMemberOpt.get().getRole();
 

@@ -34,6 +34,7 @@ import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
 import { useGetProjectSprintsQuery } from "@/features/sprint/api/sprintApi";
 import { useGetTagsByProjectQuery } from "@/features/tag/api";
 import { TagBadge } from "@/features/tag/components";
+import { useGuidance } from "@/features/guidance/context/GuidanceContext";
 
 interface TaskFormSheetProps {
   open: boolean;
@@ -98,6 +99,8 @@ export function TaskFormSheet({
     skip: !open,
   });
   const projectTags = tagsData?.data ?? [];
+
+  const { reportAction } = useGuidance();
 
   const [createTask, { isLoading: isCreating }] = useCreateTaskMutation();
   const [updateTask, { isLoading: isUpdating }] = useUpdateTaskMutation();
@@ -177,6 +180,7 @@ export function TaskFormSheet({
           parentTaskId: parentTaskId ?? undefined,
         }).unwrap();
         toast.success("Task created");
+        reportAction("TASK_CREATED");
       }
       onOpenChange(false);
     } catch (err) {

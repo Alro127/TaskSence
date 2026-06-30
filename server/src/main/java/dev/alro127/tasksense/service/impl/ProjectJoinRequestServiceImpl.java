@@ -20,6 +20,7 @@ import dev.alro127.tasksense.exception.UnauthorizedException;
 import dev.alro127.tasksense.repository.jpa.ProjectJoinRequestRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
+import dev.alro127.tasksense.security.permission.EffectivePermissionResolver;
 import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.ProjectJoinRequestService;
 import dev.alro127.tasksense.service.SecurityService;
@@ -42,6 +43,7 @@ public class ProjectJoinRequestServiceImpl implements ProjectJoinRequestService 
     private final ProjectRepository projectRepository;
     private final SecurityService securityService;
     private final NotificationService notificationService;
+    private final EffectivePermissionResolver permissionResolver;
 
     @Override
     public ProjectJoinRequestResponse sendJoinRequest(Long projectId, ProjectJoinRequest request) {
@@ -144,6 +146,7 @@ public class ProjectJoinRequestServiceImpl implements ProjectJoinRequestService 
                     .role(ProjectMemberRole.MEMBER)
                     .build();
             projectMemberRepository.save(member);
+            permissionResolver.evictAllPermissionCache();
         }
 
         notificationService.saveAndPublish(NotificationMessage.builder()

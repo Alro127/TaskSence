@@ -1,11 +1,12 @@
 package dev.alro127.tasksense.dto.request;
 
-import dev.alro127.tasksense.domain.enums.ProjectStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDate;
+
+import dev.alro127.tasksense.domain.enums.ProjectStatus;
 
 @Data
 public class CreateProjectRequest {

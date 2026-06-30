@@ -1,11 +1,12 @@
 package dev.alro127.tasksense.dto.response;
 
-import dev.alro127.tasksense.domain.enums.TaskPriority;
-import dev.alro127.tasksense.domain.enums.TaskStatus;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.OffsetDateTime;
+
+import dev.alro127.tasksense.domain.enums.TaskPriority;
+import dev.alro127.tasksense.domain.enums.TaskStatus;
 
 @Data
 @Builder

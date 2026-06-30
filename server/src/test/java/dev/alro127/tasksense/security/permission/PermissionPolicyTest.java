@@ -1,7 +1,8 @@
 package dev.alro127.tasksense.security.permission;
 
-import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 import org.junit.jupiter.api.Test;
+
+import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

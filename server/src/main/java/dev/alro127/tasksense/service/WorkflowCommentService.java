@@ -16,7 +16,9 @@ public interface WorkflowCommentService {
 
     void deleteComment(Long commentId);
 
-    List<WorkflowCommentResponse> getComments(Long workflowId, Long cursor, int limit);
+    List<WorkflowCommentResponse> getComments(Long workflowId, Long cursor, int limit, String sort);
+
+    List<WorkflowCommentResponse> getReplies(Long parentId, Long cursor, int limit);
 
     void addReaction(Long commentId, CommentReactionRequest request);
 

@@ -7,6 +7,7 @@ import dev.alro127.tasksense.repository.jpa.WorkflowRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.service.SecurityService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Set;
 
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Component;
  */
 @Component("perm")
 @RequiredArgsConstructor
+@Slf4j
 public class PermissionChecker {
 
     private final SecurityService securityService;
@@ -62,6 +64,19 @@ public class PermissionChecker {
     public boolean workspaceMember(Long workspaceId) {
         Long userId = securityService.getCurrentUserId();
         return workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userId);
+    }
+
+    /**
+     * Check project membership (bất kỳ role nào).
+     * Dùng: @PreAuthorize("@perm.isProjectMember(#projectId)")
+     */
+    public boolean isProjectMember(Long projectId) {
+        Long userId = securityService.getCurrentUserId();
+        log.info("Checking project membership for user {} on project {}", userId, projectId);
+        ProjectMemberRole role = resolver.resolveEffectiveProjectRole(userId, projectId);
+        boolean isMember = role != null;
+        log.info("User {} has role {} on project {}. Membership: {}", userId, role, projectId, isMember);
+        return isMember;
     }
 
     /**

@@ -1,15 +1,16 @@
 package dev.alro127.tasksense.repository.jpa;
 
-import dev.alro127.tasksense.domain.entity.ProjectEntity;
-import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
-import dev.alro127.tasksense.domain.enums.ProjectStatus;
-import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
+import dev.alro127.tasksense.domain.entity.ProjectEntity;
+import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
+import dev.alro127.tasksense.domain.enums.ProjectStatus;
+import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
@@ -65,36 +66,36 @@ public interface ProjectRepository extends JpaRepository<ProjectEntity, Long> {
     Long countByWorkspaceId(@Param("id") Long id);
 
     @Query("""
-        SELECT p.workspace.id, COUNT(p.id)
-        FROM ProjectEntity p
-        WHERE p.workspace.id IN :workspaceIds
-        GROUP BY p.workspace.id
-    """)
+                SELECT p.workspace.id, COUNT(p.id)
+                FROM ProjectEntity p
+                WHERE p.workspace.id IN :workspaceIds
+                GROUP BY p.workspace.id
+            """)
     List<Object[]> countByWorkspaceIds(@Param("workspaceIds") List<Long> workspaceIds);
 
     @Query("""
-        SELECT DISTINCT p
-        FROM ProjectEntity p
-        JOIN FETCH p.workspace w
-        WHERE (CAST(:projectName AS string) IS NULL OR LOWER(p.name) = LOWER(CAST(:projectName AS string)))
-        AND (:workspaceId IS NULL OR w.id = :workspaceId)
-        AND (CAST(:workspaceName AS string) IS NULL OR LOWER(w.name) = LOWER(CAST(:workspaceName AS string)))
-        AND (
-            EXISTS (
-                SELECT 1 FROM ProjectMemberEntity pm
-                WHERE pm.project = p
-                AND pm.user.id = :userId
-                AND pm.role IN :allowedProjectRoles
-            )
-            OR EXISTS (
-                SELECT 1 FROM WorkspaceMemberEntity wm
-                WHERE wm.workspace = w
-                AND wm.user.id = :userId
-                AND wm.role IN :allowedInheritedWorkspaceRoles
-            )
-        )
-        ORDER BY p.updatedAt DESC, p.id DESC
-    """)
+                SELECT DISTINCT p
+                FROM ProjectEntity p
+                JOIN FETCH p.workspace w
+                WHERE (CAST(:projectName AS string) IS NULL OR LOWER(p.name) = LOWER(CAST(:projectName AS string)))
+                AND (:workspaceId IS NULL OR w.id = :workspaceId)
+                AND (CAST(:workspaceName AS string) IS NULL OR LOWER(w.name) = LOWER(CAST(:workspaceName AS string)))
+                AND (
+                    EXISTS (
+                        SELECT 1 FROM ProjectMemberEntity pm
+                        WHERE pm.project = p
+                        AND pm.user.id = :userId
+                        AND pm.role IN :allowedProjectRoles
+                    )
+                    OR EXISTS (
+                        SELECT 1 FROM WorkspaceMemberEntity wm
+                        WHERE wm.workspace = w
+                        AND wm.user.id = :userId
+                        AND wm.role IN :allowedInheritedWorkspaceRoles
+                    )
+                )
+                ORDER BY p.updatedAt DESC, p.id DESC
+            """)
     List<ProjectEntity> findAuthorizedExactName(
             @Param("userId") Long userId,
             @Param("projectName") String projectName,
@@ -105,28 +106,28 @@ public interface ProjectRepository extends JpaRepository<ProjectEntity, Long> {
             Pageable pageable);
 
     @Query("""
-        SELECT DISTINCT p
-        FROM ProjectEntity p
-        JOIN FETCH p.workspace w
-        WHERE (CAST(:projectName AS string) IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:projectName AS string), '%')))
-        AND (:workspaceId IS NULL OR w.id = :workspaceId)
-        AND (CAST(:workspaceName AS string) IS NULL OR LOWER(w.name) LIKE LOWER(CONCAT('%', CAST(:workspaceName AS string), '%')))
-        AND (
-            EXISTS (
-                SELECT 1 FROM ProjectMemberEntity pm
-                WHERE pm.project = p
-                AND pm.user.id = :userId
-                AND pm.role IN :allowedProjectRoles
-            )
-            OR EXISTS (
-                SELECT 1 FROM WorkspaceMemberEntity wm
-                WHERE wm.workspace = w
-                AND wm.user.id = :userId
-                AND wm.role IN :allowedInheritedWorkspaceRoles
-            )
-        )
-        ORDER BY p.updatedAt DESC, p.id DESC
-    """)
+                SELECT DISTINCT p
+                FROM ProjectEntity p
+                JOIN FETCH p.workspace w
+                WHERE (CAST(:projectName AS string) IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:projectName AS string), '%')))
+                AND (:workspaceId IS NULL OR w.id = :workspaceId)
+                AND (CAST(:workspaceName AS string) IS NULL OR LOWER(w.name) LIKE LOWER(CONCAT('%', CAST(:workspaceName AS string), '%')))
+                AND (
+                    EXISTS (
+                        SELECT 1 FROM ProjectMemberEntity pm
+                        WHERE pm.project = p
+                        AND pm.user.id = :userId
+                        AND pm.role IN :allowedProjectRoles
+                    )
+                    OR EXISTS (
+                        SELECT 1 FROM WorkspaceMemberEntity wm
+                        WHERE wm.workspace = w
+                        AND wm.user.id = :userId
+                        AND wm.role IN :allowedInheritedWorkspaceRoles
+                    )
+                )
+                ORDER BY p.updatedAt DESC, p.id DESC
+            """)
     List<ProjectEntity> findAuthorizedNameLike(
             @Param("userId") Long userId,
             @Param("projectName") String projectName,
@@ -135,4 +136,10 @@ public interface ProjectRepository extends JpaRepository<ProjectEntity, Long> {
             @Param("allowedProjectRoles") Collection<ProjectMemberRole> allowedProjectRoles,
             @Param("allowedInheritedWorkspaceRoles") Collection<WorkspaceRole> allowedInheritedWorkspaceRoles,
             Pageable pageable);
+
+    List<ProjectEntity> findAllBySourceWorkflowId(Long sourceWorkflowId);
+
+    @Modifying
+    @Query("UPDATE ProjectEntity p SET p.sourceWorkflow = NULL WHERE p.sourceWorkflow.id IN :workflowIds")
+    void setSourceWorkflowToNullByWorkflowIds(@Param("workflowIds") List<Long> workflowIds);
 }

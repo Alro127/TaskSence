@@ -1,15 +1,15 @@
 package dev.alro127.tasksense.repository.jpa;
 
-import dev.alro127.tasksense.domain.entity.ProjectEntity;
-import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
-import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
+import dev.alro127.tasksense.domain.entity.ProjectEntity;
+import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
+import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
 
 import org.springframework.data.repository.query.Param;
 
@@ -27,6 +27,14 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMemberEnti
                 WHERE m.project.id = :projectId
             """)
     Page<ProjectMemberEntity> findAllByProjectId(Long projectId, Pageable pageable);
+
+    @Query("""
+                SELECT m
+                FROM ProjectMemberEntity m
+                JOIN FETCH m.user
+                WHERE m.project.id = :projectId
+            """)
+    List<ProjectMemberEntity> findAllByProjectId(Long projectId);
 
     List<ProjectMemberEntity> findByProjectIdAndUserIdIn(Long projectId, List<Long> userIds);
 
@@ -87,13 +95,13 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMemberEnti
     // ===== Dashboard queries =====
 
     @Query("""
-    SELECT p
-    FROM ProjectMemberEntity pm
-    JOIN pm.project p
-    JOIN FETCH p.workspace
-    WHERE pm.user.id = :userId
-    ORDER BY p.updatedAt DESC
-""")
+                SELECT p
+                FROM ProjectMemberEntity pm
+                JOIN pm.project p
+                JOIN FETCH p.workspace
+                WHERE pm.user.id = :userId
+                ORDER BY p.updatedAt DESC
+            """)
     List<ProjectEntity> findProjectsByUserId(@Param("userId") Long userId);
 
     @Query("""

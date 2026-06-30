@@ -21,6 +21,7 @@ import dev.alro127.tasksense.repository.jpa.WorkspaceInviteRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceMemberRepository;
 import dev.alro127.tasksense.repository.jpa.WorkspaceRepository;
 import dev.alro127.tasksense.security.hash.TokenHasher;
+import dev.alro127.tasksense.security.permission.EffectivePermissionResolver;
 import dev.alro127.tasksense.security.token.TokenProvider;
 import dev.alro127.tasksense.service.EmailService;
 import dev.alro127.tasksense.service.NotificationService;
@@ -50,6 +51,7 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
         private final TokenHasher tokenHasher;
         private final EmailService emailService;
         private final NotificationService notificationService;
+        private final EffectivePermissionResolver permissionResolver;
 
         @Override
         @Transactional
@@ -166,6 +168,7 @@ public class WorkspaceInviteServiceImpl implements WorkspaceInviteService {
                                 .build();
 
                 workspaceMemberRepository.save(member);
+                permissionResolver.evictAllPermissionCache();
 
                 invite.setStatus(InviteStatus.ACCEPTED);
                 invite.setAcceptedAt(OffsetDateTime.now());

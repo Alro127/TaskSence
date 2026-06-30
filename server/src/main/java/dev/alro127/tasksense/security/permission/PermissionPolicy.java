@@ -1,8 +1,9 @@
 package dev.alro127.tasksense.security.permission;
 
+import org.springframework.stereotype.Component;
+
 import dev.alro127.tasksense.domain.enums.ProjectMemberRole;
 import dev.alro127.tasksense.domain.enums.WorkspaceRole;
-import org.springframework.stereotype.Component;
 
 import java.util.EnumSet;
 import java.util.Map;

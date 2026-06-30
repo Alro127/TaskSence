@@ -33,7 +33,8 @@ public class EsOutboxWorker {
         while (true) {
             List<OutboxEventEntity> events = outboxEventRepository
                     .lockEventsForProcessing(OutboxEventType.ES_SYNC.name(), 100);
-            if (events.isEmpty()) break;
+            if (events.isEmpty())
+                break;
 
             for (OutboxEventEntity event : events) {
                 try {

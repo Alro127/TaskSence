@@ -66,6 +66,8 @@ import { useGetMembersQuery } from "@/features/project/api/projectMemberApi";
 import { useGetProjectSprintsQuery } from "@/features/sprint/api/sprintApi";
 import { useGetTagsByProjectQuery } from "@/features/tag/api";
 import { useAppSelector } from "@/app/hooks";
+import { GuidanceTarget } from "@/features/guidance/components/GuidanceTarget";
+import { useGuidance } from "@/features/guidance/context/GuidanceContext";
 
 // ─── Config ──────────────────────────────────────────────────────────────────────
 const STATUS_COLUMNS: {
@@ -336,19 +338,32 @@ function KanbanColumn({
           isOver && "ring-2 ring-primary/30 ring-inset",
         )}
       >
-        {tasks.map((t) => (
-          <TaskCard
-            key={t.id}
-            task={t}
-            projectId={projectId}
-            workspaceId={workspaceId}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            canEdit={t.permissions?.includes("EDIT") ?? true}
-            canDelete={t.permissions?.includes("DELETE") ?? true}
-            canDrag={t.permissions?.includes("UPDATE_STATUS") ?? true}
-          />
-        ))}
+        {tasks.map((t, index) => {
+          const card = (
+            <TaskCard
+              key={t.id}
+              task={t}
+              projectId={projectId}
+              workspaceId={workspaceId}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              canEdit={t.permissions?.includes("EDIT") ?? true}
+              canDelete={t.permissions?.includes("DELETE") ?? true}
+              canDrag={t.permissions?.includes("UPDATE_STATUS") ?? true}
+            />
+          );
+
+          // Wrap the first task of the first column (or any column with tasks) as a potential target
+          if (index === 0) {
+            return (
+              <GuidanceTarget key={t.id} capability="UPDATE_TASK_STATUS">
+                {card}
+              </GuidanceTarget>
+            );
+          }
+
+          return card;
+        })}
 
         {tasks.length === 0 && !isOver && (
           <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed py-8">
@@ -399,6 +414,23 @@ function TaskListRow({
   const isOverdue =
     task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "DONE";
 
+  const statusCfg = STATUS_COLUMNS.find((s) => s.value === task.status)!;
+  const [updateTaskStatus] = useUpdateTaskStatusMutation();
+  const { reportAction } = useGuidance();
+
+  const handleStatusChange = async (newStatus: TaskStatus) => {
+    try {
+      await updateTaskStatus({
+        projectId,
+        taskId: task.id,
+        status: newStatus,
+      }).unwrap();
+      reportAction("TASK_STATUS_UPDATED");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update status"));
+    }
+  };
+
   return (
     <div className="group flex items-center gap-3 rounded-md px-3 py-2.5 hover:bg-muted/40">
       {/* Title */}
@@ -410,6 +442,27 @@ function TaskListRow({
       >
         {task.title}
       </button>
+
+      {/* Status */}
+      <div className="hidden w-24 shrink-0 sm:block">
+        <GuidanceTarget capability="UPDATE_TASK_STATUS">
+          <Select
+            value={task.status}
+            onValueChange={(v) => handleStatusChange(v as TaskStatus)}
+          >
+            <SelectTrigger className={cn("h-7 border-none bg-transparent px-2 font-medium shadow-none hover:bg-muted focus:ring-0", statusCfg.badgeClass)}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_COLUMNS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </GuidanceTarget>
+      </div>
 
       {/* Priority */}
       <div className="hidden w-20 shrink-0 sm:block">
@@ -735,6 +788,7 @@ export function TaskBoardPage() {
 
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
+  const { reportAction } = useGuidance();
 
   // ─── UI state ───────────────────────────────────────────────────────────────
   // Sheet state
@@ -837,6 +891,7 @@ export function TaskBoardPage() {
         taskId: task.id,
         status: droppedOnColumn.value,
       }).unwrap();
+      reportAction("TASK_STATUS_UPDATED");
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to move task"));
     }
@@ -857,12 +912,14 @@ export function TaskBoardPage() {
           {workspaceName}
         </Link>
         <ChevronRight className="h-3 w-3" />
-        <Link
-          to={`/workspaces/${workspaceId}/projects/${projectId}`}
-          className="hover:text-foreground transition-colors"
-        >
-          {projectName}
-        </Link>
+        <GuidanceTarget capability="NAVIGATE_PROJECT_DETAIL">
+          <Link
+            to={`/workspaces/${workspaceId}/projects/${projectId}`}
+            className="hover:text-foreground transition-colors"
+          >
+            {projectName}
+          </Link>
+        </GuidanceTarget>
         <ChevronRight className="h-3 w-3" />
         <span className="font-medium text-foreground">Tasks</span>
       </nav>
@@ -1004,10 +1061,12 @@ export function TaskBoardPage() {
 
           {/* New task */}
           {canCreateTask && (
-            <Button size="sm" onClick={() => handleOpenCreate()}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Task
-            </Button>
+            <GuidanceTarget capability="CREATE_TASK">
+              <Button size="sm" onClick={() => handleOpenCreate()}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Task
+              </Button>
+            </GuidanceTarget>
           )}
         </div>
 
@@ -1176,10 +1235,12 @@ export function TaskBoardPage() {
             Create the first task for this project.
           </p>
           {canCreateTask && (
-            <Button size="sm" onClick={() => handleOpenCreate()}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Task
-            </Button>
+            <GuidanceTarget capability="CREATE_TASK">
+              <Button size="sm" onClick={() => handleOpenCreate()}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Task
+              </Button>
+            </GuidanceTarget>
           )}
         </div>
       )}

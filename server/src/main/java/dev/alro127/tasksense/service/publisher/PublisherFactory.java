@@ -1,7 +1,8 @@
 package dev.alro127.tasksense.service.publisher;
 
-import dev.alro127.tasksense.domain.enums.OutboxEventType;
 import org.springframework.stereotype.Service;
+
+import dev.alro127.tasksense.domain.enums.OutboxEventType;
 
 import java.util.List;
 import java.util.Map;

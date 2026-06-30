@@ -1,7 +1,5 @@
 package dev.alro127.tasksense.repository.jpa;
 
-import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
-import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import dev.alro127.tasksense.domain.entity.WorkspaceEntity;
+import dev.alro127.tasksense.domain.enums.WorkspaceRole;
 
 import java.util.List;
 import java.util.Optional;

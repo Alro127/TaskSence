@@ -1,11 +1,12 @@
 package dev.alro127.tasksense.repository.elasticsearch;
 
-import dev.alro127.tasksense.domain.document.ProjectDocument;
-import dev.alro127.tasksense.domain.enums.ProjectStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.stereotype.Repository;
+
+import dev.alro127.tasksense.domain.document.ProjectDocument;
+import dev.alro127.tasksense.domain.enums.ProjectStatus;
 
 @Repository
 public interface ProjectSearchRepository extends ElasticsearchRepository<ProjectDocument, Long> {

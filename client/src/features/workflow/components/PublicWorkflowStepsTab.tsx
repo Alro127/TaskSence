@@ -1,12 +1,13 @@
-import { Info } from "lucide-react";
+import { Info, Sparkles } from "lucide-react";
 
-import type { WorkflowStepResponse } from "@/types/api";
+import type { WorkflowStepResponse, WorkflowGuidanceDto } from "@/types/api";
 
 interface PublicWorkflowStepsTabProps {
   steps: WorkflowStepResponse[];
   estimatedMinutes: number;
   progressPercent: number;
   activeStepIndex: number;
+  guidance?: WorkflowGuidanceDto;
 }
 
 export function PublicWorkflowStepsTab({
@@ -14,9 +15,39 @@ export function PublicWorkflowStepsTab({
   estimatedMinutes,
   progressPercent,
   activeStepIndex,
+  guidance,
 }: PublicWorkflowStepsTabProps) {
   return (
     <>
+      {guidance?.summary && (
+        <div className="rounded-xl border border-[rgba(0,106,97,0.2)] bg-[rgba(0,106,97,0.04)] p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-4 w-4 text-[#006a61]" />
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[#006a61]">AI Onboarding Summary</h3>
+          </div>
+          <p className="text-sm text-[#444651] mb-4">{guidance.summary.overview}</p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {guidance.summary.bestPractices.length > 0 && (
+              <div>
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#006a61] mb-2">Best Practices</h4>
+                <ul className="text-xs text-[#444651] space-y-1 list-disc pl-4">
+                  {guidance.summary.bestPractices.map((bp, i) => <li key={i}>{bp}</li>)}
+                </ul>
+              </div>
+            )}
+            {guidance.summary.risks.length > 0 && (
+              <div>
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#ba1a1a] mb-2">Risks to Avoid</h4>
+                <ul className="text-xs text-[#444651] space-y-1 list-disc pl-4">
+                  {guidance.summary.risks.map((risk, i) => <li key={i}>{risk}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="rounded-xl bg-[#f4f3f1] p-5">
         <div className="flex flex-wrap items-center justify-between gap-6">
           <div className="flex flex-wrap items-center gap-6">

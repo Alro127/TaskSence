@@ -1,6 +1,8 @@
 package dev.alro127.tasksense.service.impl;
 
+import dev.alro127.tasksense.dto.message.NotificationMessage;
 import dev.alro127.tasksense.domain.entity.ProjectEntity;
+import dev.alro127.tasksense.domain.entity.ProjectMemberEntity;
 import dev.alro127.tasksense.domain.entity.SprintEntity;
 import dev.alro127.tasksense.domain.entity.TaskEntity;
 import dev.alro127.tasksense.domain.entity.UserEntity;
@@ -9,6 +11,8 @@ import dev.alro127.tasksense.domain.entity.WorkflowFavoriteEntity;
 import dev.alro127.tasksense.domain.entity.WorkflowRatingEntity;
 import dev.alro127.tasksense.domain.entity.WorkflowStepEntity;
 import dev.alro127.tasksense.domain.entity.WorkflowStepTaskEntity;
+import dev.alro127.tasksense.domain.enums.EntityType;
+import dev.alro127.tasksense.domain.enums.NotificationType;
 import dev.alro127.tasksense.domain.enums.TaskStatus;
 import dev.alro127.tasksense.domain.enums.WorkflowGenerationSource;
 import dev.alro127.tasksense.domain.enums.WorkflowStatus;
@@ -27,12 +31,14 @@ import dev.alro127.tasksense.exception.ForbiddenException;
 import dev.alro127.tasksense.exception.ResourceNotFoundException;
 import dev.alro127.tasksense.repository.jpa.WorkflowFavoriteRepository;
 import dev.alro127.tasksense.repository.jpa.WorkflowRatingRepository;
+import dev.alro127.tasksense.repository.jpa.ProjectMemberRepository;
 import dev.alro127.tasksense.repository.jpa.ProjectRepository;
 import dev.alro127.tasksense.repository.jpa.SprintRepository;
 import dev.alro127.tasksense.repository.jpa.TaskRepository;
 import dev.alro127.tasksense.repository.jpa.WorkflowRepository;
 import dev.alro127.tasksense.repository.jpa.WorkflowStepRepository;
 import dev.alro127.tasksense.repository.jpa.WorkflowStepTaskRepository;
+import dev.alro127.tasksense.service.NotificationService;
 import dev.alro127.tasksense.service.SecurityService;
 import dev.alro127.tasksense.service.WorkflowService;
 import lombok.RequiredArgsConstructor;
@@ -68,7 +74,9 @@ public class WorkflowServiceImpl implements WorkflowService {
     private final WorkflowStepTaskRepository workflowStepTaskRepository;
     private final WorkflowRatingRepository workflowRatingRepository;
     private final WorkflowFavoriteRepository workflowFavoriteRepository;
+    private final ProjectMemberRepository projectMemberRepository;
     private final SecurityService securityService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -190,7 +198,8 @@ public class WorkflowServiceImpl implements WorkflowService {
             throw new BadRequestException("Some tasks do not belong to workflow project");
         }
 
-        Map<Long, TaskEntity> taskById = tasks.stream().collect(Collectors.toMap(TaskEntity::getId, task -> task));
+        Map<Long, TaskEntity> taskById = tasks.stream()
+                .collect(Collectors.toMap(TaskEntity::getId, task -> task, (existing, replacement) -> existing));
 
         Set<Long> sprintIds = request.getSteps().stream()
                 .map(UpdateWorkflowDraftRequest.UpdateWorkflowStepRequest::getSourceSprintId)
@@ -216,6 +225,8 @@ public class WorkflowServiceImpl implements WorkflowService {
             List<Long> existingStepIds = existingSteps.stream().map(WorkflowStepEntity::getId).toList();
             workflowStepTaskRepository.deleteByWorkflowStepIdIn(existingStepIds);
             workflowStepRepository.deleteByWorkflowId(workflowId);
+            workflowStepTaskRepository.flush();
+            workflowStepRepository.flush();
         }
 
         List<WorkflowStepResponse> stepResponses = new ArrayList<>();
@@ -234,6 +245,7 @@ public class WorkflowServiceImpl implements WorkflowService {
                     .build());
 
             List<TaskEntity> stepTasks = stepRequest.getTaskIds().stream()
+                    .distinct()
                     .map(taskById::get)
                     .toList();
 
@@ -270,41 +282,47 @@ public class WorkflowServiceImpl implements WorkflowService {
         WorkflowEntity workflow = getOwnedWorkflowOrThrow(workflowId);
 
         if (workflow.getStatus() != WorkflowStatus.DRAFT) {
-            throw new BadRequestException("Workflow is not in draft status and cannot be published");
-        }
-
-        String name = workflow.getName() != null ? workflow.getName().trim() : "";
-        if (name.isBlank()) {
-            throw new BadRequestException("Workflow name is required before publishing");
-        }
-
-        String description = workflow.getDescription() != null ? workflow.getDescription().trim() : "";
-        if (description.isBlank() || description.length() < 20) {
-            throw new BadRequestException("Workflow description must be at least 20 characters before publishing");
-        }
-
-        List<WorkflowStepEntity> steps = workflowStepRepository.findAllByWorkflowIdOrderByPositionAscIdAsc(workflowId);
-        if (steps.isEmpty()) {
-            throw new BadRequestException("Workflow must have at least one step before publishing");
-        }
-
-        List<Long> stepIds = steps.stream()
-                .map(WorkflowStepEntity::getId)
-                .toList();
-        List<WorkflowStepTaskEntity> stepTasks = workflowStepTaskRepository.findAllByWorkflowStepIdIn(stepIds);
-        Map<Long, Long> taskCountByStepId = stepTasks.stream()
-                .collect(Collectors.groupingBy(stepTask -> stepTask.getWorkflowStep().getId(), Collectors.counting()));
-
-        boolean hasStepWithoutTasks = steps.stream()
-                .anyMatch(step -> taskCountByStepId.getOrDefault(step.getId(), 0L) == 0L);
-        if (hasStepWithoutTasks) {
-            throw new BadRequestException("Each workflow step must have at least one mapped task before publishing");
+            throw new BadRequestException("Only draft workflow can be published");
         }
 
         workflow.setStatus(WorkflowStatus.PUBLIC);
-        if (workflow.getPublishedAt() == null) {
-            workflow.setPublishedAt(OffsetDateTime.now());
+        workflow.setPublishedAt(OffsetDateTime.now());
+        workflow.setPublicationVersion(workflow.getPublicationVersion() + 1);
+
+        WorkflowEntity saved = workflowRepository.save(workflow);
+
+        // Notify projects derived from this workflow
+        List<ProjectEntity> derivedProjects = projectRepository.findAllBySourceWorkflowId(workflowId);
+        for (ProjectEntity project : derivedProjects) {
+            List<ProjectMemberEntity> members = projectMemberRepository.findAllByProjectId(project.getId());
+            for (ProjectMemberEntity member : members) {
+                notificationService.saveAndPublish(NotificationMessage.builder()
+                        .receiverId(member.getUser().getId())
+                        .actorId(workflow.getCreatedBy().getId())
+                        .type(NotificationType.WORKFLOW_UPDATED)
+                        .referenceType(EntityType.PROJECT)
+                        .referenceId(project.getId())
+                        .payload(Map.of(
+                                "workflowName", workflow.getName(),
+                                "projectName", project.getName(),
+                                "projectId", project.getId()))
+                        .build());
+            }
         }
+
+        return toWorkflowDraftResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public WorkflowDraftResponse unpublishWorkflow(Long workflowId) {
+        WorkflowEntity workflow = getOwnedWorkflowOrThrow(workflowId);
+
+        if (workflow.getStatus() != WorkflowStatus.PUBLIC) {
+            throw new BadRequestException("Only public workflow can be unpublished");
+        }
+
+        workflow.setStatus(WorkflowStatus.DRAFT);
         WorkflowEntity saved = workflowRepository.save(workflow);
         return toWorkflowDraftResponse(saved);
     }
@@ -407,6 +425,18 @@ public class WorkflowServiceImpl implements WorkflowService {
         rating.setReviewText(reviewText);
 
         WorkflowRatingEntity saved = workflowRatingRepository.save(rating);
+
+        notificationService.saveAndPublish(NotificationMessage.builder()
+                .receiverId(workflow.getCreatedBy().getId())
+                .actorId(currentUser.getId())
+                .type(NotificationType.WORKFLOW_RATED)
+                .referenceType(EntityType.WORKFLOW)
+                .referenceId(workflow.getId())
+                .payload(Map.of(
+                        "workflowName", workflow.getName(),
+                        "stars", saved.getStars()))
+                .build());
+
         return toWorkflowRatingResponse(saved);
     }
 
@@ -445,17 +475,65 @@ public class WorkflowServiceImpl implements WorkflowService {
                 .user(currentUser)
                 .build());
 
+        notificationService.saveAndPublish(NotificationMessage.builder()
+                .receiverId(workflow.getCreatedBy().getId())
+                .actorId(currentUser.getId())
+                .type(NotificationType.WORKFLOW_FAVORITED)
+                .referenceType(EntityType.WORKFLOW)
+                .referenceId(workflow.getId())
+                .payload(Map.of("workflowName", workflow.getName()))
+                .build());
+
         return WorkflowFavoriteToggleResponse.builder()
                 .workflowId(workflowId)
                 .favorited(true)
                 .build();
     }
 
+    @Override
+    @Transactional
+    public void deleteWorkflowDraft(Long workflowId) {
+        WorkflowEntity workflow = getOwnedWorkflowOrThrow(workflowId);
+
+        if (workflow.getStatus() != WorkflowStatus.DRAFT) {
+            throw new BadRequestException("Only draft workflow can be deleted");
+        }
+
+        List<WorkflowStepEntity> steps = workflowStepRepository
+                .findAllByWorkflowIdOrderByPositionAscIdAsc(workflowId);
+        if (!steps.isEmpty()) {
+            List<Long> stepIds = steps.stream().map(WorkflowStepEntity::getId).toList();
+            workflowStepTaskRepository.deleteByWorkflowStepIdIn(stepIds);
+            workflowStepRepository.deleteByWorkflowId(workflowId);
+        }
+
+        workflowRatingRepository.deleteByWorkflowId(workflowId);
+        workflowFavoriteRepository.deleteByWorkflowId(workflowId);
+        workflowRepository.delete(workflow);
+    }
+
+    @Override
+    @Transactional
+    public void deleteWorkflowsByProjectIds(List<Long> projectIds, OffsetDateTime now) {
+        if (projectIds == null || projectIds.isEmpty()) {
+            return;
+        }
+
+        List<Long> workflowIdsToDelete = workflowRepository.findIdsByProjectIds(projectIds);
+        if (!workflowIdsToDelete.isEmpty()) {
+            // Nullify references from projects that were created FROM these workflows
+            projectRepository.setSourceWorkflowToNullByWorkflowIds(workflowIdsToDelete);
+
+            // Soft delete the workflows themselves
+            workflowRepository.softDeleteByProjectIds(projectIds, now);
+        }
+    }
+
     private WorkflowStepTaskSummaryResponse toTaskSummary(TaskEntity task) {
         return WorkflowStepTaskSummaryResponse.builder()
                 .id(task.getId())
                 .title(task.getTitle())
-                .status(task.getStatus())
+                .status(TaskStatus.TODO)
                 .sprintId(task.getSprint() != null ? task.getSprint().getId() : null)
                 .parentTaskId(task.getParentTask() != null ? task.getParentTask().getId() : null)
                 .build();
@@ -535,14 +613,24 @@ public class WorkflowServiceImpl implements WorkflowService {
 
     private WorkflowDraftResponse toWorkflowDraftResponse(WorkflowEntity workflow, List<WorkflowStepResponse> steps,
             boolean favorited) {
+        Long currentUserId = getCurrentUserIdOrNull();
+        boolean isOwner = currentUserId != null && workflow.getCreatedBy().getId().equals(currentUserId);
+
+        WorkflowGenerationSource effectiveSource = workflow.getGenerationSource();
+        if (!isOwner && effectiveSource == WorkflowGenerationSource.AI_REFINED) {
+            effectiveSource = WorkflowGenerationSource.RULE_BASED;
+        }
+
         return WorkflowDraftResponse.builder()
                 .id(workflow.getId())
                 .projectId(workflow.getProject().getId())
+                .projectName(workflow.getProject().getName())
+                .workspaceName(workflow.getProject().getWorkspace().getName())
                 .createdBy(workflow.getCreatedBy().getId())
                 .name(workflow.getName())
                 .description(workflow.getDescription())
                 .status(workflow.getStatus())
-                .generationSource(workflow.getGenerationSource())
+                .generationSource(effectiveSource)
                 .aiRefinementRequested(workflow.getAiRefinementRequested())
                 .publishedAt(workflow.getPublishedAt())
                 .publicationVersion(workflow.getPublicationVersion())

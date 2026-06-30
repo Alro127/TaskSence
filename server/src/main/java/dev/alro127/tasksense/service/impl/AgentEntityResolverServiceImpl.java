@@ -52,7 +52,8 @@ public class AgentEntityResolverServiceImpl implements AgentEntityResolverServic
         if (workspaceId != null) {
             return workspaceRepository.findById(workspaceId)
                     .map(workspace -> {
-                        Set<String> permissions = permissionResolver.resolveWorkspacePermissions(userId, workspace.getId());
+                        Set<String> permissions = permissionResolver.resolveWorkspacePermissions(userId,
+                                workspace.getId());
                         if (!permissions.contains(permission.name())) {
                             return workspaceForbidden();
                         }
@@ -182,7 +183,8 @@ public class AgentEntityResolverServiceImpl implements AgentEntityResolverServic
                 return taskNotFound("Task not found or not authorized");
             }
             return taskRepository.findByIdAndProjectId(taskId, projectId)
-                    .map(task -> resolvedTask(toTask(task, permissionResolver.resolveTaskPermissions(userId, projectId, task))))
+                    .map(task -> resolvedTask(
+                            toTask(task, permissionResolver.resolveTaskPermissions(userId, projectId, task))))
                     .orElseGet(() -> taskNotFound("Task not found or not authorized"));
         }
 
@@ -199,7 +201,8 @@ public class AgentEntityResolverServiceImpl implements AgentEntityResolverServic
         Long resolvedProjectId = projectResolution.getSelected().getProjectId();
         if (taskId != null) {
             return taskRepository.findByIdAndProjectId(taskId, resolvedProjectId)
-                    .map(task -> resolvedTask(toTask(task, permissionResolver.resolveTaskPermissions(userId, resolvedProjectId, task))))
+                    .map(task -> resolvedTask(
+                            toTask(task, permissionResolver.resolveTaskPermissions(userId, resolvedProjectId, task))))
                     .orElseGet(() -> taskNotFound("Task not found or not authorized"));
         }
 
@@ -212,7 +215,8 @@ public class AgentEntityResolverServiceImpl implements AgentEntityResolverServic
                 resolvedProjectId, normalizedTitle, PageRequest.of(0, CANDIDATE_LIMIT));
         if (exact.size() == 1) {
             TaskEntity task = exact.getFirst();
-            return resolvedTask(toTask(task, permissionResolver.resolveTaskPermissions(userId, resolvedProjectId, task)));
+            return resolvedTask(
+                    toTask(task, permissionResolver.resolveTaskPermissions(userId, resolvedProjectId, task)));
         }
         if (exact.size() > 1) {
             return ambiguousTasks(exact, userId, resolvedProjectId);
@@ -222,7 +226,8 @@ public class AgentEntityResolverServiceImpl implements AgentEntityResolverServic
                 resolvedProjectId, normalizedTitle, PageRequest.of(0, CANDIDATE_LIMIT));
         if (partial.size() == 1) {
             TaskEntity task = partial.getFirst();
-            return resolvedTask(toTask(task, permissionResolver.resolveTaskPermissions(userId, resolvedProjectId, task)));
+            return resolvedTask(
+                    toTask(task, permissionResolver.resolveTaskPermissions(userId, resolvedProjectId, task)));
         }
         if (partial.size() > 1) {
             return ambiguousTasks(partial, userId, resolvedProjectId);
@@ -320,7 +325,8 @@ public class AgentEntityResolverServiceImpl implements AgentEntityResolverServic
                 .build();
     }
 
-    private AgentResolutionResponse<AgentResolvedWorkspace> ambiguousWorkspaces(List<WorkspaceEntity> workspaces, Long userId) {
+    private AgentResolutionResponse<AgentResolvedWorkspace> ambiguousWorkspaces(List<WorkspaceEntity> workspaces,
+            Long userId) {
         return AgentResolutionResponse.<AgentResolvedWorkspace>builder()
                 .status(AgentResolutionStatus.AMBIGUOUS)
                 .message("Multiple authorized workspaces match")
@@ -344,7 +350,8 @@ public class AgentEntityResolverServiceImpl implements AgentEntityResolverServic
                 .build();
     }
 
-    private AgentResolutionResponse<AgentResolvedTask> ambiguousTasks(List<TaskEntity> tasks, Long userId, Long projectId) {
+    private AgentResolutionResponse<AgentResolvedTask> ambiguousTasks(List<TaskEntity> tasks, Long userId,
+            Long projectId) {
         return AgentResolutionResponse.<AgentResolvedTask>builder()
                 .status(AgentResolutionStatus.AMBIGUOUS)
                 .message("Multiple authorized tasks match")

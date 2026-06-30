@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -51,8 +51,10 @@ import { useGetMembersQuery, useUpdateMemberRoleMutation, useLeaveProjectMutatio
 import { useGetJoinRequestsQuery, useReviewJoinRequestMutation, useCancelJoinRequestMutation } from "../api/projectJoinRequestApi";
 import { useGetTasksByProjectQuery } from "@/features/task/api/taskApi";
 import { ProjectAnalyticsTab } from "@/features/analytics/components/ProjectAnalyticsTab";
-import { useCreateWorkflowDraftFromProjectMutation } from "@/features/workflow/api/workflowApi";
+import { useCreateWorkflowDraftFromProjectMutation, useGetGuidanceByProjectQuery } from "@/features/workflow/api/workflowApi";
 import { CreateWorkflowDraftCard } from "@/features/workflow/components";
+import { useGuidance } from "@/features/guidance/context/GuidanceContext";
+import { GuidanceTarget } from "@/features/guidance/components/GuidanceTarget";
 import {
   DeleteProjectDialog,
   EditProjectModal,
@@ -63,6 +65,7 @@ import {
   ROLE_LABEL,
   SprintManagementTab,
   ProjectTagsTab,
+  ProjectGuidanceCard,
 } from "../components";
 import {
   Pagination,
@@ -144,7 +147,7 @@ function JoinRequestItem({
           </p>
           <span
             className={cn(
-              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
+              "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
               cfg.badgeClass,
             )}
           >
@@ -402,6 +405,7 @@ export function ProjectDetailPage() {
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
   const [isLeaveProjectOpen, setIsLeaveProjectOpen] = useState(false);
   const [isCreateWorkflowDialogOpen, setIsCreateWorkflowDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [includeSubtasks, setIncludeSubtasks] = useState(true);
   const [includeCompletedTasks, setIncludeCompletedTasks] = useState(false);
   const [useAiRefinement, setUseAiRefinement] = useState(false);
@@ -409,6 +413,49 @@ export function ProjectDetailPage() {
   const [leaveProject, { isLoading: isLeavingProject }] = useLeaveProjectMutation();
   const [createWorkflowDraftFromProject, { isLoading: isCreatingWorkflowDraft }] =
     useCreateWorkflowDraftFromProjectMutation();
+
+  const { startGuidance, currentStep, isVisible } = useGuidance();
+
+  useEffect(() => {
+    if (isVisible && currentStep?.uiTarget) {
+      const targetToTab: Record<string, string> = {
+        CREATE_SPRINT: "sprints",
+        NAVIGATE_SPRINTS: "sprints",
+        CREATE_TASK: "tasks",
+        NAVIGATE_TASK_BOARD: "tasks",
+        CREATE_TAG: "tags",
+        NAVIGATE_TAGS: "tags",
+        MANAGE_MEMBERS: "members",
+        INVITE_MEMBER: "members",
+        NAVIGATE_MEMBERS: "members",
+        PROJECT_ANALYTICS: "analytics",
+        PROJECT_GUIDANCE: "overview",
+        NAVIGATE_PROJECT_DETAIL: "overview",
+      };
+
+      const targetTab = targetToTab[currentStep.uiTarget];
+      if (targetTab && targetTab !== activeTab) {
+        console.log(`[Guidance] Target tab mismatch: current=${activeTab}, expected=${targetTab}. Switching...`);
+        // Use an immediate switch to avoid race conditions
+        setActiveTab(targetTab);
+      }
+    }
+  }, [currentStep, activeTab, isVisible]);
+
+  const { data: guidanceData } = useGetGuidanceByProjectQuery(
+    { projectId },
+    { skip: skipMemberOnlyQueries }
+  );
+
+  useEffect(() => {
+    if (guidanceData?.data && project?.workflowId) {
+      // Small delay to ensure targets have mounted
+      const timer = setTimeout(() => {
+        void startGuidance(guidanceData.data, projectId, project.workflowId!);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [guidanceData, project, projectId, startGuidance]);
 
   const handleLeaveProject = async () => {
     try {
@@ -730,7 +777,7 @@ export function ProjectDetailPage() {
       </div>
 
       {/* ── Tabs ── */}
-      <Tabs defaultValue={defaultTab}>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="overflow-x-auto hide-scrollbar">
         <TabsList>
           <TabsTrigger value="overview" className="gap-2">
@@ -872,15 +919,24 @@ export function ProjectDetailPage() {
               </div>
             </div>
 
-            {canCreateWorkflowDraft && (
-              <div className="xl:col-span-4 xl:sticky xl:top-24 h-fit">
+            <div className="xl:col-span-4 xl:sticky xl:top-24 h-fit space-y-6">
+              {guidanceData?.data && project?.workflowId && (
+                <GuidanceTarget capability="PROJECT_GUIDANCE">
+                  <ProjectGuidanceCard
+                    guidance={guidanceData.data}
+                    onStartGuidance={() => startGuidance(guidanceData.data, projectId, project.workflowId!, true)}
+                  />
+                </GuidanceTarget>
+              )}
+
+              {canCreateWorkflowDraft && (
                 <CreateWorkflowDraftCard
                   onCreateDraft={() => setIsCreateWorkflowDialogOpen(true)}
                   onViewWorkflows={() => navigate("/workflows")}
                   disabled={isCreatingWorkflowDraft}
                 />
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </TabsContent>
 
@@ -953,15 +1009,17 @@ export function ProjectDetailPage() {
                     Manage tasks with List and Kanban views, filters, and more.
                   </p>
                 </div>
-                <Button
-                  onClick={() =>
-                    navigate(`/workspaces/${workspaceId}/projects/${projectId}/tasks`)
-                  }
-                >
-                  <ListTodo className="mr-2 h-4 w-4" />
-                  Open Task Board
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                <GuidanceTarget capability="CREATE_TASK">
+                  <Button
+                    onClick={() =>
+                      navigate(`/workspaces/${workspaceId}/projects/${projectId}/tasks`)
+                    }
+                  >
+                    <ListTodo className="mr-2 h-4 w-4" />
+                    Open Task Board
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </GuidanceTarget>
               </div>
             </>
           )}
@@ -1000,10 +1058,12 @@ export function ProjectDetailPage() {
                 </Button>
               )}
               {canManageMembers && (
-                <Button size="sm" onClick={() => setIsAddMembersOpen(true)}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Add Members
-                </Button>
+                <GuidanceTarget capability="INVITE_MEMBER">
+                  <Button size="sm" onClick={() => setIsAddMembersOpen(true)}>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Add Members
+                  </Button>
+                </GuidanceTarget>
               )}
             </div>
           </div>
