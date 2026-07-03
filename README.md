@@ -16,9 +16,6 @@
     <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/AI-FastAPI-009688.svg?style=flat&logo=fastapi" alt="FastAPI" /></a>
   </p>
 
-  <p>
-    <em>A microservices-based collaboration platform designed for small to medium teams (5-15 members), featuring robust task management, real-time collaboration, and AI-powered productivity tools.</em>
-  </p>
 </div>
 
 ---
