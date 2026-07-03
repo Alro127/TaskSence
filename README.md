@@ -25,8 +25,6 @@
 
 ## 📸 Sneak Peek
 
-> **Note:** Replace the image path below with actual screenshots or a demo GIF.
-
 <div align="center">
   <img src="https://hcm.ss.bfcplatform.vn/object-storage/object-storage/media/uploads/general/Screenshot%202026-06-26%20220450.png?AWSAccessKeyId=GB3A0N8SGS2HLB8FP4SE&Signature=nGSaRgCjP6Ce7NASkkH1J8ZPg7U%3D&Expires=1814022656" width="100%" />
 </div>
