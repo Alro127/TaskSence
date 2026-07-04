@@ -17,14 +17,14 @@ These are agreed as the first implementation phase.
 - High user value with low operational risk.
 - Improves workflow quality and clarity without risky automatic structural edits.
 - Easy to review in UI (suggestion-based flow).
-- Compatible with current backend state (rule-based draft generation already exists).
+- Compatible with current backend state (rule-draftbased generation already exists).
 
 ---
 
 ## 3) Explicitly out of scope (for this phase)
 
 - **No merge step**
-- **No split step**
+- **No split steps**
 - **No auto-apply** of structural changes
 - **No mutation** of workflow steps from AI suggestions endpoint
 
@@ -53,7 +53,7 @@ Any structural change remains suggestion-only and must be user-approved in futur
 
 1. Keep existing draft creation behavior unchanged (rule-based remains primary).
 2. AI output in this phase is **read-only suggestions**.
-3. Explanations can be generated automatically as suggestion content.
+3. Explanations can be generated automatically as suggested content.
 4. Missing-step and reorder are recommendation-only (not persisted as edits).
 5. If AI fails or output is invalid: return empty/partial-safe suggestions, never break workflow draft data.
 
@@ -67,7 +67,7 @@ Any structural change remains suggestion-only and must be user-approved in futur
 ### New endpoint (suggestions only)
 - `POST /projects/{projectId}/workflows/drafts/{workflowId}/ai-suggestions`
 
-Suggested request:
+Suggested requests:
 
 ```json
 {
@@ -110,7 +110,7 @@ Suggested response (shape):
 
 ---
 
-## 7) Backend architecture suggestion (phase-appropriate)
+## 7) Backend architecture suggestions (phase-appropriate)
 
 Create:
 - `WorkflowAiSuggestionController`
@@ -130,7 +130,7 @@ Principles:
 ## 8) Validation & safety rules (must-have)
 
 - Reorder proposal must reference existing `stepId`s only.
-- `newPosition` values must be a valid contiguous permutation.
+- `newPosition` values ​​must be a valid contiguous permutation.
 - Missing-step count must be capped (e.g., <= 3).
 - Explanation mapped to valid existing steps.
 - Strip/reject forbidden suggestion types (merge/split).
@@ -145,7 +145,7 @@ Principles:
 2. New AI suggestions endpoint returns structured suggestions for:
    - missing steps,
    - step explanations,
-   - reorder proposal.
+   - reorder proposals.
 3. Suggestion endpoint performs **zero DB mutation**.
 4. Invalid AI output is safely rejected/sanitized.
 5. Merge/split suggestions do not appear in API response.

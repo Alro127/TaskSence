@@ -294,7 +294,7 @@ QDRANT_API_KEY=your-api-key
 ## Service Ports
 
 | Service | Port | URL |
-|---------|------|-----|
+|--------|-------|-----|
 | Nginx (Proxy) | 80 | http://localhost |
 | Spring Backend | 8080 | http://localhost:8080/api/v1 |
 | AI Service | 8000 | http://localhost:8000 |
@@ -333,15 +333,15 @@ docker-compose up -d
 ## File Locations (In Containers)
 
 | Service | Location | Purpose |
-|---------|----------|---------|
+|--------|----------|--------|
 | Spring | `/app/app.jar` | Spring Boot JAR |
-| AI | `/workspace/` | Python application |
+| AI | `/workspace/` | Python applications |
 | Frontend | `/app/dist/` | Built React app |
 | Nginx | `/etc/nginx/nginx.conf` | Nginx configuration |
 | PostgreSQL | `/var/lib/postgresql/data` | Database files |
 | Redis | `/data` | Redis data |
 | Elasticsearch | `/usr/share/elasticsearch/data` | ES indices |
-| Qdrant | `/qdrant/storage` | Vector DB |
+| Qdrant | `/qdrant/storage` | VectorDB |
 
 ## Documentation Links
 
