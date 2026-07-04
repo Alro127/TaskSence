@@ -169,7 +169,7 @@ function TaskCard({
       ref={setNodeRef}
       style={isDragOverlay ? undefined : style}
       className={cn(
-        "group ghost-border relative rounded-xl bg-white p-3 shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition-all",
+        "group ghost-border relative w-full rounded-xl bg-white p-3 shadow-[0_1px_4px_rgba(0,0,0,0.05)] transition-all",
         isDragOverlay
           ? "rotate-1 shadow-[0_4px_16px_rgba(0,0,0,0.12)] opacity-95 cursor-grabbing"
           : "hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)]",
@@ -356,7 +356,7 @@ function KanbanColumn({
           // Wrap the first task of the first column (or any column with tasks) as a potential target
           if (index === 0) {
             return (
-              <GuidanceTarget key={t.id} capability="UPDATE_TASK_STATUS">
+              <GuidanceTarget key={t.id} capability="UPDATE_TASK_STATUS" className="block w-full">
                 {card}
               </GuidanceTarget>
             );

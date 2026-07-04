@@ -13,6 +13,7 @@ import {
   SquarePen,
   Trash2,
   X,
+  Zap,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -63,6 +64,7 @@ import {
   useGetCurrentUserRoleQuery,
   useGetProjectByIdQuery,
 } from "@/features/project/api/projectApi";
+import { useGetProjectSprintsQuery } from "@/features/sprint/api/sprintApi";
 
 function toDatetimeLocal(iso: string): string {
   const d = new Date(iso);
@@ -182,13 +184,19 @@ export function TaskDetailPage() {
     { projectId, taskId: parentTaskId ?? 0 },
     { skip: parentTaskId == null },
   );
-  const parentTask = parentTaskData?.data ?? null;
+  const parentTask = parentTaskId == null ? null : (parentTaskData?.data ?? null);
 
   const [updateTask] = useUpdateTaskMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
   const [createTask] = useCreateTaskMutation();
   const { reportAction } = useGuidance();
+
+  const { data: sprintsData } = useGetProjectSprintsQuery(
+    { projectId, page: 0, size: 100 },
+    { skip: isNaN(projectId) },
+  );
+  const sprints = sprintsData?.data?.data ?? [];
 
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
@@ -288,6 +296,18 @@ export function TaskDetailPage() {
     updateTask({ projectId, taskId, assigneeIds: ids })
       .unwrap()
       .catch((err) => toast.error(getApiErrorMessage(err, "Failed to remove assignee")));
+  }
+
+  function saveSprint(value: string) {
+    if (value === "NONE") {
+      updateTask({ projectId, taskId, removeSprint: true })
+        .unwrap()
+        .catch((err) => toast.error(getApiErrorMessage(err, "Failed to remove sprint")));
+    } else {
+      updateTask({ projectId, taskId, sprintId: Number(value) })
+        .unwrap()
+        .catch((err) => toast.error(getApiErrorMessage(err, "Failed to update sprint")));
+    }
   }
 
   async function addSubtask() {
@@ -809,6 +829,35 @@ export function TaskDetailPage() {
                 )}
               </div>
             </div>
+          </Card>
+
+          {/* Sprint */}
+          <Card className="p-4 space-y-2">
+            <div className="flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5 text-[#444651]" />
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#444651]">
+                Sprint
+              </p>
+            </div>
+            <Select
+              value={task.sprintId != null ? String(task.sprintId) : "NONE"}
+              onValueChange={saveSprint}
+              disabled={!canEdit}
+            >
+              <SelectTrigger className="h-9 w-full text-sm">
+                <SelectValue placeholder="No Sprint" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NONE">
+                  <span className="text-[#444651] italic">No Sprint</span>
+                </SelectItem>
+                {sprints.map((sprint) => (
+                  <SelectItem key={sprint.id} value={String(sprint.id)}>
+                    {sprint.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Card>
 
           <Card className="p-4 space-y-3">

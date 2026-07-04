@@ -184,7 +184,11 @@ public class CommentServiceImpl implements CommentService {
 
                 checkOwner(comment);
 
-                comment.setDeletedAt(OffsetDateTime.now());
+                OffsetDateTime now = OffsetDateTime.now();
+                comment.setDeletedAt(now);
+
+                commentRepository.softDeleteRepliesByParentId(commentId, now);
+
                 eventPublisher.publishEvent(new EntityChangedEvent(EntityType.COMMENT, commentId, Operation.DELETE));
         }
 

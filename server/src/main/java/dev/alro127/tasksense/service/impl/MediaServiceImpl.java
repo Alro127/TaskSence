@@ -7,6 +7,7 @@ import dev.alro127.tasksense.service.MediaService;
 import dev.alro127.tasksense.util.S3.S3FileHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -23,8 +24,7 @@ public class MediaServiceImpl implements MediaService {
 
         String uploadUrl = s3FileHandler.generateUploadPresignedUrl(
                 awsConfigValue.getBucket(),
-                objectKey
-        );
+                objectKey);
 
         return new MediaResponse(uploadUrl,
                 objectKey,
@@ -33,14 +33,13 @@ public class MediaServiceImpl implements MediaService {
 
     @Override
     public MediaResponse getDocumentUploadUrl(MediaRequest request) {
-        validateDocument(request.getExtension());
+        validateImageOrDocument(request.getExtension());
 
         String objectKey = buildDocumentKey(request.getFileName(), request.getExtension());
 
         String uploadUrl = s3FileHandler.generateUploadPresignedUrl(
                 awsConfigValue.getBucket(),
-                objectKey
-        );
+                objectKey);
 
         return new MediaResponse(uploadUrl,
                 objectKey,
@@ -48,11 +47,11 @@ public class MediaServiceImpl implements MediaService {
     }
 
     private String buildAvatarKey(String fileName, String extension) {
-        return "avatars/" + System.currentTimeMillis() + "_" + fileName + extension;
+        return "avatars/" + UUID.randomUUID() + "/" + fileName + extension;
     }
 
     private String buildDocumentKey(String fileName, String extension) {
-        return "documents/" + System.currentTimeMillis() + "_" + fileName + extension;
+        return "documents/" + UUID.randomUUID() + "/" + fileName + extension;
     }
 
     private void validateImage(String extension) {
@@ -61,9 +60,9 @@ public class MediaServiceImpl implements MediaService {
         }
     }
 
-    private void validateDocument(String extension) {
-        if (!extension.matches("\\.(pdf|doc|docx|xls|xlsx)$")) {
-            throw new IllegalArgumentException("Invalid document type");
+    private void validateImageOrDocument(String extension) {
+        if (!extension.matches("\\.(jpg|jpeg|png|webp|pdf|doc|docx|xls|xlsx)$")) {
+            throw new IllegalArgumentException("Invalid file type: must be an image or document");
         }
     }
 }
