@@ -16,16 +16,11 @@
     <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/AI-FastAPI-009688.svg?style=flat&logo=fastapi" alt="FastAPI" /></a>
   </p>
 
-  <p>
-    <em>A microservices-based collaboration platform designed for small to medium teams (5-15 members), featuring robust task management, real-time collaboration, and AI-powered productivity tools.</em>
-  </p>
 </div>
 
 ---
 
 ## 📸 Sneak Peek
-
-> **Note:** Replace the image path below with actual screenshots or a demo GIF.
 
 <div align="center">
   <img src="https://hcm.ss.bfcplatform.vn/object-storage/object-storage/media/uploads/general/Screenshot%202026-06-26%20220450.png?AWSAccessKeyId=GB3A0N8SGS2HLB8FP4SE&Signature=nGSaRgCjP6Ce7NASkkH1J8ZPg7U%3D&Expires=1814022656" width="100%" />
