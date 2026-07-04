@@ -1,518 +1,518 @@
 1. # **Stakeholders & Actors**
-   1. ## **Stakeholders chính**
+   1. ## **Main Stakeholders**
 
-- **Sinh viên (End User)**: sử dụng hệ thống để quản lý task & học cách quản lý
-- **Nhóm sinh viên (Team)**: cộng tác trong project
-- **Người có kinh nghiệm (Contributor)**: chia sẻ workflow, kinh nghiệm 2. ## **Actors trong hệ thống**
+- **Students (End User)**: use the system to manage tasks & learn how to manage
+- **Student group (Team)**: collaborate on projects
+- **Experienced person (Contributor)**: shares workflow and experience 2. ## **Actors in the system**
 
 - **Guest**
 - **Authenticated User**
 
-2. # **DANH SÁCH USE CASE**
+2. # **USE CASE LIST**
 
-- UC-01: Đăng ký tài khoản
-- UC-02: Đăng nhập
-- UC-03: Đăng xuất
-- UC-04: Cập nhật thông tin cá nhân
-- UC-05: Tạo workspace
-- UC-06: Cập nhật workspace
-- UC-07: Xóa workspace
-- UC-08: Xem danh sách workspace
-- UC-09: Thêm thành viên vào workspace
-- UC-10: Xóa thành viên khỏi workspace
-- UC-11: Rời workspace
-- UC-12: Yêu cầu tham gia workspace
-- UC-13: Hủy yêu cầu tham gia workspace
-- UC-14: Xử lý yêu cầu tham gia workspace
-- UC-15: Tạo project
-- UC-16: Cập nhật project
-- UC-17: Xóa project
-- UC-18: Xem danh sách project
-- UC-19: Thêm thành viên vào project
-- UC-20: Xóa thành viên khỏi project
-- UC-21: Rời project
-- UC-22: Yêu cầu tham gia project
-- UC-23: Hủy yêu cầu tham gia project
-- UC-24: Xử lý yêu cầu tham gia project
-- UC-25: Tạo task
-- UC-26: Cập nhật task
-- UC-27: Xóa task
-- UC-28: Xem danh sách task
-- UC-29: Xem chi tiết task
-- UC-30: Bình luận vào task
-- UC-31: Đính kèm file vào task
-- UC-32: Gợi ý task nên thực hiện tiếp theo
-- UC-33: Cảnh báo overload
-- UC-34: Tạo báo cáo tiến độ
-- UC-35: Tạo workflow từ project
-- UC-36: Chỉnh sửa workflow
-- UC-37: Chia sẻ workflow
-- UC-38: Khám phá workflow
-- UC-39: Xem chi tiết workflow
-- UC-40: Đánh giá workflow
-- UC-41: Bình luận workflow
-- UC-42: Lưu workflow yêu thích
-- UC-43: Tạo project từ workflow
-- UC-44: Xem workflow đã đăng
-- UC-45: Xem dashboard project
-- UC-46: Xem dashboard cá nhân
+- UC-01: Register an account
+- UC-02: Login
+- UC-03: Log out
+- UC-04: Update personal information
+- UC-05: Create workspace
+- UC-06: Update workspace
+- UC-07: Delete workspace
+- UC-08: View workspace list
+- UC-09: Add members to workspace
+- UC-10: Remove members from workspace
+- UC-11: Leave workspace
+- UC-12: Request to join workspace
+- UC-13: Cancel request to join workspace
+- UC-14: Handle requests to join workspace
+- UC-15: Create project
+- UC-16: Update project
+- UC-17: Delete project
+- UC-18: View project list
+- UC-19: Add members to the project
+- UC-20: Remove members from the project
+- UC-21: Leave project
+- UC-22: Request to participate in project
+- UC-23: Cancel request to join the project
+- UC-24: Processing requests to participate in the project
+- UC-25: Create task
+- UC-26: Update tasks
+- UC-27: Delete task
+- UC-28: View task list
+- UC-29: View task details
+- UC-30: Comment on task
+- UC-31: Attach file to task
+- UC-32: Suggestions for tasks that should be performed next
+- UC-33: Overload warning
+- UC-34: Create progress report
+- UC-35: Create workflow from project
+- UC-36: Edit workflow
+- UC-37: Share workflow
+- UC-38: Explore workflow
+- UC-39: View workflow details
+- UC-40: Evaluate workflow
+- UC-41: Comment workflow
+- UC-42: Save favorite workflows
+- UC-43: Create project from workflow
+- UC-44: View posted workflow
+- UC-45: View project dashboard
+- UC-46: View personal dashboard
 
-3. # **DANH SÁCH USE CASE SPECIFICATION**
-   1. ## **UC-01 Đăng ký tài khoản**
+3. # **LIST OF USE CASE SPECIFICATION**
+   1. ## **UC-01 Register account**
 
-| Use case ID         | UC-01                                                                                                                                                                              |
-| :------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Đăng ký tài khoản                                                                                                                                                                  |
-| **Mô tả**           | Cho phép người dùng tạo tài khoản mới trong hệ thống                                                                                                                               |
-| **Tác nhân**        | Guest                                                                                                                                                                              |
-| **Điều kiện trước** | Người dùng chưa đăng nhập                                                                                                                                                          |
-| **Điều kiện sau**   | Tài khoản được tạo thành công                                                                                                                                                      |
-| **Luồng chính**     | Người dùng truy cập trang đăng ký Người dùng nhập thông tin Người dùng gửi form đăng ký Hệ thống kiểm tra tính hợp lệ dữ liệu Hệ thống tạo tài khoản Hệ thống thông báo thành công |
-| **Luồng thay thế**  | **A1: Đăng ký qua OAuth (Google)** Người dùng chọn đăng ký bằng OAuth Hệ thống chuyển hướng đến nhà cung cấp Người dùng xác thực Hệ thống nhận thông tin và tạo tài khoản          |
+| Use case ID | UC-01 |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Function name** | Register an account |
+| **Description** | Allows users to create new accounts in the system |
+| **Actor** | Guest |
+| **Preconditions** | User not logged in |
+| **Subconditions** | Account created successfully |
+| **Main stream** | User accesses the registration page User enters information User submits the registration form System checks data validity System creates account System notifies success |
+| **Alternative Stream** | **A1: Register via OAuth (Google)** User chooses to register using OAuth System redirects to provider User authenticates System receives information and creates account |
 |                     |                                                                                                                                                                                    |
-| **Luồng ngoại lệ**  | **E1: Email đã tồn tại** → Hệ thống thông báo lỗi **E2: Dữ liệu không hợp lệ (format email, password yếu)** → Hệ thống từ chối và yêu cầu nhập lại                                 |
+| **Exception Stream** | **E1: Email already exists** → System reports error **E2: Invalid data (email format, weak password)** → System refuses and asks to re-enter |
 
-2.  ## **UC-02: Đăng nhập**
+2. ## **UC-02: Login**
 
-| Use case ID         | UC-02                                                                                                                                        |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Đăng nhập                                                                                                                                    |
-| **Mô tả**           | Cho phép người dùng đăng nhập                                                                                                                |
-| **Tác nhân**        | Guest                                                                                                                                        |
-| **Điều kiện trước** | Người dùng có tài khoản                                                                                                                      |
-| **Điều kiện sau**   | Người dùng đăng nhập thành công                                                                                                              |
-| **Luồng chính**     | Người dùng nhập email và mật khẩu Người dùng gửi yêu cầu đăng nhập Hệ thống xác thực Hệ thống tạo session/token Hệ thống chuyển vào hệ thống |
-| **Luồng thay thế**  | **A1: Đăng nhập bằng OAuth** Người dùng chọn OAuth Hệ thống redirect Người dùng xác thực Hệ thống đăng nhập                                  |
+| Use case ID | UC-02 |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Function name** | Sign in |
+| **Description** | Allow users to log in |
+| **Actor** | Guest |
+| **Preconditions** | User has an account |
+| **Subconditions** | User logged in successfully |
+| **Main stream** | User enters email and password User sends login request Authentication system System creates session/token System transfers to system |
+| **Alternative Stream** | **A1: Login with OAuth** User selects OAuth Redirect system User authenticates Login system |
 |                     |                                                                                                                                              |
-| **Luồng ngoại lệ**  | **E1: Sai thông tin đăng nhập** → Thông báo lỗi **E2: Lỗi đăng nhập bên thứ 3** → Không cho đăng nhập                                        |
+| **Exception Stream** | **E1: Wrong login information** → Error message **E2: 3rd party login error** → Login not allowed |
 
-3.  ## **UC-03: Đăng xuất**
+3. ## **UC-03: Sign out**
 
-| Use case ID         | UC-03                                                                            |
-| :------------------ | :------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Đăng xuất                                                                        |
-| **Mô tả**           | Cho phép người dùng đăng xuất khỏi hệ thống                                      |
-| **Tác nhân**        | User                                                                             |
-| **Điều kiện trước** | Người dùng đã đăng nhập                                                          |
-| **Điều kiện sau**   | Người dùng đăng xuất khỏi hệ thống                                               |
-| **Luồng chính**     | Người dùng chọn logout Hệ thống xóa session/token Chuyển về trang login          |
-| **Luồng thay thế**  | Không có                                                                         |
+| Use case ID | UC-03 |
+| :----------------- | :------------------------------------------------------------------------------ |
+| **Function name** | Sign out |
+| **Description** | Allow users to log out of the system |
+| **Actor** | User |
+| **Preconditions** | User is logged in |
+| **Subconditions** | User logs out of the system |
+| **Main stream** | User selects logout System deletes session/token Return to login page |
+| **Alternative Stream** | None |
 |                     |                                                                                  |
-| **Luồng ngoại lệ**  | **E1: Token đã hết hạn / không hợp lệ** → Hệ thống vẫn coi như logout thành công |
+| **Exception Stream** | **E1: Token has expired / invalid** → System still considers logout successful |
 
-4.  ## **UC-04: Cập nhật thông tin cá nhân**
+4. ## **UC-04: Update personal information**
 
-| Use case ID         | UC-04                                                                                                         |
-| :------------------ | :------------------------------------------------------------------------------------------------------------ |
-| **Tên chức năng**   | Cập nhật thông tin cá nhân                                                                                    |
-| **Mô tả**           | Cho phép người dùng cập nhật hồ sơ cá nhân                                                                    |
-| **Tác nhân**        | User                                                                                                          |
-| **Điều kiện trước** | Người dùng đã đăng nhập                                                                                       |
-| **Điều kiện sau**   | Thông tin được cập nhật                                                                                       |
-| **Luồng chính**     | Người dùng mở trang profile Người dùng chỉnh sửa thông tin Người dùng lưu Hệ thống validate Hệ thống cập nhật |
-| **Luồng thay thế**  |                                                                                                               |
+| Use case ID | UC-04 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------- |
+| **Function name** | Update personal information |
+| **Description** | Allows users to update their personal profile |
+| **Actor** | User |
+| **Preconditions** | User is logged in |
+| **Subconditions** | Updated information |
+| **Main stream** | User opens profile page User edits information User saves System validates System updates |
+| **Alternative Stream** |                                                                                                               |
 |                     |                                                                                                               |
-| **Luồng ngoại lệ**  | **E1: File avatar không hợp lệ** → Từ chối upload **E2: Dữ liệu không hợp lệ** → Không cập nhật               |
+| **Exception Stream** | **E1: Invalid avatar file** → Refuse to upload **E2: Invalid data** → Do not update |
 
-5.  ## **UC-05: Tạo workspace**
+5. ## **UC-05: Create workspace**
 
-| Use case ID         | UC-05                                                                                                                       |
-| :------------------ | :-------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Tạo workspace                                                                                                               |
-| **Mô tả**           | Cho phép tạo workspace để quản lý project                                                                                   |
-| **Tác nhân**        | User                                                                                                                        |
-| **Điều kiện trước** | Đã đăng nhập                                                                                                                |
-| **Điều kiện sau**   | Workspace được tạo User là owner                                                                                            |
-| **Luồng chính**     | Người dùng chọn tạo workspace Nhập tên workspace Xác nhận tạo Hệ thống validate Hệ thống tạo workspace và gán user là owner |
-| **Luồng thay thế**  |                                                                                                                             |
+| Use case ID | UC-05 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | Create workspace |
+| **Description** | Allows creating workspaces for project management |
+| **Actor** | User |
+| **Preconditions** | Logged in |
+| **Subconditions** | Workspace is created User is owner |
+| **Main stream** | User chooses to create workspace Enter workspace name Confirm creation System validates System creates workspace and assigns user as owner |
+| **Alternative Stream** |                                                                                                                             |
 |                     |                                                                                                                             |
-| **Luồng ngoại lệ**  | **E1: Tên workspace không hợp lệ / trống** → Yêu cầu nhập lại **E2: Lỗi hệ thống khi lưu DB** → Thông báo thất bại          |
+| **Exception Stream** | **E1: Invalid/empty workspace name** → Re-entry required **E2: System error while saving DB** → Failure message |
 
-6.  ## **UC-06: Cập nhật workspace**
+6. ## **UC-06: Update workspace**
 
-| Use case ID         | UC-06                                                                                                                                                     |
-| :------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Cập nhật workspace                                                                                                                                        |
-| **Mô tả**           | Cho phép chỉnh sửa thông tin workspace                                                                                                                    |
-| **Tác nhân**        | User (Owner workspace)                                                                                                                                    |
-| **Điều kiện trước** | Người dùng đã đăng nhập Có quyền chỉnh sửa workspace                                                                                                      |
-| **Điều kiện sau**   | Thông tin workspace được cập nhật                                                                                                                         |
-| **Luồng chính**     | Người dùng truy cập trang workspace settings Người dùng chỉnh sửa thông tin Người dùng lưu thay đổi Hệ thống kiểm tra dữ liệu Hệ thống cập nhật workspace |
-| **Luồng thay thế**  |                                                                                                                                                           |
+| Use case ID | UC-06 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | Update workspace |
+| **Description** | Allows editing workspace information |
+| **Actor** | User (Owner workspace) |
+| **Preconditions** | Logged in user Has permission to edit workspace |
+| **Subconditions** | Updated workspace information |
+| **Main stream** | User accesses workspace settings page User edits information User saves changes System checks data System updates workspace |
+| **Alternative Stream** |                                                                                                                                                           |
 |                     |                                                                                                                                                           |
-| **Luồng ngoại lệ**  | **E1: Không có quyền chỉnh sửa** → Hệ thống từ chối **E2: Dữ liệu không hợp lệ** → Không cập nhật                                                         |
+| **Exception Stream** | **E1: No editing rights** → System refuses **E2: Invalid data** → Not updated |
 
-7.  ## **UC-07: Xóa workspace**
+7. ## **UC-07: Delete workspace**
 
-| Use case ID         | UC-07                                                                                              |
-| :------------------ | :------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Xóa workspace                                                                                      |
-| **Mô tả**           | Cho phép xóa workspace và toàn bộ dữ liệu liên quan                                                |
-| **Tác nhân**        | User (Owner)                                                                                       |
-| **Điều kiện trước** | Người dùng là owner của workspace                                                                  |
-| **Điều kiện sau**   | Workspace bị xóa khỏi hệ thống                                                                     |
-| **Luồng chính**     | Người dùng chọn xóa workspace Hệ thống yêu cầu xác nhận Người dùng xác nhận Hệ thống xóa workspace |
-| **Luồng thay thế**  | **A1: Hủy thao tác xóa** Người dùng chọn cancel Hệ thống giữ nguyên workspace                      |
+| Use case ID | UC-07 |
+| :----------------- | :------------------------------------------------------------------------------------------------ |
+| **Function name** | Delete workspace |
+| **Description** | Allows deleting workspace and all related data |
+| **Actor** | User (Owner) |
+| **Preconditions** | The user is the owner of the workspace |
+| **Subconditions** | Workspace is deleted from the system |
+| **Main stream** | User chooses to delete workspace System asks for confirmation User confirms System deletes workspace |
+| **Alternative Stream** | **A1: Cancel deletion operation** User chooses cancel System keeps workspace |
 |                     |                                                                                                    |
-| **Luồng ngoại lệ**  | **E1: Không phải owner** → Không cho phép xóa **E2: Lỗi khi xóa dữ liệu** → Thông báo thất bại     |
+| **Exception Stream** | **E1: Not owner** → Delete not allowed **E2: Error deleting data** → Failure message |
 
-8.  ## **UC-08: Xem danh sách workspace**
+8. ## **UC-08: View workspace list**
 
-| Use case ID         | UC-08                                                                                                            |
-| :------------------ | :--------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Xem danh sách workspace                                                                                          |
-| **Mô tả**           | Cho phép người dùng xem các workspace mình tham gia                                                              |
-| **Tác nhân**        | User                                                                                                             |
-| **Điều kiện trước** | Người dùng đã đăng nhập                                                                                          |
-| **Điều kiện sau**   | Danh sách workspace được hiển thị                                                                                |
-| **Luồng chính**     | Người dùng truy cập dashboard Hệ thống lấy danh sách workspace Hệ thống hiển thị                                 |
-| **Luồng thay thế**  | Không có                                                                                                         |
+| Use case ID | UC-08 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------- |
+| **Function name** | View workspace list |
+| **Description** | Allows users to view the workspaces they participate in |
+| **Actor** | User |
+| **Preconditions** | User is logged in |
+| **Subconditions** | List of workspaces displayed |
+| **Main stream** | User accesses dashboard System gets list of workspaces System displays |
+| **Alternative Stream** | None |
 |                     |                                                                                                                  |
-| **Luồng ngoại lệ**  | **E1: Không có workspace nào** → Hiển thị trạng thái empty **E2: Lỗi hệ thống khi load dữ liệu** → Thông báo lỗi |
+| **Exception Stream** | **E1: There is no workspace** → Display empty status **E2: System error when loading data** → Error message |
 
-9.  ## **UC-09: Thêm thành viên vào workspace**
+9. ## **UC-09: Add members to workspace**
 
-| Use case ID         | UC-09                                                                                                                                       |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Tên chức năng**   | Thêm thành viên vào workspace                                                                                                               |
-| **Mô tả**           | Cho phép thêm người dùng khác vào workspace                                                                                                 |
-| **Tác nhân**        | User (Owner/ Manager)                                                                                                                       |
-| **Điều kiện trước** | Người dùng có quyền quản lý thành viên                                                                                                      |
-| **Điều kiện sau**   | Thành viên được thêm vào workspace                                                                                                          |
-| **Luồng chính**     | Người dùng nhập email người cần thêm Người dùng xác nhận thêm Hệ thống kiểm tra user tồn tại Hệ thống gửi invitation về mail của người nhận |
-| **Luồng thay thế**  | Không có                                                                                                                                    |
+| Use case ID | UC-09 |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Function name** | Add members to workspace |
+| **Description** | Allows adding other users to the workspace |
+| **Actor** | User (Owner/ Manager) |
+| **Preconditions** | User has membership management rights |
+| **Subconditions** | Member added to workspace |
+| **Main stream** | The user enters the email of the person he needs to add. The user confirms the addition. The system checks that the user exists. The system sends invitation to the recipient's email |
+| **Alternative Stream** | None |
 |                     |                                                                                                                                             |
-| **Luồng ngoại lệ**  | **E1: User không tồn tại** → Thông báo lỗi **E2: User đã trong workspace** → Không thêm lại **E3: Không có quyền** → Từ chối                |
+| **Exception Stream** | **E1: User does not exist** → Error message **E2: User is already in the workspace** → Do not add again **E3: No permissions** → Deny |
 
-10. ## **UC-10: Xóa thành viên khỏi workspace**
+10. ## **UC-10: Remove members from workspace**
 
-| Use case ID         | UC-10                                                                                                |
-| :------------------ | :--------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Xóa thành viên khỏi workspace                                                                        |
-| **Mô tả**           | Cho phép loại bỏ một thành viên khỏi workspace                                                       |
-| **Tác nhân**        | User (Owner)                                                                                         |
-| **Điều kiện trước** | Có quyền quản lý thành viên                                                                          |
-| **Điều kiện sau**   | Thành viên bị xóa khỏi workspace                                                                     |
-| **Luồng chính**     | Người dùng chọn thành viên Người dùng chọn remove Hệ thống xác nhận Hệ thống xóa thành viên          |
-| **Luồng thay thế**  | Không có                                                                                             |
+| Use case ID | UC-10 |
+| :----------------- | :---------------------------------------------------------------------------------------------------------- |
+| **Function name** | Remove members from workspace |
+| **Description** | Allows removing a member from workspace |
+| **Actor** | User (Owner) |
+| **Preconditions** | Have member management rights |
+| **Subconditions** | Member removed from workspace |
+| **Main stream** | User selects member User selects remove System confirms System deletes member |
+| **Alternative Stream** | None |
 |                     |                                                                                                      |
-| **Luồng ngoại lệ**  | **E1: Không có quyền** → Không cho thực hiện **E2: Xóa owner** → Bị chặn, yêu cầu transfer ownership |
+| **Exception Stream** | **E1: No rights** → Not allowed **E2: Delete owner** → Blocked, request to transfer ownership |
 
-11. ## **UC-11 Rời workspace**
+11. ## **UC-11 Leave workspace**
 
-| Use case ID         | UC-11                                                                                                          |
-| :------------------ | :------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Rời workspace                                                                                                  |
-| **Mô tả**           | Cho phép thành viên tự rời khỏi workspace                                                                      |
-| **Tác nhân**        | User                                                                                                           |
-| **Điều kiện trước** | User đã đăng nhập User là thành viên của workspace                                                             |
-| **Điều kiện sau**   | User bị xóa khỏi workspace                                                                                     |
-| **Luồng chính**     | Người dùng chọn “Rời workspace” Hệ thống yêu cầu xác nhận Người dùng xác nhận Hệ thống xóa user khỏi workspace |
-| **Luồng thay thế**  | Không có                                                                                                       |
-| **Luồng ngoại lệ**  |                                                                                                                |
+| Use case ID | UC-11 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------- |
+| **Function name** | Leave workspace |
+| **Description** | Allow members to leave the workspace themselves |
+| **Actor** | User |
+| **Preconditions** | User is logged in User is a member of workspace |
+| **Subconditions** | User is removed from workspace |
+| **Main stream** | User selects "Leave workspace" System asks for confirmation User confirms System deletes user from workspace |
+| **Alternative Stream** | None |
+| **Exception Stream** |                                                                                                                |
 
-12. ## **UC-12 Yêu cầu tham gia workspace**
+12. ## **UC-12 Request to join workspace**
 
-| Use case ID         | UC-12                                                                                                                                                                                             |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Tên chức năng**   | Yêu cầu tham gia workspace                                                                                                                                                                        |
-| **Mô tả**           | Cho phép người dùng gửi yêu cầu tham gia một workspace mà họ chưa phải là thành viên.                                                                                                             |
-| **Tác nhân**        | User                                                                                                                                                                                              |
-| **Điều kiện trước** | User đã đăng nhập. User chưa là thành viên của workspace. Workspace có cấu hình cho phép yêu cầu tham gia.                                                                                        |
-| **Điều kiện sau**   | Yêu cầu tham gia được gửi đi và chờ Chủ workspace/Quản lý xử lý.                                                                                                                                  |
-| **Luồng chính**     | Người dùng tìm kiếm và chọn workspace muốn tham gia. Người dùng chọn "Yêu cầu tham gia". Hệ thống kiểm tra điều kiện. Hệ thống ghi nhận yêu cầu và gửi thông báo đến Owner/Manager của workspace. |
-| **Luồng thay thế**  | **A1: Workspace yêu cầu mật khẩu/mã mời** Người dùng nhập mật khẩu/mã mời. Hệ thống xác thực. Nếu thành công, thêm user vào workspace (bỏ qua bước xử lý yêu cầu).                                |
-| **Luồng ngoại lệ**  | **E1: User đã là thành viên** → Hệ thống thông báo lỗi.                                                                                                                                           |
+| Use case ID | UC-12 |
+| :----------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | Request to join workspace |
+| **Description** | Allows users to submit a request to join a workspace where they are not yet a member.                                                                                                             |
+| **Actor** | User |
+| **Preconditions** | User is logged in. User is not yet a member of the workspace. The workspace has a configuration that allows join requests.                                                                                        |
+| **Subconditions** | The request to join is sent and is waiting for the workspace Owner/Manager to process.                                                                                                                                  |
+| **Main stream** | Users search and select the workspace they want to join. User selects "Request to join". Condition checking system. The system records the request and sends a notification to the Owner/Manager of the workspace. |
+| **Alternative Stream** | **A1: Workspace requires password/invitation code** User enters password/invitation code. Authentication system. If successful, add the user to the workspace (skip the request processing step).                                |
+| **Exception Stream** | **E1: User is already a member** → The system reports an error.                                                                                                                                           |
 
-13. ## **UC-13 Hủy yêu cầu tham gia workspace**
+13. ## **UC-13 Cancel request to join workspace**
 
-| Use case ID         | UC-13                                                                                                                                                          |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | **Hủy yêu cầu tham gia workspace**                                                                                                                             |
-| **Mô tả**           | Cho phép người dùng hủy bỏ yêu cầu tham gia workspace đã gửi trước đó nếu yêu cầu đó chưa được xử lý.                                                          |
-| **Tác nhân**        | User                                                                                                                                                           |
-| **Điều kiện trước** | User đã gửi yêu cầu tham gia và yêu cầu đó đang ở trạng thái chờ.                                                                                              |
-| **Điều kiện sau**   | Yêu cầu tham gia bị hủy bỏ khỏi danh sách chờ xử lý.                                                                                                           |
-| **Luồng chính**     | Người dùng truy cập danh sách yêu cầu đã gửi. Người dùng chọn yêu cầu tham gia workspace cần hủy. Người dùng xác nhận hủy. Hệ thống xóa yêu cầu khỏi hệ thống. |
-| **Luồng thay thế**  | Không có                                                                                                                                                       |
-| **Luồng ngoại lệ**  | **E1: Yêu cầu đã được xử lý (Chấp nhận/Từ chối)** → Hệ thống thông báo lỗi, không cho phép hủy.                                                                |
+| Use case ID | UC-13 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | **Cancel request to join workspace** |
+| **Description** | Allows users to cancel a previously submitted workspace join request if it has not yet been processed.                                                          |
+| **Actor** | User |
+| **Preconditions** | The user has submitted a request to join and the request is pending.                                                                                              |
+| **Subconditions** | The participation request is removed from the pending list.                                                                                                           |
+| **Main stream** | The user accesses the list of sent requests. The user selects the request to join the workspace that needs to be canceled. User confirms cancellation. The system deletes the request from the system. |
+| **Alternative Stream** | None |
+| **Exception Stream** | **E1: The request has been processed (Accepted/Rejected)** → The system reports an error, cancellation is not allowed.                                                                |
 
-14. ## **UC-14 Xử lý yêu cầu tham gia workspace**
+14. ## **UC-14 Processing requests to join workspace**
 
-| Use case ID         | UC-14                                                                                                                                                                                                                                        |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | **Xử lý yêu cầu tham gia workspace**                                                                                                                                                                                                         |
-| **Mô tả**           | Cho phép Owner/Manager chấp nhận hoặc từ chối yêu cầu tham gia workspace từ người dùng khác.                                                                                                                                                 |
-| **Tác nhân**        | User (Owner/Manager workspace)                                                                                                                                                                                                               |
-| **Điều kiện trước** | Có yêu cầu tham gia workspace đang chờ xử lý. User có quyền quản lý thành viên trong workspace.                                                                                                                                              |
-| **Điều kiện sau**   | Yêu cầu được chuyển trạng thái (Chấp nhận/Từ chối). User được thêm vào workspace nếu được chấp nhận.                                                                                                                                         |
-| **Luồng chính**     | Owner/Manager truy cập danh sách yêu cầu tham gia. Chọn một yêu cầu. Chọn hành động (Chấp nhận/Từ chối). Nếu chấp nhận, hệ thống thêm user vào workspace với vai trò mặc định (Thành viên). Hệ thống gửi thông báo kết quả cho user yêu cầu. |
-| **Luồng thay thế**  | **A1: Chấp nhận và gán vai trò tùy chỉnh** Tại bước 3, Manager chọn vai trò cụ thể trước khi chấp nhận. Hệ thống gán vai trò đó cho user mới.                                                                                                |
-| **Luồng ngoại lệ**  | **E1: Người xử lý không có quyền** → Từ chối thao tác.                                                                                                                                                                                       |
+| Use case ID | UC-14 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | **Handling requests to join workspace** |
+| **Description** | Allows Owner/Manager to accept or deny requests to join workspaces from other users.                                                                                                                                                 |
+| **Actor** | User (Owner/Manager workspace) |
+| **Preconditions** | There is a pending request to join the workspace. User has the right to manage members in the workspace.                                                                                                                                              |
+| **Subconditions** | The request is changed to status (Accepted/Rejected). The user is added to the workspace if accepted.                                                                                                                                         |
+| **Main stream** | Owner/Manager accesses the participation request list. Select a request. Select action (Accept/Reject). If accepted, the system adds the user to the workspace with the default role (Member). The system sends a result notification to the requesting user. |
+| **Alternative Stream** | **A1: Accept and assign custom roles** In step 3, Manager selects a specific role before accepting. The system assigns that role to the new user.                                                                                                |
+| **Exception Stream** | **E1: The handler does not have permission** → Refuse the operation.                                                                                                                                                                                       |
 
-15. ## **UC-15: Tạo project**
+15. ## **UC-15: Create project**
 
-| Use case ID         | UC-15                                                                                                                                                                |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Tạo project                                                                                                                                                          |
-| **Mô tả**           | Cho phép người dùng tạo project trong workspace                                                                                                                      |
-| **Tác nhân**        | User                                                                                                                                                                 |
-| **Điều kiện trước** | Người dùng đã đăng nhập Người dùng thuộc workspace                                                                                                                   |
-| **Điều kiện sau**   | Project được tạo thành công Người tạo trở thành owner của project                                                                                                    |
-| **Luồng chính**     | Người dùng truy cập trang workspace Người dùng nhấn nút tạo project Người dùng nhập thông tin Người dùng xác nhận tạo Hệ thống kiểm tra dữ liệu Hệ thống tạo project |
-| **Luồng thay thế**  |                                                                                                                                                                      |
+| Use case ID | UC-15 |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Function name** | Create project |
+| **Description** | Allows users to create projects in workspace |
+| **Actor** | User |
+| **Preconditions** | Logged in user User belongs to workspace |
+| **Subconditions** | The project is successfully created. The creator becomes the owner of the project |
+| **Main stream** | User accesses workspace page User presses project creation button User enters information User confirms creation System checks data System creates project |
+| **Alternative Stream** |                                                                                                                                                                      |
 |                     |                                                                                                                                                                      |
-| **Luồng ngoại lệ**  | **E1: Không thuộc workspace** → Không cho phép tạo **E2: Lỗi hệ thống khi lưu** → Thông báo thất bại                                                                 |
+| **Exception Stream** | **E1: Not part of workspace** → Creation not allowed **E2: System error when saving** → Failure message |
 
-16. ## **UC-16: Cập nhật project**
+16. ## **UC-16: Project update**
 
-| Use case ID         | UC-16                                                                                                                    |
-| :------------------ | :----------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Cập nhật project                                                                                                         |
-| **Mô tả**           | Cho phép chỉnh sửa thông tin project                                                                                     |
-| **Tác nhân**        | User (Owner)                                                                                                             |
-| **Điều kiện trước** | Có quyền chỉnh sửa project                                                                                               |
-| **Điều kiện sau**   | Thông tin project được cập nhật                                                                                          |
-| **Luồng chính**     | Người dùng mở project settings Người dùng chỉnh sửa thông tin Người dùng lưu Hệ thống kiểm tra dữ liệu Hệ thống cập nhật |
-| **Luồng thay thế**  |                                                                                                                          |
+| Use case ID | UC-16 |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------ |
+| **Function name** | Update project |
+| **Description** | Allows editing project information |
+| **Actor** | User (Owner) |
+| **Preconditions** | Have permission to edit project |
+| **Subconditions** | Project information updated |
+| **Main stream** | User opens project settings User edits information User saves System checks data System updates |
+| **Alternative Stream** |                                                                                                                          |
 |                     |                                                                                                                          |
-| **Luồng ngoại lệ**  | **E1: Không có quyền** → Từ chối **E2: Dữ liệu không hợp lệ** → Không cập nhật                                           |
+| **Exception Stream** | **E1: No permission** → Reject **E2: Invalid data** → No update |
 
-17. ## **UC-17: Xóa project**
+17. ## ​​**UC-17: Delete project**
 
-| Use case ID         | UC-17                                                                                             |
-| :------------------ | :------------------------------------------------------------------------------------------------ |
-| **Tên chức năng**   | Xóa project                                                                                       |
-| **Mô tả**           | Cho phép xóa project và dữ liệu liên quan                                                         |
-| **Tác nhân**        | User (Owner)                                                                                      |
-| **Điều kiện trước** | Người dùng là owner                                                                               |
-| **Điều kiện sau**   | Project bị xóa                                                                                    |
-| **Luồng chính**     | Người dùng chọn delete project Hệ thống yêu cầu xác nhận Người dùng xác nhận Hệ thống xóa project |
-| **Luồng thay thế**  |                                                                                                   |
+| Use case ID | UC-17 |
+| :----------------- | :------------------------------------------------------------------------------------------------ |
+| **Function name** | Delete project |
+| **Description** | Allows deleting projects and related data |
+| **Actor** | User (Owner) |
+| **Preconditions** | The user is owner |
+| **Subconditions** | Project deleted |
+| **Main stream** | User selects delete project System asks for confirmation User confirms System deletes project |
+| **Alternative Stream** |                                                                                                   |
 |                     |                                                                                                   |
-| **Luồng ngoại lệ**  | **E1: Không phải owner** → Không cho phép **E2: Lỗi khi xóa dữ liệu** → Thông báo lỗi             |
+| **Exception Stream** | **E1: Not owner** → Not allowed **E2: Error deleting data** → Error message |
 
-18. ## **UC-18: Xem danh sách project**
+18. ## **UC-18: View project list**
 
-| Use case ID         | UC-18                                                                                         |
-| :------------------ | :-------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Xem danh sách project                                                                         |
-| **Mô tả**           | Hiển thị danh sách project trong workspace                                                    |
-| **Tác nhân**        | User                                                                                          |
-| **Điều kiện trước** | Người dùng thuộc workspace                                                                    |
-| **Điều kiện sau**   | Danh sách project được hiển thị                                                               |
-| **Luồng chính**     | Người dùng truy cập workspace Hệ thống lấy danh sách project Hệ thống hiển thị                |
-| **Luồng thay thế**  | **A1: Lọc / tìm kiếm project** Người dùng nhập keyword / filter Hệ thống lọc Hiển thị kết quả |
+| Use case ID | UC-18 |
+| :----------------- | :-------------------------------------------------------------------------------------------- |
+| **Function name** | View project list |
+| **Description** | Display project list in workspace |
+| **Actor** | User |
+| **Preconditions** | User belongs to workspace |
+| **Subconditions** | Project list is displayed |
+| **Main stream** | User accesses workspace System gets project list System displays |
+| **Alternative Stream** | **A1: Filter / search project** User enters keyword / filter Filter system Display results |
 |                     |                                                                                               |
-| **Luồng ngoại lệ**  | **E1: Không có project** → Hiển thị empty state **E2: Lỗi khi load dữ liệu** → Thông báo lỗi  |
+| **Exception Stream** | **E1: No project** → Display empty state **E2: Error loading data** → Error message |
 
-19. ## **UC-19: Thêm thành viên vào project**
+19. ## **UC-19: Add members to project**
 
-| Use case ID         | UC-19                                                                                                                               |
-| :------------------ | :---------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Thêm thành viên vào project                                                                                                         |
-| **Mô tả**           | Cho phép thêm thành viên từ workspace vào project                                                                                   |
-| **Tác nhân**        | User (Owner / Manager)                                                                                                              |
-| **Điều kiện trước** | Có quyền quản lý project User cần thêm đã thuộc workspace                                                                           |
-| **Điều kiện sau**   | Thành viên được thêm vào project                                                                                                    |
-| **Luồng chính**     | Người dùng chọn thêm member Chọn user từ danh sách workspace Chọn role (member, viewer,…) Xác nhận Hệ thống thêm vào project        |
-| **Luồng thay thế**  | **A1: Thêm nhanh (default role)** Người dùng chọn user Hệ thống tự gán role mặc định Thêm vào project                               |
+| Use case ID | UC-19 |
+| :----------------- | :---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | Add members to project |
+| **Description** | Allows adding members from workspace to project |
+| **Actor** | User (Owner / Manager) |
+| **Preconditions** | Have project management rights. The user you need to add already belongs to the workspace |
+| **Subconditions** | Member added to project |
+| **Main stream** | User selects to add member Select user from workspace list Select role (member, viewer,...) Confirm System adds to project |
+| **Alternative Stream** | **A1: Quick add (default role)** User selects user System automatically assigns default role Add to project |
 |                     |                                                                                                                                     |
-| **Luồng ngoại lệ**  | **E1: User không thuộc workspace** → Không cho phép **E2: User đã trong project** → Không thêm lại **E3: Không có quyền** → Từ chối |
+| **Exception Stream** | **E1: User not in the workspace** → Not allowed **E2: User already in the project** → Do not add again **E3: No permissions** → Deny |
 
-20. ## **UC-20: Xóa thành viên khỏi project**
+20. ## **UC-20: Remove members from project**
 
-| Use case ID         | UC-20                                                                                                                                                                           |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Tên chức năng**   | Xóa thành viên khỏi project                                                                                                                                                     |
-| **Mô tả**           | Cho phép loại bỏ một thành viên khỏi project                                                                                                                                    |
-| **Tác nhân**        | User                                                                                                                                                                            |
-| **Điều kiện trước** | Người dùng có quyền quản lý project Thành viên tồn tại trong project                                                                                                            |
-| **Điều kiện sau**   | Thành viên bị xóa khỏi project                                                                                                                                                  |
-| **Luồng chính**     | Người dùng mở danh sách thành viên project Người dùng chọn thành viên Người dùng chọn remove Hệ thống yêu cầu xác nhận Người dùng xác nhận Hệ thống xóa thành viên khỏi project |
-| **Luồng thay thế**  | Không có                                                                                                                                                                        |
+| Use case ID | UC-20 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | Remove members from project |
+| **Description** | Allows removing a member from project |
+| **Actor** | User |
+| **Preconditions** | User has permission to manage project Member exists in project |
+| **Subconditions** | Member removed from project |
+| **Main stream** | User opens project member list User selects member User selects remove System asks for confirmation User confirms System removes member from project |
+| **Alternative Stream** | None |
 |                     |                                                                                                                                                                                 |
-| **Luồng ngoại lệ**  | **E1: Không có quyền** → Hệ thống từ chối **E2: Xóa owner** → Bị chặn hoặc yêu cầu transfer ownership                                                                           |
+| **Exception Stream** | **E1: No rights** → System refuses **E2: Delete owner** → Blocked or requested to transfer ownership |
 
-21. ## **UC-21 Rời project**
+21. ## **UC-21 Leaving project**
 
-| Use case ID         | UC-21                                                                                                      |
-| :------------------ | :--------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Rời project                                                                                                |
-| **Mô tả**           | Cho phép thành viên tự rời khỏi project                                                                    |
-| **Tác nhân**        | User (thuộc project)                                                                                       |
-| **Điều kiện trước** | User đã đăng nhập và là thành viên của project                                                             |
-| **Điều kiện sau**   | User bị xóa khỏi project                                                                                   |
-| **Luồng chính**     | Người dùng chọn “Rời project” Hệ thống yêu cầu xác nhận Người dùng xác nhận Hệ thống xóa user khỏi project |
-| **Luồng thay thế**  | Không có                                                                                                   |
-| **Luồng ngoại lệ**  | **E1:** User là Owner **→** Bị chặn hoặc yêu cầu transfer ownership                                        |
+| Use case ID | UC-21 |
+| :----------------- | :---------------------------------------------------------------------------------------------------------- |
+| **Function name** | Leave project |
+| **Description** | Allow members to leave the project themselves |
+| **Actor** | User (belongs to project) |
+| **Preconditions** | User is logged in and is a member of project |
+| **Subconditions** | User deleted from project |
+| **Main stream** | User selects "Leave project" System asks for confirmation User confirms System deletes user from project |
+| **Alternative Stream** | None |
+| **Exception Stream** | **E1:** User is Owner **→** Blocked or required to transfer ownership |
 
-22. ## **UC-22 Yêu cầu tham gia project**
+22. ## **UC-22 Project participation request**
 
-| Use case ID         | UC-22                                                                                                                                                                      |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | **Yêu cầu tham gia project**                                                                                                                                               |
-| **Mô tả**           | Cho phép thành viên trong workspace gửi yêu cầu tham gia một project mà họ chưa phải là thành viên.                                                                        |
-| **Tác nhân**        | User (thuộc workspace)                                                                                                                                                     |
-| **Điều kiện trước** | User đã đăng nhập và thuộc workspace chứa project. User chưa phải thành viên của project. Project có cấu hình cho phép yêu cầu tham gia.                                   |
-| **Điều kiện sau**   | Yêu cầu tham gia được gửi đi và chờ Chủ project/Quản lý xử lý.                                                                                                             |
-| **Luồng chính**     | Người dùng truy cập project (ở chế độ xem giới hạn). Người dùng chọn "Yêu cầu tham gia project". Hệ thống ghi nhận yêu cầu và gửi thông báo đến Owner/Manager của project. |
-| **Luồng thay thế**  | Không có                                                                                                                                                                   |
-| **Luồng ngoại lệ**  | **E1: User đã là thành viên của project** → Hệ thống thông báo lỗi.                                                                                                        |
+| Use case ID | UC-22 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | **Request to join the project** |
+| **Description** | Allows workspace members to submit requests to join a project where they are not members.                                                                        |
+| **Actor** | User (belongs to workspace) |
+| **Preconditions** | The user is logged in and belongs to the workspace containing the project. User is not a member of the project. Project has a configuration that allows participation requests.                                   |
+| **Subconditions** | The participation request is sent and waiting for the Project Owner/Manager to process.                                                                                                             |
+| **Main stream** | User accesses project (in limited view). User selects "Request to join project". The system records the request and sends a notification to the Owner/Manager of the project. |
+| **Alternative Stream** | None |
+| **Exception Stream** | **E1: User is already a member of the project** → System error notification.                                                                                                        |
 
-23. ## **UC-23 Hủy yêu cầu tham gia project**
+23. ## **UC-23 Cancel project participation request**
 
-| Use case ID         | UC-23                                                                                                                                                        |
-| :------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | **Hủy yêu cầu tham gia project**                                                                                                                             |
-| **Mô tả**           | Cho phép người dùng hủy bỏ yêu cầu tham gia project đã gửi trước đó nếu yêu cầu đó chưa được xử lý.                                                          |
-| **Tác nhân**        | User (thuộc workspace)                                                                                                                                       |
-| **Điều kiện trước** | User đã gửi yêu cầu tham gia project và yêu cầu đó đang ở trạng thái chờ.                                                                                    |
-| **Điều kiện sau**   | Yêu cầu tham gia project bị hủy bỏ.                                                                                                                          |
-| **Luồng chính**     | Người dùng truy cập danh sách yêu cầu đã gửi. Người dùng chọn yêu cầu tham gia project cần hủy. Người dùng xác nhận hủy. Hệ thống xóa yêu cầu khỏi hệ thống. |
-| **Luồng thay thế**  | Không có                                                                                                                                                     |
-| **Luồng ngoại lệ**  | **E1: Yêu cầu đã được xử lý (Chấp nhận/Từ chối)** → Hệ thống thông báo lỗi, không cho phép hủy.                                                              |
+| Use case ID | UC-23 |
+| :----------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | **Cancel request to participate in project** |
+| **Description** | Allows users to cancel a previously submitted project participation request if the request has not been processed.                                                          |
+| **Actor** | User (belongs to workspace) |
+| **Preconditions** | The user has sent a request to join the project and the request is pending.                                                                                    |
+| **Subconditions** | The request to join the project has been cancelled.                                                                                                                          |
+| **Main stream** | The user accesses the list of sent requests. The user selects the request to join the project that needs to be canceled. User confirms cancellation. The system deletes the request from the system. |
+| **Alternative Stream** | None |
+| **Exception Stream** | **E1: The request has been processed (Accepted/Rejected)** → The system reports an error, cancellation is not allowed.                                                              |
 
-24. ## **UC-24 Xử lý yêu cầu tham gia project**
+24. ## **UC-24 Processing project participation request**
 
-| Use case ID         | UC-24                                                                                                                                                                                                                                    |
-| :------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | **Xử lý yêu cầu tham gia project**                                                                                                                                                                                                       |
-| **Mô tả**           | Cho phép Owner/Manager project chấp nhận hoặc từ chối yêu cầu tham gia project.                                                                                                                                                          |
-| **Tác nhân**        | User (Owner/Manager project)                                                                                                                                                                                                             |
-| **Điều kiện trước** | Có yêu cầu tham gia project đang chờ xử lý. User có quyền quản lý thành viên trong project.                                                                                                                                              |
-| **Điều kiện sau**   | Yêu cầu được chuyển trạng thái. User được thêm vào project nếu được chấp nhận.                                                                                                                                                           |
-| **Luồng chính**     | Owner/Manager truy cập danh sách yêu cầu tham gia project. Chọn một yêu cầu. Chọn hành động (Chấp nhận/Từ chối). Nếu chấp nhận, hệ thống thêm user vào project và gán vai trò mặc định. Hệ thống gửi thông báo kết quả cho user yêu cầu. |
-| **Luồng thay thế**  | Không có                                                                                                                                                                                                                                 |
-| **Luồng ngoại lệ**  | **E1: Người xử lý không có quyền** → Từ chối thao tác.                                                                                                                                                                                   |
+| Use case ID | UC-24 |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Function name** | **Processing requests to join the project** |
+| **Description** | Allows Project Owner/Manager to accept or decline requests to join the project.                                                                                                                                                          |
+| **Actor** | User (Owner/Manager project) |
+| **Preconditions** | There is a request to join the project pending. User has the right to manage members in the project.                                                                                                                                              |
+| **Subconditions** | Request to change status. The user is added to the project if accepted.                                                                                                                                                           |
+| **Main stream** | Owner/Manager accesses the list of project participation requests. Select a request. Select action (Accept/Reject). If accepted, the system adds the user to the project and assigns default roles. The system sends a result notification to the requesting user. |
+| **Alternative Stream** | None |
+| **Exception Stream** | **E1: The handler does not have permission** → Refuse the operation.                                                                                                                                                                                   |
 
-25. ## **UC-25: Tạo task**
+25. ## **UC-25: Create task**
 
-| Use case ID         | UC-25                                                                                                                                                                                                                                                                                                                                                                                               |
-| :------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Tạo task                                                                                                                                                                                                                                                                                                                                                                                            |
-| **Mô tả**           | Cho phép tạo task trong project                                                                                                                                                                                                                                                                                                                                                                     |
-| **Tác nhân**        | User                                                                                                                                                                                                                                                                                                                                                                                                |
-| **Điều kiện trước** | Người dùng thuộc project                                                                                                                                                                                                                                                                                                                                                                            |
-| **Điều kiện sau**   | Task được tạo thành công                                                                                                                                                                                                                                                                                                                                                                            |
-| **Luồng chính**     | Người dùng chọn tạo task Người dùng nhập thông tin (title, description,…) Người dùng xác nhận Hệ thống kiểm tra dữ liệu Hệ thống tạo task                                                                                                                                                                                                                                                           |
-| **Luồng thay thế**  | **A1: Tạo nhanh (quick add)** Người dùng nhập title nhanh Hệ thống tạo task với default config **A2: Tạo task từ AI (natural language)** Người dùng nhập mô tả tự nhiên Người dùng gửi yêu cầu Hệ thống gửi dữ liệu tới AI service AI phân tích và trả về cấu trúc task (title, description, priority, deadline, …) Hệ thống hiển thị preview Người dùng xác nhận Hệ thống tạo task A3: Tạo subtask |
+| Use case ID | UC-25 |
+| :----------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | Create task |
+| **Description** | Allows creating tasks in project |
+| **Actor** | User |
+| **Preconditions** | User belongs to project |
+| **Subconditions** | Task created successfully |
+| **Main stream** | User chooses to create task User enters information (title, description,...) User confirms System checks data System creates task |
+| **Alternative Stream** | **A1: Quick add** User enters title quickly System creates task with default config **A2: Creates task from AI (natural language)** User enters natural description User sends request System sends data to AI service AI analyzes and returns task structure (title, description, priority, deadline, ...) System displays preview User confirms System creates task A3: Create subtask |
 |                     |                                                                                                                                                                                                                                                                                                                                                                                                     |
-| **Luồng ngoại lệ**  | **E1: Không thuộc project** → Không cho tạo **E2: Dữ liệu không hợp lệ** → Từ chối                                                                                                                                                                                                                                                                                                                  |
+| **Exception Stream** | **E1: Not part of the project** → Do not allow creation **E2: Invalid data** → Reject |
 
-26. ## **UC-26: Cập nhật task**
+26. ## **UC-26: Update task**
 
-| Use case ID         | UC-26                                                                                          |
-| :------------------ | :--------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Cập nhật task                                                                                  |
-| **Mô tả**           | Cho phép chỉnh sửa thông tin task                                                              |
-| **Tác nhân**        | User                                                                                           |
-| **Điều kiện trước** | Có quyền chỉnh sửa task                                                                        |
-| **Điều kiện sau**   | Task được cập nhật                                                                             |
-| **Luồng chính**     | Người dùng mở task Người dùng chỉnh sửa Người dùng lưu Hệ thống validate Hệ thống cập nhật     |
-| **Luồng thay thế**  | **A1: Inline edit (edit nhanh)** Người dùng chỉnh trực tiếp trên list/board Hệ thống auto-save |
+| Use case ID | UC-26 |
+| :----------------- | :---------------------------------------------------------------------------------------------- |
+| **Function name** | Update tasks |
+| **Description** | Allows editing task information |
+| **Actor** | User |
+| **Preconditions** | Have permission to edit tasks |
+| **Subconditions** | Task updated |
+| **Main stream** | User opens task User edits User saves System validates System updates |
+| **Alternative Stream** | **A1: Inline edit (quick edit)** Users edit directly on the list/board Auto-save system |
 |                     |                                                                                                |
-| **Luồng ngoại lệ**  | **E1: Không có quyền** → Từ chối **E2: Dữ liệu không hợp lệ** → Không cập nhật                 |
+| **Exception Stream** | **E1: No permission** → Reject **E2: Invalid data** → No update |
 
-27. ## **UC-27: Xóa task**
+27. ## **UC-27: Delete task**
 
-| Use case ID         | UC-27                                                                                       |
-| :------------------ | :------------------------------------------------------------------------------------------ |
-| **Tên chức năng**   | Xóa task                                                                                    |
-| **Mô tả**           | Cho phép xóa task                                                                           |
-| **Tác nhân**        | User                                                                                        |
-| **Điều kiện trước** | Có quyền xóa task                                                                           |
-| **Điều kiện sau**   | Task bị xóa                                                                                 |
-| **Luồng chính**     | Người dùng chọn delete task Hệ thống yêu cầu xác nhận Người dùng xác nhận Hệ thống xóa task |
-| **Luồng thay thế**  |                                                                                             |
+| Use case ID | UC-27 |
+| :----------------- | :------------------------------------------------------------------------------------------ |
+| **Function name** | Delete tasks |
+| **Description** | Allows deleting tasks |
+| **Actor** | User |
+| **Preconditions** | Has the right to delete tasks |
+| **Subconditions** | Task deleted |
+| **Main stream** | User selects delete task System asks for confirmation User confirms System deletes task |
+| **Alternative Stream** |                                                                                             |
 |                     |                                                                                             |
-| **Luồng ngoại lệ**  | **E1: Không có quyền** → Không cho phép **E2: Task không tồn tại** → Báo lỗi                |
+| **Exception Stream** | **E1: No permission** → Not allowed **E2: Task does not exist** → Report error |
 
-28. ## **UC-28: Xem danh sách task**
+28. ## **UC-28: View task list**
 
-| Use case ID         | UC-28                                                                                                                                                                                                       |
-| :------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Xem danh sách task                                                                                                                                                                                          |
-| **Mô tả**           | Hiển thị danh sách task trong project                                                                                                                                                                       |
-| **Tác nhân**        | User                                                                                                                                                                                                        |
-| **Điều kiện trước** | Người dùng thuộc project                                                                                                                                                                                    |
-| **Điều kiện sau**   | Danh sách task được hiển thị                                                                                                                                                                                |
-| **Luồng chính**     | Người dùng truy cập project Hệ thống lấy danh sách task Hệ thống hiển thị                                                                                                                                   |
-| **Luồng thay thế**  | **A1: Lọc / tìm kiếm task** Người dùng nhập filter (status, assignee, priority) Hệ thống lọc Hiển thị **A2: Xem theo nhiều view (list / kanban / calendar)** Người dùng chọn view Hệ thống render tương ứng |
+| Use case ID | UC-28 |
+| :----------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | View task list |
+| **Description** | Display task list in project |
+| **Actor** | User |
+| **Preconditions** | User belongs to project |
+| **Subconditions** | Task list is displayed |
+| **Main stream** | User accesses project System gets list of tasks System displays |
+| **Alternative Stream** | **A1: Filter / search tasks** User enters filter (status, assignee, priority) Filter system Display **A2: View by multiple views (list / kanban / calendar)** User selects view Corresponding rendering system |
 |                     |                                                                                                                                                                                                             |
-| **Luồng ngoại lệ**  | **E1: Không có task** → Hiển thị empty state **E2: Lỗi load dữ liệu** → Thông báo lỗi                                                                                                                       |
+| **Exception Stream** | **E1: No task** → Display empty state **E2: Error loading data** → Error message |
 
-29. ## **UC-29: Xem chi tiết task**
+29. ## **UC-29: View task details**
 
-| Use case ID         | UC-29                                                                                                                            |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Xem chi tiết task                                                                                                                |
-| **Mô tả**           | Cho phép người dùng xem đầy đủ thông tin của một task                                                                            |
-| **Tác nhân**        | User                                                                                                                             |
-| **Điều kiện trước** | Task tồn tại Người dùng có quyền truy cập                                                                                        |
-| **Điều kiện sau**   | Thông tin task được hiển thị                                                                                                     |
-| **Luồng chính**     | Người dùng chọn một task Hệ thống lấy dữ liệu chi tiết (description, assignee, deadline, priority, subtask, …) Hệ thống hiển thị |
-| **Luồng thay thế**  | **A1: Xem nhanh (quick preview)** Người dùng hover / click nhanh Hệ thống hiển thị popup                                         |
+| Use case ID | UC-29 |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------ |
+| **Function name** | View task details |
+| **Description** | Allows users to view complete information of a task |
+| **Actor** | User |
+| **Preconditions** | Task exists User has access |
+| **Subconditions** | Task information is displayed |
+| **Main stream** | User selects a task. The system retrieves detailed data (description, assignee, deadline, priority, subtask, ...) The system displays |
+| **Alternative Stream** | **A1: Quick preview** User hovers / quickly clicks System displays popup |
 |                     |                                                                                                                                  |
-| **Luồng ngoại lệ**  | **E1: Task không tồn tại** → Thông báo lỗi **E2: Không có quyền truy cập** → Từ chối                                             |
+| **Exception Stream** | **E1: Task does not exist** → Error message **E2: No access rights** → Deny |
 
-30. ## **UC-30: Bình luận vào task**
+30. ## **UC-30: Comment on task**
 
-| Use case ID         | UC-30                                                                                                                                                                                           |
-| :------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Bình luận task                                                                                                                                                                                  |
-| **Mô tả**           | Cho phép người dùng trao đổi, thảo luận trong task                                                                                                                                              |
-| **Tác nhân**        | User                                                                                                                                                                                            |
-| **Điều kiện trước** | Task tồn tại                                                                                                                                                                                    |
-| **Điều kiện sau**   | Comment được tạo                                                                                                                                                                                |
-| **Luồng chính**     | Người dùng mở task Người dùng nhập comment Người dùng gửi Hệ thống lưu comment                                                                                                                  |
-| **Luồng thay thế**  | **A1: Mention user (@user)** Người dùng mention Hệ thống notify user **A2: Reply user** Người dùng nhấn nút reply một comment Người dùng nhập comment reply Người dùng gửi Hệ thống lưu comment |
+| Use case ID | UC-30 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | Comment tasks |
+| **Description** | Allows users to exchange and discuss in task |
+| **Actor** | User |
+| **Preconditions** | Task exists |
+| **Subconditions** | Comment created |
+| **Main stream** | User opens task User enters comment User submits System saves comment |
+| **Alternative Stream** | **A1: Mention user (@user)** The user mentions The system notifies the user **A2: Reply user** The user presses the reply button to a comment The user enters a reply comment The user submits The system saves the comment |
 |                     |                                                                                                                                                                                                 |
-| **Luồng ngoại lệ**  | **E1: Nội dung rỗng** → Không cho gửi **E2: Không có quyền truy cập task** → Từ chối                                                                                                            |
+| **Exception Stream** | **E1: Empty content** → Do not allow sending **E2: No permission to access task** → Refuse |
 
-31. ## **UC-31: Đính kèm file vào task**
+31. ## **UC-31: Attach file to task**
 
-| Use case ID         | UC-31                                                                                                |
-| :------------------ | :--------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Đính kèm file                                                                                        |
-| **Mô tả**           | Cho phép upload và gắn file vào task                                                                 |
-| **Tác nhân**        | User                                                                                                 |
-| **Điều kiện trước** | Task tồn tại                                                                                         |
-| **Điều kiện sau**   | File được lưu và liên kết với task                                                                   |
-| **Luồng chính**     | Người dùng chọn upload file Người dùng chọn file Hệ thống upload Hệ thống lưu metadata Hiển thị file |
-| **Luồng thay thế**  | **A1: Drag & drop file** Người dùng kéo file vào UI Hệ thống upload                                  |
+| Use case ID | UC-31 |
+| :----------------- | :---------------------------------------------------------------------------------------------------------- |
+| **Function name** | Attach file |
+| **Description** | Allows uploading and attaching files to tasks |
+| **Actor** | User |
+| **Preconditions** | Task exists |
+| **Subconditions** | The file is saved and associated with task |
+| **Main stream** | User chooses to upload file User selects file Upload system System saves metadata File display |
+| **Alternative Stream** | **A1: Drag & drop file** User drags file into UI Upload system |
 |                     |                                                                                                      |
-| **Luồng ngoại lệ**  | **E1: File quá lớn / format không hợp lệ** → Từ chối **E2: Lỗi upload** → Thông báo                  |
+| **Exception Stream** | **E1: File too large / invalid format** → Reject **E2: Upload error** → Notice |
 
-32. ## **UC-32: Gợi ý task nên thực hiện tiếp tđheo**
+32. ## **UC-32: Suggested task that should be done next**
 
-| Use case ID         | UC-32                                                                                                          |
-| :------------------ | :------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Gợi ý task tiếp theo                                                                                           |
-| **Mô tả**           | Hệ thống AI đề xuất task ưu tiên nên làm tiếp theo dựa trên trạng thái project, deadline, dependency.          |
-| **Tác nhân**        | User                                                                                                           |
-| **Điều kiện trước** | User có project và danh sách task                                                                              |
-| **Điều kiện sau**   | Danh sách gợi ý được hiển thị                                                                                  |
-| **Luồng chính**     | User mở project Hệ thống hiển thị gợi ý task tiếp theo có kèm giải thích tại giao diện trang tổng quan project |
-| **Luồng thay thế**  | Không đủ dữ liệu → gợi ý đơn giản (deadline gần nhất)                                                          |
+| Use case ID | UC-32 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------- |
+| **Function name** | Next task suggestion |
+| **Description** | The AI ​​system recommends priority tasks to do next based on project status, deadline, and dependencies.          |
+| **Actor** | User |
+| **Preconditions** | User has project and task list |
+| **Subconditions** | The suggested list is displayed |
+| **Main stream** | User opens the project. The system displays next task suggestions with explanations on the project dashboard interface |
+| **Alternative Stream** | Not enough data → simple suggestion (latest deadline) |
 |                     |                                                                                                                |
-| **Luồng ngoại lệ**  | AI service lỗi → fallback rule-based                                                                           |
+| **Exception Stream** | AI service error → fallback rule-based |
 
-33. ## **UC-33: Cảnh báo overload**
+33. ## **UC-33: Overload warning**
 
-| Use case ID         | UC-33                                                                                                                                                |
-| :------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Cảnh báo quá tải công việc                                                                                                                           |
-| **Mô tả**           | Hệ thống phát hiện khi user có workload vượt ngưỡng và đưa ra cảnh báo.                                                                              |
-| **Tác nhân**        | User                                                                                                                                                 |
-| **Điều kiện trước** | User có nhiều task đang active Có estimate hoặc deadline                                                                                             |
-| **Điều kiện sau**   | User nhận được cảnh báo overload                                                                                                                     |
-| **Luồng chính**     | Hệ thống định kỳ kiểm tra workload Tính tổng effort / thời gian So sánh với ngưỡng cấu hình Nếu vượt ngưỡng → tạo cảnh báo Hiển thị cảnh báo trên UI |
-| **Luồng thay thế**  | Không có estimate → dùng số lượng task thay thế                                                                                                      |
+| Use case ID | UC-33 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | Work overload warning |
+| **Description** | The system detects when a user's workload exceeds the threshold and issues a warning.                                                                              |
+| **Actor** | User |
+| **Preconditions** | User has many active tasks with estimate or deadline |
+| **Subconditions** | User receives overload warning |
+| **Main stream** | The system periodically checks the workload Calculate total effort / time Compare with configured threshold If threshold is exceeded → create alert Display alert on UI |
+| **Alternative Stream** | There is no estimate → use the number of tasks instead |
 |                     |                                                                                                                                                      |
-| **Luồng ngoại lệ**  | E1. Không đủ dữ liệu → không cảnh báo                                                                                                                |
+| **Exception Stream** | E1. Not enough data → no warning |
 
-34. ## **UC-34 Tạo báo cáo tiến độ**
+34. ## **UC-34 Generate progress report**
 
 | Use case ID         | UC-34                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -526,7 +526,7 @@
 |                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | **Luồng ngoại lệ**  | **E1. AI service timeout / lỗi** Fallback: Hiển thị thống kê: Completion rate Task done / total Thông báo: “AI insight currently unavailable” **E2. Dữ liệu không hợp lệ** Không generate report Hiển thị lỗi validation                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
-35. ## **UC-35: Tạo workflow từ project**
+35. ## **UC-35: Create workflow from project**
 
 | Use case ID         | UC-35                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | :------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -540,21 +540,21 @@
 |                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | **Luồng ngoại lệ**  | E1: AI service không khả dụng Hệ thống fallback sang rule-based Workflow vẫn được tạo nhưng không có mô tả nâng cao E2: Dữ liệu project không hợp lệ (task rỗng hoặc không đủ thông tin) Hệ thống thông báo lỗi và không tạo workflow                                                                                                                                                                                                                                                                                 |
 
-36. ## **UC-36: Chỉnh sửa workflow**
+36. ## **UC-36: Edit workflow**
 
-| Use case ID         | UC-36                                                                    |
-| :------------------ | :----------------------------------------------------------------------- |
-| **Tên chức năng**   | Chỉnh sửa workflow                                                       |
-| **Mô tả**           | Cho phép chỉnh sửa nội dung workflow                                     |
-| **Tác nhân**        | User                                                                     |
-| **Điều kiện trước** | Workflow ở trạng thái draft                                              |
-| **Điều kiện sau**   | Workflow được cập nhật                                                   |
-| **Luồng chính**     | Người dùng mở workflow Chỉnh sửa nội dung workflow Lưu Hệ thống cập nhật |
-| **Luồng thay thế**  | **A1: Reorder step** → Drag & drop **A2: Thêm / xóa step** → Cập nhật    |
+| Use case ID | UC-36 |
+| :----------------- | :------------------------------------------------------------------------ |
+| **Function name** | Edit workflow |
+| **Description** | Allows editing workflow content |
+| **Actor** | User |
+| **Preconditions** | Workflow is in draft state |
+| **Subconditions** | Workflow updated |
+| **Main stream** | User opens workflow Edit workflow content Save System updates |
+| **Alternative Stream** | **A1: Reorder step** → Drag & drop **A2: Add / delete step** → Update |
 |                     |                                                                          |
-| **Luồng ngoại lệ**  | **E1: Không có quyền** → Từ chối                                         |
+| **Exception Stream** | **E1: No permission** → Deny |
 
-37. ## **UC-37: Chia sẻ workflow**
+37. ## ​​**UC-37: Share workflow**
 
 | Use case ID         | UC-37                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -568,126 +568,126 @@
 |                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | **Luồng ngoại lệư** | E1. Không đủ quyền Tại bước 3, nếu user không phải owner → Trả lỗi: 403 Forbiden → Không tiếp tục E2. Validation fail Tại bước 4: Thiếu name / task invalid → Trả lỗi: Hiển thị field bị lỗi → Không publish E3. Lỗi database khi lưu Tại bước 6: DB lỗi / transaction fail → Rollback toàn bộ → Trả lỗi “Publish thất bại, thử lại sau”                                                                                                                                                                                                                                                    |
 
-38. ## **UC-38: Khám phá workflow**
+38. ## **UC-38: Exploring workflow**
 
-| Use case ID         | UC-38                                                                                                                                                               |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Tên chức năng**   | Khám phá workflow                                                                                                                                                   |
-| **Mô tả**           | Cho phép người dùng tìm kiếm và sử dụng workflow từ người khác                                                                                                      |
-| **Tác nhân**        | User                                                                                                                                                                |
-| **Điều kiện trước** |                                                                                                                                                                     |
-| **Điều kiện sau**   |                                                                                                                                                                     |
-| **Luồng chính**     | Người dùng mở trang khám phá Hệ thống hiển thị danh sách workflow public Người dùng tìm kiếm / filter Người dùng chọn workflow Người dùng apply                     |
-| **Luồng thay thế**  | **A1: AI gợi ý workflow phù hợp** Hệ thống phân tích hành vi user Gợi ý workflow **A2: Xem preview trước khi dùng** Người dùng mở preview Xem step Quyết định apply |
+| Use case ID | UC-38 |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Function name** | Explore workflow |
+| **Description** | Allows users to search and use workflows from others |
+| **Actor** | User |
+| **Preconditions** |                                                                                                                                                                     |
+| **Subconditions** |                                                                                                                                                                     |
+| **Main stream** | User opens discovery page System displays list of public workflows User searches / filters User selects workflow User apply |
+| **Alternative Stream** | **A1: AI suggests suitable workflow** System analyzes user behavior Suggests workflow **A2: See preview before using** User opens preview See step Decide to apply |
 |                     |                                                                                                                                                                     |
-| **Luồng ngoại lệ**  | **E1: Không có workflow phù hợp** → Hiển thị rỗng                                                                                                                   |
+| **Exception Stream** | **E1: No suitable workflow** → Empty display |
 
-39. ## **UC-39 Xem chi tiết workflow**
+39. ## **UC-39 View workflow details**
 
-| Use case ID         | UC-39                                                                                                                                                                                                               |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Tên chức năng**   | **Xem chi tiết workflow**                                                                                                                                                                                           |
-| **Mô tả**           | Cho phép người dùng xem cấu trúc, mô tả và các bước (steps) chi tiết của một workflow đã được chia sẻ (public) hoặc là bản nháp của họ.                                                                             |
-| **Tác nhân**        | User                                                                                                                                                                                                                |
-| **Điều kiện trước** | Workflow tồn tại. Người dùng có quyền truy cập (public hoặc là owner/draft).                                                                                                                                        |
-| **Điều kiện sau**   | Thông tin chi tiết của workflow được hiển thị.                                                                                                                                                                      |
-| **Luồng chính**     | Người dùng truy cập trang Khám phá (Explore) hoặc danh sách workflow đã đăng. Người dùng chọn một workflow. Hệ thống lấy dữ liệu chi tiết (steps, mô tả, đánh giá, bình luận). Hệ thống hiển thị chi tiết workflow. |
-| **Luồng thay thế**  | **A1: Xem thông tin tác giả** Người dùng click vào tên tác giả. Hệ thống hiển thị hồ sơ cơ bản của tác giả.                                                                                                         |
-| **Luồng ngoại lệ**  | **E1: Workflow không tồn tại hoặc không có quyền truy cập** → Thông báo lỗi 404 hoặc từ chối truy cập.                                                                                                              |
+| Use case ID | UC-39 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | **See detailed workflow** |
+| **Description** | Allows users to view the structure, description, and detailed steps of a shared (public) or draft workflow.                                                                             |
+| **Actor** | User |
+| **Preconditions** | Workflow exists. User has access (public or owner/draft).                                                                                                                                        |
+| **Subconditions** | Detailed information of the workflow is displayed.                                                                                                                                                                      |
+| **Main stream** | The user visits the Explore page or the list of posted workflows. The user selects a workflow. The system retrieves detailed data (steps, descriptions, reviews, comments). The system displays workflow details. |
+| **Alternative Stream** | **A1: View author information** User clicks on the author's name. The system displays the author's basic profile.                                                                                                         |
+| **Exception Stream** | **E1: Workflow does not exist or does not have access permission** → 404 error message or access denied.                                                                                                              |
 
-40. ## **UC-40 Đánh giá workflow**
+40. ## **UC-40 Workflow Evaluation**
 
-| Use case ID         | UC-40                                                                                                                                                                             |
-| :------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | **Đánh giá workflow**                                                                                                                                                             |
-| **Mô tả**           | Cho phép người dùng đánh giá (rating) chất lượng của workflow đã được chia sẻ.                                                                                                    |
-| **Tác nhân**        | User                                                                                                                                                                              |
-| **Điều kiện trước** | Workflow tồn tại và ở trạng thái public. User đã đăng nhập.                                                                                                                       |
-| **Điều kiện sau**   | Đánh giá của người dùng được ghi nhận và cập nhật điểm trung bình của workflow.                                                                                                   |
-| **Luồng chính**     | Người dùng xem chi tiết workflow. Người dùng chọn số sao đánh giá (1-5) và/hoặc nhập nhận xét ngắn. Hệ thống lưu rating của user. Hệ thống cập nhật điểm trung bình cho workflow. |
-| **Luồng thay thế**  | **A1: Thay đổi đánh giá** Người dùng đã đánh giá, chọn lại số sao/sửa nhận xét. Hệ thống cập nhật rating mới.                                                                     |
-| **Luồng ngoại lệ**  | **E1: Lỗi hệ thống khi lưu** → Thông báo thất bại.                                                                                                                                |
+| Use case ID | UC-40 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | **Workflow review** |
+| **Description** | Allows users to rate the quality of the shared workflow.                                                                                                    |
+| **Actor** | User |
+| **Preconditions** | Workflow exists and is public. User is logged in.                                                                                                                       |
+| **Subconditions** | User reviews are recorded and the average score of the workflow is updated.                                                                                                   |
+| **Main stream** | Users view workflow details. The user selects the number of rating stars (1-5) and/or enters a short comment. The system saves the user's rating. The system updates the average score for the workflow. |
+| **Alternative Stream** | **A1: Change rating** User has rated, re-select number of stars/edit comment. New rating update system.                                                                     |
+| **Exception Stream** | **E1: System error when saving** → Failure message.                                                                                                                                |
 
-41. ## **UC-41 Bình luận workflow**
+41. ## **UC-41 Comment workflow**
 
-| Use case ID         | UC-41                                                                                                                                                             |
-| :------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | **Bình luận workflow**                                                                                                                                            |
-| **Mô tả**           | Cho phép người dùng trao đổi, bình luận về nội dung của workflow đã được chia sẻ.                                                                                 |
-| **Tác nhân**        | User                                                                                                                                                              |
-| **Điều kiện trước** | Workflow tồn tại và ở trạng thái public. User đã đăng nhập.                                                                                                       |
-| **Điều kiện sau**   | Bình luận được lưu và hiển thị trong danh sách bình luận của workflow.                                                                                            |
-| **Luồng chính**     | Người dùng xem chi tiết workflow. Người dùng nhập nội dung bình luận. Người dùng gửi. Hệ thống kiểm tra nội dung và lưu comment. Hệ thống hiển thị bình luận mới. |
-| **Luồng thay thế**  | **A1: Trả lời bình luận (Reply)** Người dùng chọn reply một comment. Hệ thống lưu comment dưới dạng comment con.                                                  |
-| **Luồng ngoại lệ**  | **E1: Nội dung bình luận không hợp lệ (trống/spam)** → Từ chối đăng và thông báo lỗi.                                                                             |
+| Use case ID | UC-41 |
+| :----------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Function name** | **Comment workflow** |
+| **Description** | Allows users to exchange and comment on the content of the shared workflow.                                                                                 |
+| **Actor** | User |
+| **Preconditions** | Workflow exists and is public. User is logged in.                                                                                                       |
+| **Subconditions** | Comments are saved and displayed in the workflow's comments list.                                                                                            |
+| **Main stream** | Users view workflow details. User enters comment content. User submitted. The system checks the content and saves comments. The system displays new comments. |
+| **Alternative Stream** | **A1: Reply to comment (Reply)** User chooses to reply to a comment. The system saves comments as child comments.                                                  |
+| **Exception Stream** | **E1: Invalid comment content (empty/spam)** → Refuse to post and error message.                                                                             |
 
-42. ## **UC-42 Lưu workflow yêu thích**
+42. ## **UC-42 Save favorite workflow**
 
-| Use case ID         | UC-42                                                                                                                                                                     |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Tên chức năng**   | **Lưu workflow yêu thích**                                                                                                                                                |
-| **Mô tả**           | Cho phép người dùng đánh dấu và lưu trữ các workflow đã được chia sẻ (public) để tiện theo dõi/sử dụng sau này.                                                           |
-| **Tác nhân**        | User                                                                                                                                                                      |
-| **Điều kiện trước** | Workflow tồn tại và ở trạng thái public. User đã đăng nhập.                                                                                                               |
-| **Điều kiện sau**   | Workflow được thêm/bỏ khỏi danh sách yêu thích của người dùng.                                                                                                            |
-| **Luồng chính**     | Người dùng xem danh sách/chi tiết workflow. Người dùng chọn biểu tượng "Lưu yêu thích" (Favorite). Hệ thống lưu liên kết workflow vào danh sách yêu thích của người dùng. |
-| **Luồng thay thế**  | **A1: Bỏ yêu thích** Người dùng chọn lại biểu tượng "Lưu yêu thích". Hệ thống xóa workflow khỏi danh sách yêu thích.                                                      |
-| **Luồng ngoại lệ**  | **E1: Lỗi hệ thống khi lưu** → Thông báo thất bại.                                                                                                                        |
+| Use case ID | UC-42 |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Function name** | **Save favorite workflow** |
+| **Description** | Allows users to mark and store shared (public) workflows for easy tracking/use later.                                                           |
+| **Actor** | User |
+| **Preconditions** | Workflow exists and is public. User is logged in.                                                                                                               |
+| **Subconditions** | Workflow added/removed from user's favorites list.                                                                                                            |
+| **Main stream** | User views workflow list/details. The user selects the "Save favorite" icon (Favorite). The system saves the workflow link to the user's favorite list. |
+| **Alternative Stream** | **A1: Remove favorites** The user selects the "Save favorites" icon again. The system deletes workflows from the favorites list.                                                      |
+| **Exception Stream** | **E1: System error when saving** → Failure message.                                                                                                                        |
 
-43. ## **UC-43: Tạo project từ workflow**
+43. ## **UC-43: Create project from workflow**
 
-| Use case ID         | UC-43                                                                                                                                                                |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Tạo project từ workflow                                                                                                                                              |
-| **Mô tả**           | Cho phép tạo project từ workflow đã có                                                                                                                               |
-| **Tác nhân**        | User                                                                                                                                                                 |
-| **Điều kiện trước** |                                                                                                                                                                      |
-| **Điều kiện sau**   |                                                                                                                                                                      |
-| **Luồng chính**     | Người dùng chọn workflow Người dùng chọn “Apply” Hệ thống tạo project hoặc task structure Hệ thống hiển thị kết quả                                                  |
-| **Luồng thay thế**  | **A1: Áp dụng một phần workflow** Người dùng chọn step Hệ thống chỉ tạo phần đó **A2: Tùy chỉnh trước khi apply** Hệ thống hiển thị preview Người dùng chỉnh sửa Tạo |
+| Use case ID | UC-43 |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Function name** | Create project from workflow |
+| **Description** | Allows creating projects from existing workflows |
+| **Actor** | User |
+| **Preconditions** |                                                                                                                                                                      |
+| **Subconditions** |                                                                                                                                                                      |
+| **Main stream** | User selects workflow User selects “Apply” System creates project or task structure System displays results |
+| **Alternative Stream** | **A1: Apply part of the workflow** User selects step The system only creates that part **A2: Customize before applying** System displays preview User edits Create |
 |                     |                                                                                                                                                                      |
-| **Luồng ngoại lệ**  |                                                                                                                                                                      |
+| **Exception Stream** |                                                                                                                                                                      |
 
-44. ## **UC-44 Xem workflow đã đăng**
+44. ## **UC-44 View posted workflow**
 
-| Use case ID         | UC-44                                                                                                                                                                                          |
-| :------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | **Xem workflow đã đăng**                                                                                                                                                                       |
-| **Mô tả**           | Cho phép người dùng xem danh sách các workflow mà họ đã tạo và chia sẻ (public) hoặc đang ở trạng thái nháp (draft).                                                                           |
-| **Tác nhân**        | User                                                                                                                                                                                           |
-| **Điều kiện trước** | User đã đăng nhập.                                                                                                                                                                             |
-| **Điều kiện sau**   | Danh sách workflow do user tạo được hiển thị (bao gồm cả Draft và Public).                                                                                                                     |
-| **Luồng chính**     | Người dùng truy cập trang quản lý workflow cá nhân. Hệ thống truy vấn danh sách workflow do user này là tác giả. Hệ thống hiển thị danh sách, bao gồm tên, mô tả và trạng thái (Draft/Public). |
-| **Luồng thay thế**  | **A1: Lọc theo trạng thái** 1\. Người dùng chọn filter (Draft / Public). 2\. Hệ thống cập nhật danh sách hiển thị.                                                                             |
-| **Luồng ngoại lệ**  | **E1: Không có workflow nào được đăng** → Hiển thị trạng thái empty và gợi ý tạo mới.                                                                                                          |
+| Use case ID | UC-44 |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Function name** | **See posted workflow** |
+| **Description** | Allows users to view a list of workflows they have created and shared (public) or are in draft status.                                                                           |
+| **Actor** | User |
+| **Preconditions** | User is logged in.                                                                                                                                                                             |
+| **Subconditions** | A list of user-created workflows is displayed (including Draft and Public).                                                                                                                     |
+| **Main stream** | Users access their personal workflow management page. The system queries the list of workflows authored by this user. The system displays a list, including name, description and status (Draft/Public). |
+| **Alternative Stream** | **A1: Filter by status** 1\. User selects filter (Draft / Public). 2\. The system updates the display list.                                                                             |
+| **Exception Stream** | **E1: No workflows posted** → Displays empty status and suggests creating a new one.                                                                                                          |
 
-45. ## **UC-45: Xem dashboard project**
+45. ## **UC-45: View project dashboard**
 
-| Use case ID         | UC-45                                                                                                                                                                                    |
-| :------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Xem dashboard project                                                                                                                                                                    |
-| **Mô tả**           | Hiển thị tổng quan về tiến độ công việc, project và hiệu suất                                                                                                                            |
-| **Tác nhân**        | User                                                                                                                                                                                     |
-| **Điều kiện trước** | Người dùng có dữ liệu task/project                                                                                                                                                       |
-| **Điều kiện sau**   | Dashboard được hiển thị                                                                                                                                                                  |
-| **Luồng chính**     | Người dùng mở dashboard Hệ thống tổng hợp dữ liệu (task, deadline, progress…) Hệ thống hiển thị biểu đồ / thống kê                                                                       |
-| **Luồng thay thế**  | **A1: Filter theo project / thời gian** Người dùng chọn filter Hệ thống cập nhật dữ liệu hiển thị **A2: Tùy chỉnh widget dashboard** Người dùng chọn widget muốn xem Hệ thống lưu config |
+| Use case ID | UC-45 |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Function name** | View dashboard project |
+| **Description** | Show overview of work progress, projects and performance |
+| **Actor** | User |
+| **Preconditions** | User has data task/project |
+| **Subconditions** | Dashboard is displayed |
+| **Main stream** | User opens dashboard Data synthesis system (tasks, deadlines, progress...) Chart / statistics display system |
+| **Alternative Stream** | **A1: Filter by project / time** User selects filter System updates display data **A2: Customize dashboard widget** User selects widget he wants to view System saves config |
 |                     |                                                                                                                                                                                          |
-| **Luồng ngoại lệ**  | **E1: Không có dữ liệu** → Hiển thị trạng thái rỗng                                                                                                                                      |
+| **Exception Stream** | **E1: No data** → Show empty status |
 
-46. ## **UC-46: Xem dashboard cá nhân**
+46. ## **UC-46: View personal dashboard**
 
-| Use case ID         | UC-46                                                                                                           |
-| :------------------ | :-------------------------------------------------------------------------------------------------------------- |
-| **Tên chức năng**   | Xem dashboard cá nhân                                                                                           |
-| **Mô tả**           | Đánh giá hiệu suất làm việc dựa trên dữ liệu task                                                               |
-| **Tác nhân**        | User                                                                                                            |
-| **Điều kiện trước** |                                                                                                                 |
-| **Điều kiện sau**   |                                                                                                                 |
-| **Luồng chính**     | Người dùng mở analytics Hệ thống tính toán: Task hoàn thành Thời gian trung bình Deadline miss Hiển thị kết quả |
-| **Luồng thay thế**  | **A1: AI phân tích nâng cao** Hệ thống gửi dữ liệu cho AI AI đưa ra nhận xét Hiển thị insight                   |
+| Use case ID | UC-46 |
+| :----------------- | :-------------------------------------------------------------------------------------------------------------- |
+| **Function name** | View personal dashboard |
+| **Description** | Evaluate work performance based on task data |
+| **Actor** | User |
+| **Preconditions** |                                                                                                                 |
+| **Subconditions** |                                                                                                                 |
+| **Main stream** | User opens analytics System calculates: Task completed Average time Deadline miss Show results |
+| **Alternative Stream** | **A1: Advanced analytical AI** System sends data to AI AI makes comments Show insight |
 |                     |                                                                                                                 |
-| **Luồng ngoại lệ**  | **A1: AI phân tích nâng cao** Hệ thống gửi dữ liệu cho AI AI đưa ra nhận xét Hiển thị insight                   |
+| **Exception Stream** | **A1: Advanced analytical AI** System sends data to AI AI makes comments Show insight |
 
 ##
 

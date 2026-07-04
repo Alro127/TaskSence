@@ -41,13 +41,13 @@ Constraints/Indexes:
 - POST /workflows/{workflowId}/guidance/generate
 - Only for PUBLIC workflow
 - Uses current publicationVersion
-- Persists guidance
+- Persist guidance
 - Returns guidance payload
 
 2. Get guidance for project
 
 - GET /projects/{projectId}/guidance
-- Resolve workflow for project
+- Resolve workflow for projects
 - Return latest published guidance
 - If missing: return guidance=null with status="MISSING"
 

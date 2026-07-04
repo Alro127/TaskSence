@@ -1,17 +1,17 @@
 # Permission Policy - TaskSense
 
-## 1. Tổng quan kiến trúc
+## 1. Architecture overview
 
-Hệ thống phân quyền được thiết kế theo mô hình **centralized policy matrix**, gồm 4 file chính:
+The decentralized system is designed according to the **centralized policy matrix** model, including 4 main files:
 
-| File                       | Vai trò                                                                               |
+| File | Role |
 | -------------------------- | ------------------------------------------------------------------------------------- |
-| `PermissionPolicy.java`    | Ma trận phân quyền tập trung — nơi **duy nhất** quyết định role nào có permission nào |
-| `PermissionChecker.java`   | Bean `@perm` dùng cho `@PreAuthorize` SpEL và service-layer permission checks         |
-| `WorkspacePermission.java` | Enum định nghĩa tất cả hành động cấp Workspace                                        |
-| `ProjectPermission.java`   | Enum định nghĩa tất cả hành động cấp Project                                          |
+| `PermissionPolicy.java` | Centralized permission matrix — the **only place** that decides which roles have which permissions |
+| `PermissionChecker.java` | Bean `@perm` used for `@PreAuthorize` SpEL and service-layer permission checks |
+| `WorkspacePermission.java` | Enum defines all Workspace | level actions
+| `ProjectPermission.java` | Enum defines all Project | level actions
 
-### Luồng kiểm tra quyền
+### Permission checking flow
 
 ```
 HTTP Request
@@ -25,31 +25,31 @@ HTTP Request
 
 ### Enum `WorkspacePermission`
 
-| Permission             | Mô tả                            |
+| Permission | Description |
 | ---------------------- | -------------------------------- |
-| `VIEW`                 | Xem thông tin workspace          |
-| `UPDATE`               | Cập nhật workspace               |
-| `DELETE`               | Xóa workspace                    |
-| `VIEW_MEMBERS`         | Xem danh sách thành viên         |
-| `MANAGE_MEMBERS`       | Thêm/xóa/đổi role thành viên     |
-| `INVITE_MEMBERS`       | Gửi lời mời tham gia workspace   |
-| `CREATE_PROJECT`       | Tạo project trong workspace      |
-| `MANAGE_JOIN_REQUESTS` | Duyệt yêu cầu tham gia workspace |
+| `VIEW` | View workspace information |
+| `UPDATE` | Update workspace |
+| `DELETE` | Delete workspace |
+| `VIEW_MEMBERS` | View member list |
+| `MANAGE_MEMBERS` | Add/delete/change member roles |
+| `INVITE_MEMBERS` | Send invitation to join workspace |
+| `CREATE_PROJECT` | Create project in workspace |
+| `MANAGE_JOIN_REQUESTS` | Browse requests to join workspace |
 
-### Ma trận phân quyền Workspace
+### Workspace authorization matrix
 
-| Permission             | OWNER | MANAGER | MEMBER | VIEWER |
+| Permission | OWNER | MANAGER | MEMBER | VIEWER |
 | ---------------------- | :---: | :-----: | :----: | :----: |
-| `VIEW`                 |   x   |    x    |   x    |   x    |
-| `UPDATE`               |   x   |         |        |        |
-| `DELETE`               |   x   |         |        |        |
-| `VIEW_MEMBERS`         |   x   |    x    |   x    |   x    |
-| `MANAGE_MEMBERS`       |   x   |    x    |        |        |
-| `INVITE_MEMBERS`       |   x   |    x    |        |        |
-| `CREATE_PROJECT`       |   x   |         |        |        |
-| `MANAGE_JOIN_REQUESTS` |   x   |    x    |        |        |
+| `VIEW` |   x |    x |   x |   x |
+| `UPDATE` |   x |         |        |        |
+| `DELETE` |   x |         |        |        |
+| `VIEW_MEMBERS` |   x |    x |   x |   x |
+| `MANAGE_MEMBERS` |   x |    x |        |        |
+| `INVITE_MEMBERS` |   x |    x |        |        |
+| `CREATE_PROJECT` |   x |         |        |        |
+| `MANAGE_JOIN_REQUESTS` |   x |    x |        |        |
 
-> **OWNER** có toàn quyền (`EnumSet.allOf`). Chỉ OWNER mới có thể `UPDATE`, `DELETE` workspace và `CREATE_PROJECT`.
+> **OWNER** has full authority (`EnumSet.allOf`). Only OWNER can `UPDATE`, `DELETE` workspace and `CREATE_PROJECT`.
 
 ---
 
@@ -57,49 +57,49 @@ HTTP Request
 
 ### Enum `ProjectPermission`
 
-| Permission           | Mô tả                                |
+| Permission | Description |
 | -------------------- | ------------------------------------ |
-| `VIEW`               | Xem thông tin project                |
-| `UPDATE`             | Cập nhật project                     |
-| `DELETE`             | Xóa project                          |
-| `VIEW_MEMBERS`       | Xem danh sách thành viên project     |
-| `MANAGE_MEMBERS`     | Thêm/xóa/đổi role thành viên project |
-| `CREATE_TASK`        | Tạo task                             |
-| `VIEW_TASKS`         | Xem danh sách task                   |
-| `UPDATE_TASK`        | Cập nhật task                        |
-| `DELETE_TASK`        | Xóa task                             |
-| `UPDATE_TASK_STATUS` | Cập nhật trạng thái task             |
+| `VIEW` | View project information |
+| `UPDATE` | Update project |
+| `DELETE` | Delete project |
+| `VIEW_MEMBERS` | View project member list |
+| `MANAGE_MEMBERS` | Add/remove/change project member roles |
+| `CREATE_TASK` | Create task |
+| `VIEW_TASKS` | View task list |
+| `UPDATE_TASK` | Update tasks |
+| `DELETE_TASK` | Delete tasks |
+| `UPDATE_TASK_STATUS` | Update task status |
 
-### Ma trận phân quyền Project
+### Project delegation matrix
 
-| Permission           | MANAGER | MEMBER | VIEWER |
+| Permission | MANAGER | MEMBER | VIEWER |
 | -------------------- | :-----: | :----: | :----: |
-| `VIEW`               |    x    |   x    |   x    |
-| `UPDATE`             |    x    |        |        |
-| `DELETE`             |    x    |        |        |
-| `VIEW_MEMBERS`       |    x    |   x    |   x    |
-| `MANAGE_MEMBERS`     |    x    |        |        |
-| `CREATE_TASK`        |    x    |   x    |        |
-| `VIEW_TASKS`         |    x    |   x    |   x    |
-| `UPDATE_TASK`        |    x    |   x    |        |
-| `DELETE_TASK`        |    x    |   x    |        |
-| `UPDATE_TASK_STATUS` |    x    |   x    |        |
+| `VIEW` |    x |   x |   x |
+| `UPDATE` |    x |        |        |
+| `DELETE` |    x |        |        |
+| `VIEW_MEMBERS` |    x |   x |   x |
+| `MANAGE_MEMBERS` |    x |        |        |
+| `CREATE_TASK` |    x |   x |        |
+| `VIEW_TASKS` |    x |   x |   x |
+| `UPDATE_TASK` |    x |   x |        |
+| `DELETE_TASK` |    x |   x |        |
+| `UPDATE_TASK_STATUS` |    x |   x |        |
 
-> **MANAGER** có toàn quyền (`EnumSet.allOf`). **VIEWER** chỉ có thể xem (VIEW, VIEW_MEMBERS, VIEW_TASKS).
+> **MANAGER** has full authority (`EnumSet.allOf`). **VIEWER** can only view (VIEW, VIEW_MEMBERS, VIEW_TASKS).
 
 ---
 
-## 4. Quy tắc đặc biệt
+## 4. Special rules
 
-### Implicit project access dựa trên Workspace role
+### Implicit project access based on Workspace role
 
-Khi kiểm tra quyền cấp project, nếu user **không phải project member** thì hệ thống fallback kiểm tra workspace role:
+When checking project-level permissions, if the user is **not a project member**, the fallback system checks the workspace role:
 
-| Workspace Role      | Implicit Project Access                                    |
+| Workspace Role | Implicit Project Access |
 | ------------------- | ---------------------------------------------------------- |
-| `OWNER`             | Full access (tương đương Project MANAGER)                  |
-| `MANAGER`           | VIEWER-level access (`VIEW`, `VIEW_MEMBERS`, `VIEW_TASKS`) |
-| `MEMBER` / `VIEWER` | Không có implicit project access                           |
+| `OWNER` | Full access (equivalent to Project MANAGER) |
+| `MANAGER` | VIEWER-level access (`VIEW`, `VIEW_MEMBERS`, `VIEW_TASKS`) |
+| `MEMBER` / `VIEWER` | There is no implicit project access |
 
 ```java
 // PermissionChecker.project()
@@ -117,18 +117,18 @@ private boolean hasImplicitProjectPermission(Long projectId, Long userId, Projec
 }
 ```
 
-### Resource-level permission cho Task
+### Resource-level permission for Task
 
-Ngoài role-based check ở controller (`@PreAuthorize`), service layer còn kiểm tra **resource-level**:
+In addition to role-based checks on the controller (`@PreAuthorize`), the service layer also checks **resource-level**:
 
-| Hành động                     | MANAGER / WS OWNER | MEMBER                                |
+| Action | MANAGER / WS OWNER | MEMBER |
 | ----------------------------- | ------------------ | ------------------------------------- |
-| **Edit task** (update/delete) | Bất kỳ task nào    | Chỉ task do mình tạo (`createdBy`)    |
-| **Update task status**        | Bất kỳ task nào    | Task do mình tạo **hoặc** được assign |
+| **Edit task** (update/delete) | Any task | Only tasks created by me (`createdBy`) |
+| **Update task status** | Any task | Task created by me **or** assigned |
 
 ---
 
-## 5. Cách sử dụng trong Controller
+## 5. How to use in Controller
 
 ### Workspace-level check
 
@@ -146,7 +146,7 @@ Ngoài role-based check ở controller (`@PreAuthorize`), service layer còn ki�
 @PreAuthorize("@perm.project(#projectId, 'MANAGE_MEMBERS')")
 ```
 
-### Workspace membership check (bất kỳ role)
+### Workspace membership check (any role)
 
 ```java
 @PreAuthorize("@perm.workspaceMember(#workspaceId)")
@@ -158,66 +158,66 @@ Ngoài role-based check ở controller (`@PreAuthorize`), service layer còn ki�
 
 ### WorkspaceController (`/workspaces`)
 
-| Endpoint           | Method | Permission                         |
+| Endpoints | Method | Permission |
 | ------------------ | ------ | ---------------------------------- |
-| `/workspaces`      | POST   | Authenticated (tự do)              |
-| `/workspaces`      | GET    | Authenticated (workspace của mình) |
-| `/workspaces/{id}` | GET    | `workspace(VIEW)`                  |
-| `/workspaces/{id}` | PUT    | `workspace(UPDATE)`                |
-| `/workspaces/{id}` | DELETE | `workspace(DELETE)`                |
+| `/workspaces` | POST | Authenticated (free) |
+| `/workspaces` | GET | Authenticated (my workspace) |
+| `/workspaces/{id}` | GET | `workspace(VIEW)` |
+| `/workspaces/{id}` | PUT | `workspace(UPDATE)` |
+| `/workspaces/{id}` | DELETE | `workspace(DELETE)` |
 
 ### WorkspaceMemberController (`/workspaces/{id}/members`)
 
-| Endpoint                            | Method | Permission                  |
-| ----------------------------------- | ------ | --------------------------- |
-| `/{workspaceId}/members`            | GET    | `workspace(VIEW_MEMBERS)`   |
-| `/{workspaceId}/members/{memberId}` | PATCH  | `workspace(MANAGE_MEMBERS)` |
+| Endpoints | Method | Permission |
+| ----------------------------------- | ------ | ------------------------- |
+| `/{workspaceId}/members` | GET | `workspace(VIEW_MEMBERS)` |
+| `/{workspaceId}/members/{memberId}` | PATCH | `workspace(MANAGE_MEMBERS)` |
 | `/{workspaceId}/members/{memberId}` | DELETE | `workspace(MANAGE_MEMBERS)` |
 
 ### WorkspaceInviteController (`/workspaces/{id}/invites`)
 
-| Endpoint                      | Method | Permission                  |
-| ----------------------------- | ------ | --------------------------- |
-| `/{workspaceId}/invites`      | POST   | `workspace(INVITE_MEMBERS)` |
-| `/{workspaceId}/invites/bulk` | POST   | `workspace(INVITE_MEMBERS)` |
-| `/{workspaceId}/invites`      | GET    | `workspace(INVITE_MEMBERS)` |
+| Endpoints | Method | Permission |
+| ----------------------------- | ------ | ------------------------- |
+| `/{workspaceId}/invites` | POST | `workspace(INVITE_MEMBERS)` |
+| `/{workspaceId}/invites/bulk` | POST | `workspace(INVITE_MEMBERS)` |
+| `/{workspaceId}/invites` | GET | `workspace(INVITE_MEMBERS)` |
 
 ### ProjectController (`/workspaces/{workspaceId}/projects`)
 
-| Endpoint       | Method | Permission                  |
-| -------------- | ------ | --------------------------- |
-| `/`            | POST   | `workspace(CREATE_PROJECT)` |
-| `/`            | GET    | `workspace(VIEW)`           |
-| `/{projectId}` | GET    | `project(VIEW)`             |
-| `/{projectId}` | PUT    | `project(UPDATE)`           |
-| `/{projectId}` | DELETE | `project(DELETE)`           |
+| Endpoints | Method | Permission |
+| -------------- | ------ | ------------------------- |
+| `/` | POST | `workspace(CREATE_PROJECT)` |
+| `/` | GET | `workspace(VIEW)` |
+| `/{projectId}` | GET | `project(VIEW)` |
+| `/{projectId}` | PUT | `project(UPDATE)` |
+| `/{projectId}` | DELETE | `project(DELETE)` |
 
 ### ProjectMemberController (`/projects/{projectId}/members`)
 
-| Endpoint         | Method | Permission                |
+| Endpoints | Method | Permission |
 | ---------------- | ------ | ------------------------- |
-| `/`              | POST   | `project(MANAGE_MEMBERS)` |
-| `/`              | GET    | `project(VIEW_MEMBERS)`   |
-| `/{userId}/role` | PATCH  | `project(MANAGE_MEMBERS)` |
-| `/{userId}`      | DELETE | `project(MANAGE_MEMBERS)` |
-| `/me/role`       | GET    | Authenticated (tự do)     |
+| `/` | POST | `project(MANAGE_MEMBERS)` |
+| `/` | GET | `project(VIEW_MEMBERS)` |
+| `/{userId}/role` | PATCH | `project(MANAGE_MEMBERS)` |
+| `/{userId}` | DELETE | `project(MANAGE_MEMBERS)` |
+| `/me/role` | GET | Authenticated (free) |
 
 ### TaskController (`/projects/{projectId}/tasks`)
 
-| Endpoint             | Method | Permission                    | Resource-level                |
+| Endpoints | Method | Permission | Resource-level |
 | -------------------- | ------ | ----------------------------- | ----------------------------- |
-| `/`                  | POST   | `project(CREATE_TASK)`        | —                             |
-| `/`                  | GET    | `project(VIEW_TASKS)`         | —                             |
-| `/search`            | GET    | `project(VIEW_TASKS)`         | —                             |
-| `/{taskId}`          | GET    | `project(VIEW_TASKS)`         | —                             |
-| `/{taskId}/subtasks` | GET    | `project(VIEW_TASKS)`         | —                             |
-| `/{taskId}`          | PUT    | `project(UPDATE_TASK)`        | `requireTaskEditPermission`   |
-| `/{taskId}/status`   | PATCH  | `project(UPDATE_TASK_STATUS)` | `requireTaskStatusPermission` |
-| `/{taskId}`          | DELETE | `project(DELETE_TASK)`        | `requireTaskEditPermission`   |
+| `/` | POST | `project(CREATE_TASK)` | — |
+| `/` | GET | `project(VIEW_TASKS)` | — |
+| `/search` | GET | `project(VIEW_TASKS)` | — |
+| `/{taskId}` | GET | `project(VIEW_TASKS)` | — |
+| `/{taskId}/subtasks` | GET | `project(VIEW_TASKS)` | — |
+| `/{taskId}` | PUT | `project(UPDATE_TASK)` | `requireTaskEditPermission` |
+| `/{taskId}/status` | PATCH | `project(UPDATE_TASK_STATUS)` | `requireTaskStatusPermission` |
+| `/{taskId}` | DELETE | `project(DELETE_TASK)` | `requireTaskEditPermission` |
 
 ---
 
-## 7. Mở rộng
+## 7. Expand
 
-- **Thêm permission mới**: thêm enum value vào `WorkspacePermission` hoặc `ProjectPermission` → cập nhật map trong `PermissionPolicy`.
-- **Chuyển sang DB-driven**: thay `Map` tĩnh trong `PermissionPolicy` bằng repository, load lúc startup hoặc cache.
+- **Add new permission**: add enum value to `WorkspacePermission` or `ProjectPermission` → update map in `PermissionPolicy`.
+- **Switch to DB-driven**: replace static `Map` in `PermissionPolicy` with repository, load at startup or cache.

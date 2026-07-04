@@ -1,37 +1,37 @@
 # Permission System Upgrade Guide
 
-## Tổng quan thay đổi
+## Change overview
 
-Nâng cấp hệ thống phân quyền: thêm **Capability layer** và **Effective Permission Resolver**.
-API giờ trả kèm `permissions` (Set\<String\>) trong response, FE chỉ cần check `permissions.includes("CREATE_TASK")`.
+Upgrade the decentralized system: add **Capability layer** and **Effective Permission Resolver**.
+The API now includes `permissions` (Set\<String\>) in the response, FE only needs to check `permissions.includes("CREATE_TASK")`.
 
 ---
 
-## Files thay đổi
+## Files changed
 
-### Mới tạo
-| File | Mục đích |
-|------|----------|
-| `security/permission/TaskPermission.java` | Enum permission cấp Task (VIEW, EDIT, DELETE, UPDATE_STATUS) |
-| `security/permission/EffectivePermissionResolver.java` | Trung tâm resolve effective permissions, có cache |
-| `config/common/CacheConfig.java` | Caffeine in-memory cache config (TTL 5 phút) |
+### Just created
+| File | Purpose |
+|-----|----------|
+| `security/permission/TaskPermission.java` | Enum permission at Task level (VIEW, EDIT, DELETE, UPDATE_STATUS) |
+| `security/permission/EffectivePermissionResolver.java` | Resolve effective permissions center, with cache |
+| `config/common/CacheConfig.java` | Caffeine in-memory cache config (TTL 5 minutes) |
 
-### Sửa đổi
-| File | Thay đổi |
-|------|----------|
-| `security/permission/PermissionPolicy.java` | Thêm task-level policy (base + context modifiers) |
-| `security/permission/PermissionChecker.java` | Delegate sang Resolver, thêm `requireTaskPermission()`, bỏ methods cũ |
-| `dto/response/TaskResponse.java` | Thêm field `Set<String> permissions` |
-| `dto/response/WorkspaceMemberResponse.java` | Thêm field `Set<String> permissions` |
-| `dto/response/ProjectMemberResponse.java` | Thêm field `Set<String> permissions` |
-| `service/impl/TaskServiceImpl.java` | Inject permissions vào mọi TaskResponse |
+### Edit
+| File | Change |
+|-----|----------|
+| `security/permission/PermissionPolicy.java` | Add task-level policy (base + context modifiers) |
+| `security/permission/PermissionChecker.java` | Delegate to Resolver, add `requireTaskPermission()`, remove old methods |
+| `dto/response/TaskResponse.java` | Add field `Set<String> permissions` |
+| `dto/response/WorkspaceMemberResponse.java` | Add field `Set<String> permissions` |
+| `dto/response/ProjectMemberResponse.java` | Add field `Set<String> permissions` |
+| `service/impl/TaskServiceImpl.java` | Inject permissions into every TaskResponse |
 | `service/impl/WorkspaceMemberServiceImpl.java` | Inject workspace permissions + cache eviction |
 | `service/impl/ProjectMemberServiceImpl.java` | Inject project permissions + cache eviction |
-| `pom.xml` | Thêm spring-boot-starter-cache + caffeine |
+| `pom.xml` | Add spring-boot-starter-cache + caffeine |
 
 ---
 
-## Kiến trúc sau nâng cấp
+## Architecture after upgrade
 
 ```
 Request
@@ -57,21 +57,21 @@ PermissionChecker ──delegate──► EffectivePermissionResolver
 
 ---
 
-## Permission logic cho Task
+## Permission logic for Task
 
-Task permissions = **base permissions theo role** + **context modifiers**
+Task permissions = **base permissions by role** + **context modifiers**
 
 | Project Role | Base permissions | + isCreator | + isAssignee |
-|-------------|-----------------|-------------|--------------|
-| MANAGER | VIEW, EDIT, DELETE, UPDATE_STATUS | (đã có all) | (đã có all) |
+|-------------|-----------|-------------|--------------|
+| MANAGER | VIEW, EDIT, DELETE, UPDATE_STATUS | (already has all) | (already has all) |
 | MEMBER | VIEW | +EDIT, +DELETE | +UPDATE_STATUS |
 | VIEWER | VIEW | — | — |
 
 ---
 
-## API Response thay đổi
+## API Response changed
 
-### Trước
+### Before
 ```json
 {
   "id": 1,
@@ -80,7 +80,7 @@ Task permissions = **base permissions theo role** + **context modifiers**
 }
 ```
 
-### Sau
+### Later
 ```json
 {
   "id": 1,
@@ -90,7 +90,7 @@ Task permissions = **base permissions theo role** + **context modifiers**
 }
 ```
 
-FE sử dụng:
+FE uses:
 ```javascript
 // Show/hide nút edit
 const canEdit = task.permissions.includes("EDIT");
@@ -101,29 +101,29 @@ const canCreate = projectContext.permissions.includes("CREATE_TASK");
 
 ---
 
-## Caching
+##Caching
 
 - **Provider**: Caffeine (in-memory)
-- **TTL**: 5 phút (configurable trong `CacheConfig.java`)
+- **TTL**: 5 minutes (configurable in `CacheConfig.java`)
 - **Max size**: 1000 entries
 - **Scope**: Workspace + Project permissions (cache key = `ws:userId:wsId` / `proj:userId:projId`)
-- **Task permissions**: Không cache (phụ thuộc context ownership/assignment)
-- **Eviction**: Tự động khi membership/role thay đổi (`evictAllPermissionCache()`)
+- **Task permissions**: No cache (depends on context ownership/assignment)
+- **Eviction**: Automatically when membership/role changes (`evictAllPermissionCache()`)
 
 ---
 
-## Hướng dẫn mở rộng cho resource mới
+## Expanded instructions for new resources
 
-Khi cần thêm permission cho resource mới (ví dụ: Sprint, Comment, Document...):
+When you need to add permission for a new resource (for example: Sprint, Comment, Document...):
 
-### Bước 1: Tạo enum
+### Step 1: Create enum
 ```java
 public enum SprintPermission {
     VIEW, CREATE, UPDATE, DELETE, MANAGE_TASKS
 }
 ```
 
-### Bước 2: Thêm policy vào `PermissionPolicy.java`
+### Step 2: Add policy to `PermissionPolicy.java`
 ```java
 private static final Map<ProjectMemberRole, Set<SprintPermission>> SPRINT_POLICY = Map.of(
     ProjectMemberRole.MANAGER, EnumSet.allOf(SprintPermission.class),
@@ -134,7 +134,7 @@ private static final Map<ProjectMemberRole, Set<SprintPermission>> SPRINT_POLICY
 // Thêm context modifiers nếu cần (tương tự TASK_CREATOR_PERMISSIONS)
 ```
 
-### Bước 3: Thêm resolve method vào `EffectivePermissionResolver.java`
+### Step 3: Add resolve method to `EffectivePermissionResolver.java`
 ```java
 @Cacheable(value = "permissions", key = "'sprint:' + #userId + ':' + #sprintId")
 public Set<String> resolveSprintPermissions(Long userId, Long projectId) {
@@ -142,7 +142,7 @@ public Set<String> resolveSprintPermissions(Long userId, Long projectId) {
 }
 ```
 
-### Bước 4: Thêm field vào Response DTO
+### Step 4: Add field to Response DTO
 ```java
 public class SprintResponse {
     // ... existing fields
@@ -150,7 +150,7 @@ public class SprintResponse {
 }
 ```
 
-### Bước 5: Populate trong service
+### Step 5: Populate in service
 ```java
 SprintResponse response = SprintResponse.mapToResponse(entity);
 response.setPermissions(permissionResolver.resolveSprintPermissions(userId, projectId));
@@ -160,20 +160,20 @@ response.setPermissions(permissionResolver.resolveSprintPermissions(userId, proj
 
 ## Breaking changes
 
-**Không có breaking change cho FE hiện tại.**
-- Field `permissions` mới thêm vào response, giá trị mặc định null nếu không set
-- Tất cả `@PreAuthorize` annotation giữ nguyên
-- API endpoints không đổi
+**There are no breaking changes for the current FE.**
+- New field `permissions` added to response, default value is null if not set
+- All `@PreAuthorize` annotations remain the same
+- API endpoints remain unchanged
 
-**Breaking change cho code BE gọi trực tiếp:**
-- `permissionChecker.requireTaskEditPermission()` → đổi thành `permissionChecker.requireTaskPermission(projectId, task, TaskPermission.EDIT)`
-- `permissionChecker.requireTaskStatusPermission()` → đổi thành `permissionChecker.requireTaskPermission(projectId, task, TaskPermission.UPDATE_STATUS)`
+**Breaking change for direct call BE code:**
+- `permissionChecker.requireTaskEditPermission()` → changed to `permissionChecker.requireTaskPermission(projectId, task, TaskPermission.EDIT)`
+- `permissionChecker.requireTaskStatusPermission()` → changed to `permissionChecker.requireTaskPermission(projectId, task, TaskPermission.UPDATE_STATUS)`
 
 ---
 
-## Lưu ý bảo mật
+## Security note
 
-- `@PreAuthorize` vẫn là lớp enforcement chính (server-side, không bypass được)
-- `permissions` trong response chỉ phục vụ UI rendering, KHÔNG phải authorization
-- Task-level checks (`requireTaskPermission`) vẫn enforce ở service layer
-- Cache eviction đảm bảo permissions cập nhật khi role thay đổi (+ TTL 5 phút backup)
+- `@PreAuthorize` is still the main enforcement layer (server-side, cannot be bypassed)
+- `permissions` in response only serves UI rendering, NOT authorization
+- Task-level checks (`requireTaskPermission`) are still enforced at the service layer
+- Cache eviction ensures updated permissions when roles change (+ 5 minute backup TTL)

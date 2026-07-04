@@ -9,16 +9,16 @@ I've created a complete Docker and nginx configuration for TaskSense with the fo
 #### **1. Dockerfiles Created**
 
 | File | Purpose | Technology |
-|------|---------|-----------|
+|-------|---------|-----------|
 | `server/Dockerfile` | Spring Boot backend | Java 21, Maven, multi-stage build |
 | `client/Dockerfile` | React frontend | Node 20, Vite, production optimized |
-| `ai/app/Dockerfile` | AI service | Python 3.13, FastAPI (already existed) |
+| `ai/app/Dockerfile` | AI service | Python 3.13, FastAPI (already exists) |
 | `proxy/Dockerfile` | Nginx proxy | nginx:alpine, lightweight |
 
 #### **2. Configuration Files**
 
 | File | Purpose |
-|------|---------|
+|--------|--------|
 | `proxy/nginx.conf` | Complete nginx routing and configuration |
 | `docker-compose.yaml` | Orchestration for all services |
 | `.env.example` | Environment variables template |
@@ -58,7 +58,7 @@ I've created a complete Docker and nginx configuration for TaskSense with the fo
 - Flyway (migrations)
 
 **Application Services:**
-- Spring Boot (Java 21) - API Backend
+- Spring Boot (Java 21) - Backend API
 - FastAPI (Python) - AI Service
 - React + Vite - Frontend
 - Nginx - Proxy & Load Balancer
@@ -89,7 +89,7 @@ I've created a complete Docker and nginx configuration for TaskSense with the fo
 
 #### **Nginx Routing** (`proxy/nginx.conf`)
 
-Routes requests to appropriate services:
+Routes require appropriate services:
 ```
 /api/v1/*  ──► Spring Backend (8080)
 /chat/*    ──► AI Service (8000)
@@ -184,13 +184,13 @@ docker-compose ps
 ### 🔗 Access Points After Startup
 
 | Service | URL | Notes |
-|---------|-----|-------|
+|--------|-----|-------|
 | Frontend | http://localhost | React app |
 | Backend API | http://localhost/api/v1 | Spring Boot |
 | AI Service | http://localhost/ai | FastAPI |
 | pgAdmin | http://localhost:5050 | admin@admin.com / admin |
-| Elasticsearch | http://localhost:9200 | Search engine |
-| Qdrant | http://localhost:6333 | Vector DB |
+| Elasticsearch | http://localhost:9200 | Search engines |
+| Qdrant | http://localhost:6333 | VectorDB |
 
 ### 📊 Health Check Endpoints
 

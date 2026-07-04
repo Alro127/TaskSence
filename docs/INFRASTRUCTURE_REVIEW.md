@@ -169,7 +169,7 @@ volumes:
 ## Summary Table
 
 | Issue # | Type | Service | Severity | Status |
-|---------|------|---------|----------|--------|
+|--------|-------|--------|----------|--------|
 | 1 | depends_on | tasksense-ai | 🔴 Critical | Break-fix needed |
 | 2 | Host reference | tasksense-ai | 🔴 Critical | Connection error |
 | 3 | Host reference | tasksense-ai | 🔴 Critical | Connection error |
@@ -197,8 +197,8 @@ volumes:
 
 ## Comparison with Generated docker-compose.yaml
 
-| Feature | infra/compose.yaml | Generated version | Winner |
-|---------|-------------------|-------------------|--------|
+| Features | infra/compose.yaml | Generated version | Winner |
+|--------|-------------------|-------------------|--------|
 | Network separation | ✓ 2 networks | 1 network | infra ✓ |
 | Service naming | Consistent prefix | Simpler names | infra ✓ |
 | All services included | Missing frontend | Complete | Generated ✓ |

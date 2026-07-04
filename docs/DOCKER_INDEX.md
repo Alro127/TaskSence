@@ -128,10 +128,10 @@ docker-compose build spring && docker-compose up -d spring
 ```
 → [DOCKER_COMMANDS.md](DOCKER_COMMANDS.md) → Build section
 
-## 📋 File Reference
+## 📋 Reference file
 
 | File | Purpose | Audience | Length |
-|------|---------|----------|--------|
+|--------|---------|----------|-------|
 | DOCKER_SUMMARY.md | Overview & quick start | Everyone | 5 min |
 | DOCKER_SETUP.md | Complete setup guide | Operators/Devs | 30 min |
 | DOCKER_COMMANDS.md | Command reference | Operators | 10 min |

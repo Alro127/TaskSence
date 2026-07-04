@@ -33,6 +33,6 @@ Trigger compaction when either condition is met:
 ## Agent Read Order
 
 1. INDEX.md
-2. Latest snapshot in snapshots/ (if present)
+2. Latest snapshots in snapshots/ (if present)
 3. Last 5 run files in runs/
 4. LEDGER.md

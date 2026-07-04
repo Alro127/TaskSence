@@ -9,7 +9,7 @@
 - Primary Skill(s):
 - Agent Role(s):
 
-## Inputs Snapshot
+## Inputs Snapshots
 
 - Key files reviewed:
 - Constraints detected:
@@ -38,4 +38,4 @@
 
 - Remaining issues:
 - Next actions:
-- Context promoted to ledger:
+- Context promoted to leader:

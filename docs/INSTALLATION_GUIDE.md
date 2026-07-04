@@ -1,53 +1,53 @@
-# Hướng Dẫn Cài Đặt Hệ Thống TaskSense
+# TaskSense System Installation Instructions
 
-## Mục lục
+## Table of contents
 
-- [1. Tổng quan kiến trúc hệ thống](#1-tổng-quan-kiến-trúc-hệ-thống)
-- [2. Yêu cầu phần cứng](#2-yêu-cầu-phần-cứng)
-- [3. Yêu cầu phần mềm](#3-yêu-cầu-phần-mềm)
-- [4. Cài đặt các công cụ cần thiết](#4-cài-đặt-các-công-cụ-cần-thiết)
+- [1. System architecture overview](#1-tổng-quan-kiến-trúc-hệ-thống)
+- [2. Hardware requirements](#2-yêu-cầu-phần-cứng)
+- [3. Software requirements](#3-yêu-cầu-phần-mềm)
+- [4. Install necessary tools](#4-cài-đặt-các-công-cụ-cần-thiết)
   - [4.1. Java Development Kit (JDK 21)](#41-java-development-kit-jdk-21)
   - [4.2. Node.js](#42-nodejs)
   - [4.3. Python](#43-python)
   - [4.4. Docker Desktop](#44-docker-desktop)
   - [4.5. Git](#45-git)
-- [5. Tải mã nguồn](#5-tải-mã-nguồn)
-- [6. Cấu hình biến môi trường](#6-cấu-hình-biến-môi-trường)
-  - [6.1. Thiết lập Google OAuth 2.0](#61-thiết-lập-google-oauth-20)
-  - [6.2. Thiết lập Gmail SMTP](#62-thiết-lập-gmail-smtp)
-  - [6.3. Thiết lập API Key cho dịch vụ AI](#63-thiết-lập-api-key-cho-dịch-vụ-ai)
-  - [6.4. Tạo file biến môi trường](#64-tạo-file-biến-môi-trường)
-- [7. Triển khai môi trường phát triển (Development)](#7-triển-khai-môi-trường-phát-triển-development)
-  - [7.1. Khởi động hạ tầng với Docker Compose](#71-khởi-động-hạ-tầng-với-docker-compose)
-  - [7.2. Khởi động Backend (Spring Boot)](#72-khởi-động-backend-spring-boot)
-  - [7.3. Khởi động dịch vụ AI (FastAPI)](#73-khởi-động-dịch-vụ-ai-fastapi)
-  - [7.4. Khởi động Frontend (React + Vite)](#74-khởi-động-frontend-react--vite)
-  - [7.5. Kiểm tra hệ thống](#75-kiểm-tra-hệ-thống)
-- [8. Triển khai môi trường production (Docker)](#8-triển-khai-môi-trường-production-docker)
-  - [8.1. Cấu hình biến môi trường](#81-cấu-hình-biến-môi-trường)
-  - [8.2. Khởi động toàn bộ hệ thống](#82-khởi-động-toàn-bộ-hệ-thống)
-  - [8.3. Kiểm tra trạng thái các dịch vụ](#83-kiểm-tra-trạng-thái-các-dịch-vụ)
-- [9. Tài khoản mẫu và dữ liệu seed](#9-tài-khoản-mẫu-và-dữ-liệu-seed)
-- [10. Xử lý sự cố thường gặp](#10-xử-lý-sự-cố-thường-gặp)
+- [5. Download source code](#5-tải-mã-nguồn)
+- [6. Configure environment variables](#6-cấu-hình-biến-môi-trường)
+  - [6.1. Set up Google OAuth 2.0](#61-thiết-lập-google-oauth-20)
+  - [6.2. Set up Gmail SMTP](#62-thiết-lập-gmail-smtp)
+  - [6.3. Set API Key for AI service](#63-thiết-lập-api-key-cho-dịch-vụ-ai)
+  - [6.4. Create environment variable file](#64-tạo-file-biến-môi-trường)
+- [7. Deploy the development environment (Development)](#7-triển-khai-môi-trường-phát-triển-development)
+  - [7.1. Starting infrastructure with Docker Compose](#71-khởi-động-hạ-tầng-với-docker-compose)
+  - [7.2. Start Backend (Spring Boot)](#72-khởi-động-backend-spring-boot)
+  - [7.3. Start AI service (FastAPI)](#73-khởi-động-dịch-vụ-ai-fastapi)
+  - [7.4. Start Frontend (React + Vite)](#74-khởi-động-frontend-react--vite)
+  - [7.5. System Check](#75-kiểm-tra-hệ-thống)
+- [8. Deploy production environment (Docker)](#8-triển-khai-môi-trường-production-docker)
+  - [8.1. Configure environment variables](#81-cấu-hình-biến-môi-trường)
+  - [8.2. Boot the entire system](#82-khởi-động-toàn-bộ-hệ-thống)
+  - [8.3. Check the status of services](#83-kiểm-tra-trạng-thái-các-dịch-vụ)
+- [9. Sample account and seed data](#9-tài-khoản-mẫu-và-dữ-liệu-seed)
+- [10. Troubleshooting common problems](#10-xử-lý-sự-cố-thường-gặp)
 
 ---
 
-## 1. Tổng quan kiến trúc hệ thống
+## 1. System architecture overview
 
-Hệ thống TaskSense là một ứng dụng web quản lý dự án thông minh, được xây dựng theo kiến trúc microservices, bao gồm các thành phần chính sau:
+The TaskSense system is a smart project management web application, built according to a microservices architecture, including the following main components:
 
-| Thành phần | Công nghệ | Mô tả | Cổng mặc định |
+| Ingredients | Technology | Description | Default Gateway |
 |---|---|---|---|
-| **Frontend** | React 19, Vite, TypeScript, TailwindCSS | Giao diện người dùng SPA | `5173` |
-| **Backend API** | Spring Boot 4, Java 21, JPA, Flyway | REST API chính của hệ thống | `8080` |
-| **AI Service** | FastAPI, Python 3.13, LangChain | Dịch vụ chatbot AI (RAG-based) | `8000` |
-| **PostgreSQL** | PostgreSQL 16 | Cơ sở dữ liệu quan hệ chính | `5432` |
-| **Redis** | Redis 7 | Bộ nhớ đệm và quản lý phiên | `6379` |
-| **Elasticsearch** | Elasticsearch 9.0 | Công cụ tìm kiếm toàn văn bản | `9200` |
-| **Qdrant** | Qdrant (latest) | Cơ sở dữ liệu vector cho RAG | `6333` |
-| **Nginx** | Nginx Alpine | Reverse proxy (chỉ dùng trong production) | `80` |
+| **Frontend** | React 19, Vite, TypeScript, TailwindCSS | SPA User Interface | `5173` |
+| **Backend API** | Spring Boot 4, Java 21, JPA, Flyway | The system's main REST API | `8080` |
+| **AI Service** | FastAPI, Python 3.13, LangChain | AI chatbot service (RAG-based) | `8000` |
+| **PostgreSQL** | PostgreSQL 16 | Primary Relational Database | `5432` |
+| **Redis** | Redis 7 | Caching and session management | `6379` |
+| **Elasticsearch** | Elasticsearch 9.0 | Full-text search engine | `9200` |
+| **Qdrant** | Qdrant (latest) | Vector database for RAG | `6333` |
+| **Nginx** | Nginx Alpine | Reverse proxy (only used in production) | `80` |
 
-Sơ đồ kiến trúc tổng quan:
+General architectural diagram:
 
 ```
                         ┌─────────────┐
@@ -80,60 +80,60 @@ Sơ đồ kiến trúc tổng quan:
 
 ---
 
-## 2. Yêu cầu phần cứng
+## 2. Hardware requirements
 
-Bảng sau liệt kê cấu hình phần cứng tối thiểu và khuyến nghị để chạy hệ thống TaskSense:
+The following table lists the minimum and recommended hardware configuration to run the TaskSense system:
 
-| Thông số | Tối thiểu | Khuyến nghị |
+| Parameters | Minimum | Recommendations |
 |---|---|---|
-| **CPU** | 4 nhân (cores) | 8 nhân trở lên |
-| **RAM** | 8 GB | 16 GB trở lên |
-| **Ổ cứng** | 20 GB trống | 50 GB SSD trở lên |
-| **Hệ điều hành** | Windows 10/11 (64-bit), macOS 12+, hoặc Ubuntu 22.04+ | Windows 11, macOS 14+, hoặc Ubuntu 24.04 |
-| **Kết nối mạng** | Có kết nối Internet | Băng thông ổn định |
+| **CPU** | 4 cores | 8 cores or more |
+| **RAM** | 8 GB | 16 GB or more |
+| **Hard Drive** | 20 GB free | 50 GB SSD or more |
+| **Operating system** | Windows 10/11 (64-bit), macOS 12+, or Ubuntu 22.04+ | Windows 11, macOS 14+, or Ubuntu 24.04 |
+| **Network connection** | Internet connection available | Stable bandwidth |
 
-> **Lưu ý:** Elasticsearch và các dịch vụ Docker chiếm dụng đáng kể tài nguyên RAM. Trên hệ thống có 8 GB RAM, nên đóng các ứng dụng không cần thiết trước khi khởi động.
+> **Note:** Elasticsearch and Docker services consume significant RAM resources. On systems with 8 GB of RAM, it is recommended to close unnecessary applications before booting.
 
 ---
 
-## 3. Yêu cầu phần mềm
+## 3. Software requirements
 
-Bảng sau liệt kê các phần mềm cần cài đặt trước khi triển khai hệ thống:
+The following table lists the software that needs to be installed before deploying the system:
 
-| Phần mềm | Phiên bản yêu cầu | Mục đích |
+| Software | Required version | Purpose |
 |---|---|---|
-| **JDK** | 21 trở lên | Biên dịch và chạy Backend (Spring Boot) |
-| **Node.js** | 20 LTS trở lên | Chạy Frontend (React + Vite) |
-| **npm** | 10 trở lên (đi kèm Node.js) | Quản lý gói JavaScript |
-| **Python** | 3.13 trở lên | Chạy dịch vụ AI (FastAPI) |
-| **uv** | Phiên bản mới nhất | Quản lý gói và môi trường ảo Python |
-| **Docker Desktop** | 4.x trở lên | Container hóa các dịch vụ hạ tầng |
-| **Docker Compose** | v2 (đi kèm Docker Desktop) | Điều phối các container |
-| **Git** | 2.x trở lên | Quản lý mã nguồn |
+| **JDK** | 21 and up | Compile and run Backend (Spring Boot) |
+| **Node.js** | 20 LTS or more | Running Frontend (React + Vite) |
+| **npm** | 10 or later (includes Node.js) | JavaScript Package Manager |
+| **Python** | 3.13 and up | Run AI service (FastAPI) |
+| **uv** | Latest version | Python virtual environment and package management |
+| **Docker Desktop** | 4.x or higher | Containerization of infrastructure services |
+| **Docker Compose** | v2 (included with Docker Desktop) | Coordination of containers |
+| **Git** | 2.x or higher | Source Code Management |
 
 ---
 
-## 4. Cài đặt các công cụ cần thiết
+## 4. Install necessary tools
 
 ### 4.1. Java Development Kit (JDK 21)
 
-**Bước 1:** Tải JDK 21 từ trang chủ Eclipse Adoptium:
+**Step 1:** Download JDK 21 from the Eclipse Adoptium homepage:
 
 ```
 https://adoptium.net/temurin/releases/?version=21
 ```
 
-Chọn phiên bản phù hợp với hệ điều hành (Windows x64 `.msi`, macOS `.pkg`, hoặc Linux `.tar.gz`).
+Select the appropriate version for your operating system (Windows x64 `.msi`, macOS `.pkg`, or Linux `.tar.gz`).
 
-**Bước 2:** Chạy trình cài đặt và chọn tùy chọn **"Set JAVA_HOME variable"** trong quá trình cài đặt.
+**Step 2:** Run the installer and select the **"Set JAVA_HOME variable"** option during the installation process.
 
-**Bước 3:** Xác nhận cài đặt thành công:
+**Step 3:** Confirm successful installation:
 
 ```bash
 java -version
 ```
 
-Kết quả mong đợi:
+Expected results:
 
 ```
 openjdk version "21.0.x" ...
@@ -141,24 +141,24 @@ openjdk version "21.0.x" ...
 
 ### 4.2. Node.js
 
-**Bước 1:** Tải Node.js 20 LTS từ trang chủ:
+**Step 1:** Download Node.js 20 LTS from the homepage:
 
 ```
 https://nodejs.org/
 ```
 
-Chọn phiên bản **LTS** (Long Term Support).
+Select **LTS** (Long Term Support) version.
 
-**Bước 2:** Chạy trình cài đặt với các tùy chọn mặc định.
+**Step 2:** Run the installer with default options.
 
-**Bước 3:** Xác nhận cài đặt thành công:
+**Step 3:** Confirm successful installation:
 
 ```bash
 node -v
 npm -v
 ```
 
-Kết quả mong đợi:
+Expected results:
 
 ```
 v20.x.x
@@ -167,41 +167,41 @@ v20.x.x
 
 ### 4.3. Python
 
-**Bước 1:** Tải Python 3.13 từ trang chủ:
+**Step 1:** Download Python 3.13 from the homepage:
 
 ```
 https://www.python.org/downloads/
 ```
 
-**Bước 2:** Chạy trình cài đặt. **Bắt buộc** đánh dấu tùy chọn **"Add Python to PATH"** trước khi nhấn Install.
+**Step 2:** Run the installer. **Required** check the option **"Add Python to PATH"** before clicking Install.
 
-**Bước 3:** Xác nhận cài đặt thành công:
+**Step 3:** Confirm successful installation:
 
 ```bash
 python --version
 ```
 
-Kết quả mong đợi:
+Expected results:
 
 ```
 Python 3.13.x
 ```
 
-**Bước 4:** Cài đặt `uv` — trình quản lý gói Python hiệu năng cao:
+**Step 4:** Install `uv` — a high-performance Python package manager:
 
-- Trên **Windows** (PowerShell):
+- On **Windows** (PowerShell):
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-- Trên **macOS/Linux**:
+- On **macOS/Linux**:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Xác nhận:
+Confirmation:
 
 ```bash
 uv --version
@@ -209,46 +209,46 @@ uv --version
 
 ### 4.4. Docker Desktop
 
-**Bước 1:** Tải Docker Desktop từ trang chủ:
+**Step 1:** Download Docker Desktop from the homepage:
 
 ```
 https://www.docker.com/products/docker-desktop/
 ```
 
-**Bước 2:** Chạy trình cài đặt với các tùy chọn mặc định.
+**Step 2:** Run the installer with default options.
 
-- Trên **Windows**: Đảm bảo tính năng **WSL 2** (Windows Subsystem for Linux) đã được bật. Docker Desktop sẽ tự động cài đặt nếu chưa có.
-- Trên **macOS**: Chọn phiên bản phù hợp với chip (Apple Silicon hoặc Intel).
+- On **Windows**: Make sure the **WSL 2** (Windows Subsystem for Linux) feature is enabled. Docker Desktop will automatically install if it isn't already there.
+- On **macOS**: Select the version appropriate to the chip (Apple Silicon or Intel).
 
-**Bước 3:** Khởi động Docker Desktop và chờ cho đến khi biểu tượng Docker ở thanh tác vụ chuyển sang trạng thái "Running".
+**Step 3:** Start Docker Desktop and wait until the Docker icon in the taskbar changes to the "Running" state.
 
-**Bước 4:** Xác nhận cài đặt thành công:
+**Step 4:** Confirm successful installation:
 
 ```bash
 docker --version
 docker compose version
 ```
 
-Kết quả mong đợi:
+Expected results:
 
 ```
 Docker version 27.x.x, build ...
 Docker Compose version v2.x.x
 ```
 
-> **Cấu hình Docker Desktop:** Vào **Settings → Resources** và đảm bảo cấp phát ít nhất **4 GB RAM** và **2 CPU** cho Docker.
+> **Docker Desktop configuration:** Go to **Settings → Resources** and make sure to allocate at least **4 GB RAM** and **2 CPU** for Docker.
 
 ### 4.5. Git
 
-**Bước 1:** Tải Git từ trang chủ:
+**Step 1:** Download Git from the homepage:
 
 ```
 https://git-scm.com/downloads
 ```
 
-**Bước 2:** Cài đặt với các tùy chọn mặc định.
+**Step 2:** Install with default options.
 
-**Bước 3:** Xác nhận cài đặt:
+**Step 3:** Confirm installation:
 
 ```bash
 git --version
@@ -256,16 +256,16 @@ git --version
 
 ---
 
-## 5. Tải mã nguồn
+## 5. Download source code
 
-Clone repository từ hệ thống quản lý mã nguồn:
+Clone repository from source code management system:
 
 ```bash
 git clone https://github.com/Alro127/TaskSense.git
 cd TaskSense
 ```
 
-Cấu trúc thư mục sau khi clone:
+Directory structure after cloning:
 
 ```
 TaskSense/
@@ -284,87 +284,87 @@ TaskSense/
 
 ---
 
-## 6. Cấu hình biến môi trường
+## 6. Configure environment variables
 
-Hệ thống TaskSense sử dụng các biến môi trường để cấu hình kết nối giữa các dịch vụ và tích hợp với các dịch vụ bên ngoài. Phần này hướng dẫn cách thiết lập từng nhóm biến môi trường cần thiết.
+The TaskSense system uses environment variables to configure connections between services and integration with external services. This section explains how to set up each necessary group of environment variables.
 
-### 6.1. Thiết lập Google OAuth 2.0
+### 6.1. Set up Google OAuth 2.0
 
-Hệ thống sử dụng Google OAuth 2.0 để xác thực người dùng đăng nhập bằng tài khoản Google.
+The system uses Google OAuth 2.0 to authenticate users who log in with a Google account.
 
-**Bước 1:** Truy cập Google Cloud Console:
+**Step 1:** Access Google Cloud Console:
 
 ```
 https://console.cloud.google.com/
 ```
 
-**Bước 2:** Tạo một dự án mới (hoặc chọn dự án có sẵn).
+**Step 2:** Create a new project (or select an existing project).
 
-**Bước 3:** Bật **Google People API**:
-- Vào **APIs & Services → Library**
-- Tìm kiếm "Google People API" và nhấn **Enable**
+**Step 3:** Enable **Google People API**:
+- Go to **APIs & Services → Library**
+- Search for "Google People API" and click **Enable**
 
-**Bước 4:** Tạo OAuth 2.0 Credentials:
-- Vào **APIs & Services → Credentials → Create Credentials → OAuth client ID**
-- Chọn Application type: **Web application**
-- Thêm **Authorized JavaScript origins**: `http://localhost:5173`
-- Thêm **Authorized redirect URIs**: `http://localhost:5173`
-- Nhấn **Create** và ghi nhận **Client ID** và **Client Secret**
+**Step 4:** Create OAuth 2.0 Credentials:
+- Go to **APIs & Services → Credentials → Create Credentials → OAuth client ID**
+- Select Application type: **Web application**
+- Add **Authorized JavaScript origins**: `http://localhost:5173`
+- Add **Authorized redirect URIs**: `http://localhost:5173`
+- Click **Create** and enter **Client ID** and **Client Secret**
 
-**Bước 5:** Cấu hình OAuth consent screen:
-- Vào **APIs & Services → OAuth consent screen**
-- Chọn User Type: **External**
-- Điền thông tin ứng dụng và thêm các scope cần thiết (email, profile)
+**Step 5:** Configure OAuth consent screen:
+- Go to **APIs & Services → OAuth consent screen**
+- Select User Type: **External**
+- Fill in application information and add necessary scopes (email, profile)
 
-### 6.2. Thiết lập Gmail SMTP
+### 6.2. Set up Gmail SMTP
 
-Hệ thống sử dụng Gmail SMTP để gửi email thông báo và xác thực.
+The system uses Gmail SMTP to send notifications and authenticate emails.
 
-**Bước 1:** Đăng nhập vào tài khoản Google tại:
+**Step 1:** Log in to your Google account at:
 
 ```
 https://myaccount.google.com/
 ```
 
-**Bước 2:** Bật xác thực 2 bước (Two-Factor Authentication) nếu chưa bật:
-- Vào **Security → 2-Step Verification → Get started**
+**Step 2:** Enable Two-Factor Authentication if not already enabled:
+- Go to **Security → 2-Step Verification → Get started**
 
-**Bước 3:** Tạo App Password:
-- Vào **Security → 2-Step Verification → App passwords**
-- Chọn app: **Mail**, chọn device: **Other (Custom name)** → đặt tên "TaskSense"
-- Nhấn **Generate** và sao chép mật khẩu ứng dụng 16 ký tự được tạo ra
+**Step 3:** Create App Password:
+- Go to **Security → 2-Step Verification → App passwords**
+- Select app: **Mail**, select device: **Other (Custom name)** → name "TaskSense"
+- Click **Generate** and copy the generated 16-character app password
 
-### 6.3. Thiết lập API Key cho dịch vụ AI
+### 6.3. Set up API Key for AI service
 
-Dịch vụ AI hỗ trợ nhiều nhà cung cấp LLM. Chỉ cần cấu hình **một** trong các nhà cung cấp sau:
+AI Services supports multiple LLM providers. Just configure **one** of the following providers:
 
-**Tùy chọn 1 — OpenAI:**
+**Option 1 — OpenAI:**
 
-- Truy cập: `https://platform.openai.com/api-keys`
-- Tạo API key mới
-- Đặt `LLM_PROVIDER=openai`
+- Access: `https://platform.openai.com/api-keys`
+- Create new API key
+- Set `LLM_PROVIDER=openai`
 
-**Tùy chọn 2 — Google Gemini:**
+**Option 2 — Google Gemini:**
 
-- Truy cập: `https://aistudio.google.com/app/apikey`
-- Tạo API key mới
-- Đặt `LLM_PROVIDER=gemini`
+- Access: `https://aistudio.google.com/app/apikey`
+- Create new API key
+- Set `LLM_PROVIDER=gemini`
 
-**Tùy chọn 3 — OpenRouter (miễn phí):**
+**Option 3 — OpenRouter (free):**
 
-- Truy cập: `https://openrouter.ai/keys`
-- Tạo API key mới
-- Đặt `LLM_PROVIDER=openrouter`
+- Access: `https://openrouter.ai/keys`
+- Create new API key
+- Set `LLM_PROVIDER=openrouter`
 
-### 6.4. Tạo file biến môi trường
+### 6.4. Create environment variable file
 
-Sao chép file mẫu và chỉnh sửa theo cấu hình thực tế:
+Copy the sample file and edit according to actual configuration:
 
 ```bash
 cp .env.example .env
 ```
 
-Mở file `.env` và cập nhật các giá trị sau:
+Open file `.env` and update the following values:
 
 ```properties
 # ═══════════════════════════════════════════════════════════
@@ -411,15 +411,15 @@ POSTGRES_PASSWORD=postgres
 POSTGRES_DB=taskdb
 ```
 
-> **Quan trọng:** Giá trị `SECURITY_JWT_SECRET` phải **giống nhau** giữa Backend và AI Service để đảm bảo xác thực token hoạt động đúng.
+> **Important:** The `SECURITY_JWT_SECRET` value must be **the same** between Backend and AI Service to ensure token validation works properly.
 
-Ngoài file `.env` ở thư mục gốc, cần tạo thêm file `.env` cho Frontend:
+In addition to the `.env` file in the root directory, it is necessary to create an additional `.env` file for the Frontend:
 
 ```bash
 cp client/.env.example client/.env
 ```
 
-Nội dung file `client/.env`:
+Contents of file `client/.env`:
 
 ```properties
 VITE_API_BASE_URL=http://localhost:8080/api/v1
@@ -428,37 +428,37 @@ VITE_GOOGLE_CLIENT_ID=<Client ID từ bước 6.1>
 
 ---
 
-## 7. Triển khai môi trường phát triển (Development)
+## 7. Deploy the development environment (Development)
 
-Phần này hướng dẫn triển khai hệ thống trong môi trường phát triển, nơi các dịch vụ hạ tầng (PostgreSQL, Redis, Elasticsearch, Qdrant) chạy trong Docker container, còn các ứng dụng (Backend, Frontend, AI Service) chạy trực tiếp trên máy phát triển để tiện gỡ lỗi.
+This section guides on deploying the system in a development environment, where infrastructure services (PostgreSQL, Redis, Elasticsearch, Qdrant) run in Docker containers, and applications (Backend, Frontend, AI Service) run directly on the development machine for convenient debugging.
 
-### 7.1. Khởi động hạ tầng với Docker Compose
+### 7.1. Start your infrastructure with Docker Compose
 
-Đảm bảo Docker Desktop đang chạy, sau đó di chuyển vào thư mục `server/` và khởi động các dịch vụ hạ tầng:
+Make sure Docker Desktop is running, then move into the `server/` directory and start the infrastructure services:
 
 ```bash
 cd server
 docker compose up -d postgres redis elasticsearch qdrant
 ```
 
-Lệnh trên sẽ khởi tạo 4 container:
+The above command will initialize 4 containers:
 
-| Container | Image | Chức năng |
+| Containers | Image | Function |
 |---|---|---|
-| `task_postgres` | `postgres:16` | Cơ sở dữ liệu PostgreSQL |
-| `task_redis` | `redis:7` | Bộ nhớ đệm Redis |
+| `task_postgres` | `postgres:16` | PostgreSQL Database |
+| `task_redis` | `redis:7` | Redis Caching |
 | `tasksense_es` | `elasticsearch:9.0.0` | Elasticsearch |
-| `tasksense_qdrant` | `qdrant/qdrant:latest` | Cơ sở dữ liệu vector Qdrant |
+| `tasksense_qdrant` | `qdrant/qdrant:latest` | Qdrant vector database |
 
-Chờ khoảng 30–60 giây để tất cả dịch vụ sẵn sàng. Kiểm tra trạng thái:
+Wait about 30–60 seconds for all services to be ready. Check status:
 
 ```bash
 docker compose ps
 ```
 
-Đảm bảo tất cả container ở trạng thái `healthy` hoặc `running`.
+Make sure all containers are in state `healthy` or `running`.
 
-**(Tùy chọn)** Khởi động thêm các công cụ quản trị:
+**(Optional)** Launch additional administrative tools:
 
 ```bash
 # pgAdmin — Giao diện quản trị PostgreSQL (truy cập tại http://localhost:5050)
@@ -468,110 +468,110 @@ docker compose up -d pgadmin
 docker compose up -d kibana
 ```
 
-### 7.2. Khởi động Backend (Spring Boot)
+### 7.2. Backend Boot (Spring Boot)
 
-**Bước 1:** Mở terminal mới, di chuyển vào thư mục `server/`:
+**Step 1:** Open a new terminal, move to the `server/` folder:
 
 ```bash
 cd server
 ```
 
-**Bước 2:** (Lần đầu tiên) Biên dịch và tải các dependency:
+**Step 2:** (First time) Compile and download dependencies:
 
-- Trên **Windows**:
+- On **Windows**:
 
 ```powershell
 .\mvnw.cmd -DskipTests compile
 ```
 
-- Trên **macOS/Linux**:
+- On **macOS/Linux**:
 
 ```bash
 ./mvnw -DskipTests compile
 ```
 
-Quá trình này có thể mất 3–5 phút lần đầu do cần tải các thư viện phụ thuộc.
+This process may take 3–5 minutes at first due to the need to load dependent libraries.
 
-**Bước 3:** Khởi động ứng dụng:
+**Step 3:** Start the application:
 
-- Trên **Windows**:
+- On **Windows**:
 
 ```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-- Trên **macOS/Linux**:
+- On **macOS/Linux**:
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-Khi khởi động thành công, log sẽ hiển thị:
+When booting successfully, the log will display:
 
 ```
 Started TaskSense in X.XXX seconds
 ```
 
-Backend API sẵn sàng tại: `http://localhost:8080/api/v1`
+Backend API available at: `http://localhost:8080/api/v1`
 
-Tài liệu API Swagger UI: `http://localhost:8080/api/v1/swagger-ui`
+Swagger UI API Documentation: `http://localhost:8080/api/v1/swagger-ui`
 
-> **Lưu ý:** Flyway sẽ tự động thực thi các migration scripts để tạo schema cơ sở dữ liệu khi Backend khởi động lần đầu.
+> **Note:** Flyway will automatically execute migration scripts to create the database schema when the Backend first starts.
 
-### 7.3. Khởi động dịch vụ AI (FastAPI)
+### 7.3. Start AI service (FastAPI)
 
-**Bước 1:** Mở terminal mới, di chuyển vào thư mục `ai/`:
+**Step 1:** Open a new terminal, move to the `ai/` folder:
 
 ```bash
 cd ai
 ```
 
-**Bước 2:** Tạo môi trường ảo và cài đặt các dependency bằng `uv`:
+**Step 2:** Create virtual environment and install dependencies using `uv`:
 
 ```bash
 uv sync
 ```
 
-**Bước 3:** Khởi động dịch vụ:
+**Step 3:** Start the service:
 
 ```bash
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
-Khi khởi động thành công, log sẽ hiển thị:
+When booting successfully, the log will display:
 
 ```
 INFO:     Uvicorn running on http://0.0.0.0:8000
 INFO:     TaskSense AI Service starting — provider=..., qdrant=...
 ```
 
-AI Service sẵn sàng tại: `http://localhost:8000`
+AI Service is available at: `http://localhost:8000`
 
-Kiểm tra health check: `http://localhost:8000/health`
+Check health check: `http://localhost:8000/health`
 
-### 7.4. Khởi động Frontend (React + Vite)
+### 7.4. Start Frontend (React + Vite)
 
-**Bước 1:** Mở terminal mới, di chuyển vào thư mục `client/`:
+**Step 1:** Open a new terminal, move to the `client/` folder:
 
 ```bash
 cd client
 ```
 
-**Bước 2:** Cài đặt các dependency:
+**Step 2:** Install dependencies:
 
 ```bash
 npm install
 ```
 
-Quá trình này có thể mất 2–3 phút lần đầu.
+This process may take 2–3 minutes at first.
 
-**Bước 3:** Khởi động development server:
+**Step 3:** Start the development server:
 
 ```bash
 npm run dev
 ```
 
-Kết quả hiển thị:
+Display results:
 
 ```
   VITE v7.x.x  ready in XXX ms
@@ -580,52 +580,52 @@ Kết quả hiển thị:
   ➜  Network: http://192.168.x.x:5173/
 ```
 
-**Bước 4:** Mở trình duyệt và truy cập:
+**Step 4:** Open a browser and access:
 
 ```
 http://localhost:5173
 ```
 
-### 7.5. Kiểm tra hệ thống
+### 7.5. Check the system
 
-Sau khi tất cả dịch vụ đã khởi động, thực hiện kiểm tra sau để đảm bảo hệ thống hoạt động đúng:
+After all services have started, perform the following checks to ensure the system is operating properly:
 
-| Dịch vụ | URL kiểm tra | Kết quả mong đợi |
+| Services | Test URL | Expected results |
 |---|---|---|
-| Frontend | `http://localhost:5173` | Hiển thị trang đăng nhập TaskSense |
-| Backend API | `http://localhost:8080/api/v1/health` | Trả về trạng thái health check |
-| Swagger UI | `http://localhost:8080/api/v1/swagger-ui` | Hiển thị tài liệu API |
+| Frontend | `http://localhost:5173` | Show TaskSense login page |
+| Backend API | `http://localhost:8080/api/v1/health` | Returns health check status |
+| Swagger UI | `http://localhost:8080/api/v1/swagger-ui` | Show API documentation |
 | AI Service | `http://localhost:8000/health` | `{"status": "ok"}` |
-| PostgreSQL | `localhost:5432` | Kết nối thành công (dùng pgAdmin hoặc CLI) |
-| Redis | `localhost:6379` | Phản hồi `PONG` khi chạy `redis-cli ping` |
-| Elasticsearch | `http://localhost:9200` | Trả về thông tin cluster |
-| Qdrant | `http://localhost:6333/dashboard` | Hiển thị dashboard Qdrant |
+| PostgreSQL | `localhost:5432` | Successful connection (using pgAdmin or CLI) |
+| Redis | `localhost:6379` | `PONG` response when running `redis-cli ping` |
+| Elasticsearch | `http://localhost:9200` | Returns cluster information |
+| Qdrant | `http://localhost:6333/dashboard` | Display Qdrant dashboard |
 
-**(Tùy chọn)** Nạp dữ liệu mẫu để kiểm thử. Chạy lệnh sau để thực thi file seed data:
+**(Optional)** Load sample data for testing. Run the following command to execute the seed data file:
 
 ```bash
 cd server
 docker compose up seed
 ```
 
-Lệnh này sẽ khởi tạo Flyway migration (nếu chưa chạy) và nạp dữ liệu mẫu vào cơ sở dữ liệu. Xem chi tiết về tài khoản mẫu tại [Mục 9](#9-tài-khoản-mẫu-và-dữ-liệu-seed).
+This command will initiate Flyway migration (if not already running) and load sample data into the database. See details about the sample account at [Section 9](#9-tài-khoản-mẫu-và-dữ-liệu-seed).
 
 ---
 
-## 8. Triển khai môi trường production (Docker)
+## 8. Deploy production environment (Docker)
 
-Phương pháp này triển khai **toàn bộ** hệ thống (bao gồm cả ứng dụng và hạ tầng) trong Docker container, phù hợp cho môi trường staging hoặc production.
+This method deploys the **entire** system (including applications and infrastructure) in a Docker container, suitable for staging or production environments.
 
-### 8.1. Cấu hình biến môi trường
+### 8.1. Configure environment variables
 
-Tạo file `.env` tại thư mục `infra/docker/`:
+Create file `.env` in folder `infra/docker/`:
 
 ```bash
 cd infra/docker
 cp ../../.env.example .env
 ```
 
-Chỉnh sửa file `.env` với các giá trị production thực tế. **Bắt buộc** phải đặt các giá trị sau:
+Edit file `.env` with actual production values. **Required** to set the following values:
 
 ```properties
 # Bắt buộc
@@ -643,49 +643,49 @@ OPENAI_API_KEY=sk-...
 VITE_GOOGLE_CLIENT_ID=<Client ID>
 ```
 
-### 8.2. Khởi động toàn bộ hệ thống
+### 8.2. Boot the entire system
 
-Di chuyển vào thư mục `infra/docker/` và chạy:
+Move into the `infra/docker/` directory and run:
 
 ```bash
 cd infra/docker
 docker compose up -d --build
 ```
 
-Lệnh này sẽ thực hiện các bước sau theo thứ tự:
+This command will perform the following steps in order:
 
-1. **Build** Docker image cho Backend, AI Service và Frontend
-2. **Khởi động** PostgreSQL, Redis, Elasticsearch, Qdrant
-3. **Chạy** Flyway migration để tạo schema cơ sở dữ liệu
-4. **Nạp** dữ liệu seed (nếu được cấu hình)
-5. **Khởi động** Backend Spring Boot API
-6. **Khởi động** AI Service (FastAPI)
-7. **Khởi động** Frontend (phục vụ bằng `serve`)
-8. **Khởi động** Nginx reverse proxy
+1. **Build** Docker images for Backend, AI Service and Frontend
+2. **Start** PostgreSQL, Redis, Elasticsearch, Qdrant
+3. **Run** Flyway migration to create the database schema
+4. **Load** seed data (if configured)
+5. **Start** Backend Spring Boot API
+6. **Start** AI Service (FastAPI)
+7. **Start** Frontend (served by `serve`)
+8. **Start** Nginx reverse proxy
 
-Toàn bộ quá trình có thể mất **5–10 phút** ở lần đầu tiên.
+The entire process may take **5–10 minutes** the first time.
 
-Sau khi hoàn tất, toàn bộ hệ thống có thể truy cập qua **một cổng duy nhất**:
+Once complete, the entire system is accessible via **a single port**:
 
 ```
 http://localhost
 ```
 
-Nginx sẽ tự động định tuyến các request:
+Nginx will automatically route requests:
 
-| Đường dẫn | Dịch vụ đích |
+| Path | Destination Service |
 |---|---|
 | `/` | Frontend (React) |
 | `/api/core/v1/*` | Backend API (Spring Boot) |
 | `/api/chat/v1/*` | AI Service (FastAPI) |
 
-### 8.3. Kiểm tra trạng thái các dịch vụ
+### 8.3. Check the status of services
 
 ```bash
 docker compose ps
 ```
 
-Kết quả mong đợi — tất cả các dịch vụ ở trạng thái `Up` hoặc `healthy`:
+Expected result — all services in state `Up` or `healthy`:
 
 ```
 NAME                  STATUS
@@ -701,9 +701,9 @@ tasksense_client      Up
 tasksense_nginx       Up
 ```
 
-> **Lưu ý:** `tasksense_flyway` và `tasksense_seed` ở trạng thái `Exited (0)` là bình thường — chúng là các container chạy một lần (one-shot) để khởi tạo cơ sở dữ liệu.
+> **Note:** It is normal for `tasksense_flyway` and `tasksense_seed` to be in the `Exited (0)` state — they are one-shot containers that initialize the database.
 
-Xem log của một dịch vụ cụ thể:
+View logs for a specific service:
 
 ```bash
 docker compose logs -f tasksense-spring-api
@@ -711,13 +711,13 @@ docker compose logs -f tasksense-ai
 docker compose logs -f tasksense-client
 ```
 
-Dừng toàn bộ hệ thống:
+Stop the entire system:
 
 ```bash
 docker compose down
 ```
 
-Dừng và **xóa toàn bộ dữ liệu** (volumes):
+Stop and **delete all data** (volumes):
 
 ```bash
 docker compose down -v
@@ -725,11 +725,11 @@ docker compose down -v
 
 ---
 
-## 9. Tài khoản mẫu và dữ liệu seed
+## 9. Sample accounts and seed data
 
-Hệ thống đi kèm file dữ liệu mẫu (`seed_data.sql`) để phục vụ kiểm thử. Sau khi nạp dữ liệu seed, các tài khoản sau sẵn sàng sử dụng:
+The system comes with a sample data file (`seed_data.sql`) for testing. After loading the seed data, the following accounts are ready to use:
 
-| Email | Mật khẩu | Tên đầy đủ | Vai trò |
+| Email | Password | Full name | Role |
 |---|---|---|---|
 | `alice@example.com` | `password` | Alice Nguyen | Full-stack developer & tech lead |
 | `bob@example.com` | `password` | Bob Tran | Project manager |
@@ -737,100 +737,100 @@ Hệ thống đi kèm file dữ liệu mẫu (`seed_data.sql`) để phục vụ
 | `dave@example.com` | `password` | Dave Pham | Backend developer |
 | `eve@example.com` | `password` | Eve Hoang | QA engineer |
 
-> **Cảnh báo:** Tuyệt đối **không** sử dụng dữ liệu seed và các mật khẩu mặc định trên môi trường production thực tế.
+> **Warning:** Absolutely **do not** use seed data and default passwords on a real production environment.
 
 ---
 
-## 10. Xử lý sự cố thường gặp
+## 10. Troubleshooting common problems
 
-### 10.1. Lỗi Elasticsearch không khởi động
+### 10.1. Error Elasticsearch not starting
 
-**Triệu chứng:** Container `tasksense_es` liên tục restart hoặc thoát với lỗi.
+**Symptom:** Container `tasksense_es` keeps restarting or exiting with an error.
 
-**Nguyên nhân:** Elasticsearch yêu cầu giá trị `vm.max_map_count` tối thiểu là 262144.
+**Cause:** Elasticsearch requires a minimum `vm.max_map_count` value of 262144.
 
-**Giải pháp:**
+**Solution:**
 
-- Trên **Linux/WSL2**:
+- On **Linux/WSL2**:
 
 ```bash
 sudo sysctl -w vm.max_map_count=262144
 ```
 
-Để áp dụng vĩnh viễn, thêm dòng sau vào `/etc/sysctl.conf`:
+To apply permanently, add the following line to `/etc/sysctl.conf`:
 
 ```
 vm.max_map_count=262144
 ```
 
-- Trên **Windows** (chạy trong WSL2 terminal):
+- On **Windows** (runs in WSL2 terminal):
 
 ```bash
 wsl -d docker-desktop -u root
 sysctl -w vm.max_map_count=262144
 ```
 
-- Trên **macOS** (Docker Desktop): Thường không cần thay đổi, Docker Desktop tự xử lý.
+- On **macOS** (Docker Desktop): Usually no changes are needed, Docker Desktop handles it itself.
 
-### 10.2. Lỗi cổng đã được sử dụng (Port already in use)
+### 10.2. Port already in use error (Port already in use)
 
-**Triệu chứng:** Thông báo lỗi "port is already allocated" hoặc "address already in use".
+**Symptoms:** Error message "port is already allocated" or "address already in use".
 
-**Giải pháp:**
+**Solution:**
 
-- Kiểm tra tiến trình đang sử dụng cổng:
+- Check the process using the port:
 
-  - Trên **Windows**:
+  - On **Windows**:
 
   ```powershell
   netstat -ano | findstr :<PORT>
   taskkill /PID <PID> /F
   ```
 
-  - Trên **macOS/Linux**:
+  - On **macOS/Linux**:
 
   ```bash
   lsof -i :<PORT>
   kill -9 <PID>
   ```
 
-- Hoặc thay đổi cổng trong file cấu hình tương ứng.
+- Or change the port in the corresponding configuration file.
 
-### 10.3. Lỗi kết nối cơ sở dữ liệu từ Backend
+### 10.3. Error connecting to database from Backend
 
-**Triệu chứng:** Backend log hiển thị `Connection refused` tới PostgreSQL.
+**Symptoms:** Backend log shows `Connection refused` to PostgreSQL.
 
-**Giải pháp:**
+**Solution:**
 
-1. Đảm bảo container PostgreSQL đang chạy: `docker compose ps`
-2. Kiểm tra PostgreSQL đã sẵn sàng: `docker exec task_postgres pg_isready -U postgres`
-3. Đảm bảo cổng 5432 không bị tường lửa chặn
+1. Make sure the PostgreSQL container is running: `docker compose ps`
+2. Check PostgreSQL is ready: `docker exec task_postgres pg_isready -U postgres`
+3. Make sure port 5432 is not blocked by the firewall
 
-### 10.4. Frontend không kết nối được Backend
+### 10.4. Frontend cannot connect to Backend
 
-**Triệu chứng:** Giao diện hiển thị lỗi mạng (Network Error) khi gọi API.
+**Symptoms:** The interface displays a network error when calling the API.
 
-**Giải pháp:**
+**Solution:**
 
-1. Kiểm tra file `client/.env` có đúng giá trị `VITE_API_BASE_URL`
-2. Đảm bảo Backend đang chạy tại cổng đã cấu hình
-3. Kiểm tra trình duyệt không bị chặn bởi chính sách CORS
-4. Khởi động lại Frontend sau khi thay đổi file `.env`:
+1. Check file `client/.env` has the correct value `VITE_API_BASE_URL`
+2. Make sure the Backend is running at the configured port
+3. Check the browser is not blocked by CORS policy
+4. Restart Frontend after changing file `.env`:
 
 ```bash
 # Dừng dev server (Ctrl+C) rồi chạy lại
 npm run dev
 ```
 
-### 10.5. Dịch vụ AI không phản hồi
+### 10.5. AI service is not responding
 
-**Triệu chứng:** API chatbot trả về lỗi 500 hoặc timeout.
+**Symptom:** Chatbot API returns error 500 or timeout.
 
-**Giải pháp:**
+**Solution:**
 
-1. Kiểm tra API key của nhà cung cấp LLM đã được cấu hình đúng
-2. Kiểm tra Qdrant đang chạy: `http://localhost:6333/dashboard`
-3. Xem log chi tiết của dịch vụ AI:
+1. Check that the LLM provider's API key is configured correctly
+2. Check running Qdrant: `http://localhost:6333/dashboard`
+3. View detailed logs of AI services:
 
 ```bash
 # Nếu chạy development
@@ -840,24 +840,24 @@ npm run dev
 docker compose logs -f tasksense-ai
 ```
 
-### 10.6. Lỗi Docker build thất bại
+### 10.6. Docker build error failed
 
-**Triệu chứng:** `docker compose up --build` thất bại với lỗi build.
+**Symptom:** `docker compose up --build` fails with build error.
 
-**Giải pháp:**
+**Solution:**
 
-1. Xóa cache Docker và build lại:
+1. Delete Docker cache and rebuild:
 
 ```bash
 docker compose build --no-cache
 docker compose up -d
 ```
 
-2. Đảm bảo đủ dung lượng ổ cứng (Docker image có thể chiếm đến vài GB)
-3. Kiểm tra kết nối Internet ổn định (cần tải base image và dependencies)
+2. Ensure enough hard drive space (Docker image can take up several GB)
+3. Check stable Internet connection (need to download base image and dependencies)
 
-### 10.7. Lỗi "SECURITY_JWT_SECRET is required"
+### 10.7. Error "SECURITY_JWT_SECRET is required"
 
-**Triệu chứng:** Docker compose không thể khởi động, hiển thị lỗi biến bắt buộc.
+**Symptoms:** Docker compose fails to start, showing required variable error.
 
-**Giải pháp:** Đảm bảo file `.env` đã được tạo đúng vị trí và chứa giá trị `SECURITY_JWT_SECRET`. Với triển khai production, file `.env` phải nằm trong thư mục `infra/docker/`.
+**Solution:** Make sure the file `.env` has been created in the correct location and contains the value `SECURITY_JWT_SECRET`. For production deployment, the `.env` file must be in the `infra/docker/` directory.

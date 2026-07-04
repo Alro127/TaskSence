@@ -6,12 +6,12 @@ Help team members use AI effectively without memorizing skill names.
 
 ## How to Prompt Normally
 
-Use plain language with goal, constraints, and expected output.
+Use plain language with goals, constraints, and expected output.
 Examples:
 
-- "Giup minh lam ro yeu cau va lap ke hoach trien khai feature nay"
-- "Kiem tra thay doi nay co an toan ve bao mat va release duoc chua"
-- "Dong bo API frontend va backend sau khi doi DTO"
+- "Help me clarify requirements and create a plan to deploy this feature"
+- "Check if this change is safe in terms of packaging and release"
+- "Consolidate frontend and backend API after DTO"
 
 Agents will auto-route to relevant skills based on intent.
 
@@ -33,7 +33,7 @@ Agents will auto-route to relevant skills based on intent.
 Before planning/implementation, agents should load context docs in order:
 
 1. Documents/ai-context/INDEX.md
-2. Latest snapshot in Documents/ai-context/snapshots/
+2. Latest snapshots in Documents/ai-context/snapshots/
 3. Latest 5 run files in Documents/ai-context/runs/
 4. Documents/ai-context/LEDGER.md
 
@@ -45,10 +45,10 @@ Before planning/implementation, agents should load context docs in order:
 - Done criteria: how to verify output is acceptable
 
 Example:
-"Muc tieu: them API cap nhat trang thai task.
-Context: server task controller va client task API.
-Rang buoc: giu nguyen response envelope hien tai.
-Done criteria: compile pass, contract dong bo, co test path chinh."
+"Target: add the most capacious API to the task page.
+Context: server task controller and client task API.
+Rang: keep the current response envelope intact.
+Done criteria: compile pass, contract agreement, main test path."
 
 ## Governance
 

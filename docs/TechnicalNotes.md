@@ -1,36 +1,36 @@
 # Technical Notes
 
-Ghi chú các quyết định thiết kế và giới hạn kỹ thuật quan trọng trong dự án.
+Note important design decisions and technical constraints in the project.
 
 ---
 
-## Task
+## Tasks
 
-### Giới hạn độ sâu cây task (Task Nesting Depth)
-- **Giới hạn:** tối đa **5 cấp** (`MAX_TASK_DEPTH = 5`)
-- **Lý do:** Task management thực tế hiếm khi cần quá 5 cấp. Giới hạn này tránh N query không kiểm soát khi validate circular parent.
-- **Xử lý:** Nếu vượt quá → throw `BadRequestException`
-- **Vị trí:** `TaskServiceImpl.MAX_TASK_DEPTH`
+### Limit task tree depth (Task Nesting Depth)
+- **Limit:** maximum **5 levels** (`MAX_TASK_DEPTH = 5`)
+- **Reason:** Practical task management rarely needs more than 5 levels. This limit avoids uncontrolled N queries when validating circular parents.
+- **Handling:** If exceeded → throw `BadRequestException`
+- **Location:** `TaskServiceImpl.MAX_TASK_DEPTH`
 
-### Chống vòng lặp cha-con (Circular Parent Detection)
-- Khi update `parentTaskId`, hệ thống traverse ngược lên cây tối đa `MAX_TASK_DEPTH` bước.
-- Nếu phát hiện `taskId` trong chuỗi cha → throw `BadRequestException("Circular parent-child relationship detected")`
+### Circular Parent Detection
+- When updating `parentTaskId`, the system traverses up the tree up to `MAX_TASK_DEPTH` steps.
+- If `taskId` is detected in the parent string → throw `BadRequestException("Circular parent-child relationship detected")`
 
 ### Soft Delete
-- Task không bị xóa khỏi DB, chỉ set `deleted_at = now()`
-- `@SQLRestriction("deleted_at IS NULL")` trên `TaskEntity` đảm bảo các query JPA tự động lọc task đã xóa.
+- Task is not deleted from the database, only `deleted_at = now()` is set
+- `@SQLRestriction("deleted_at IS NULL")` over `TaskEntity` ensures JPA queries automatically filter deleted tasks.
 
-### Trạng thái `completedAt`
-- Tự động set `completed_at = now()` khi `status` chuyển sang `DONE`
-- Tự động clear `completed_at = null` khi `status` chuyển về trạng thái khác
+### Status `completedAt`
+- Automatically set `completed_at = now()` when `status` changes to `DONE`
+- Automatically clear `completed_at = null` when `status` changes to another state
 
-### Phân quyền Task
-- Mọi thao tác trên task đều yêu cầu user là **project member**
-- Assignee cũng phải là **project member** — không thể assign task cho người ngoài project
+### Decentralize Task
+- All operations on the task require the user to be **project member**
+- Assignee must also be a **project member** — tasks cannot be assigned to people outside the project
 
-### Position (Thứ tự task)
-- Field `position` dùng để sắp xếp task trong cùng project + status (phục vụ drag & drop)
-- Mặc định `position = 0` khi tạo mới
+### Position (Task order)
+- Field `position` is used to sort tasks in the same project + status (for drag & drop)
+- Default is `position = 0` when creating a new one
 
 ---
 
@@ -38,21 +38,21 @@ Ghi chú các quyết định thiết kế và giới hạn kỹ thuật quan tr
 
 Base path: `/projects/{projectId}/tasks`
 
-| Method | Path | Mô tả |
+| Method | Path | Description |
 |---|---|---|
-| POST | `/` | Tạo task |
-| GET | `/` | Lấy tất cả task của project |
-| GET | `/search` | Tìm kiếm task (filter status, keyword, cursor pagination) |
-| GET | `/{taskId}` | Lấy chi tiết task |
-| GET | `/{taskId}/subtasks` | Lấy subtask |
-| PUT | `/{taskId}` | Cập nhật task |
-| DELETE | `/{taskId}` | Xóa mềm task |
+| POST | `/` | Create task |
+| GET | `/` | Get all project tasks |
+| GET | `/search` | Search task (filter status, keyword, cursor pagination) |
+| GET | `/{taskId}` | Get task details |
+| GET | `/{taskId}/subtasks` | Get subtask |
+| PUT | `/{taskId}` | Update tasks |
+| DELETE | `/{taskId}` | Soft delete task |
 
-> Dashboard (task across all projects) sẽ được implement ở controller riêng sau.
+> Dashboard (task across all projects) will be implemented in a separate controller later.
 
 ---
 
-## Các TODO còn lại
+## The remaining TODOs
 
-- [ ] Implement `requireWorkspaceMember` trong `TaskServiceImpl`
-- [ ] Dashboard controller: `GET /tasks/my` — lấy task được assign cho current user across all projects
+- [ ] Implement `requireWorkspaceMember` in `TaskServiceImpl`
+- [ ] Dashboard controller: `GET /tasks/my` — get tasks assigned to current user across all projects

@@ -10,7 +10,7 @@
 - Primary Skill(s):
 - Agent Role(s):
 
-### Inputs Snapshot
+### Inputs Snapshots
 
 - Key files reviewed:
 - Constraints detected:
