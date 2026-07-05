@@ -1,8 +1,8 @@
-# TaskSense — Tài liệu Phân tích (Analytics)
+# TaskSense — Document Analysis (Analytics)
 
-## 1. Tổng quan kiến trúc
+## 1. Architecture overview
 
-Hệ thống analytics của TaskSense được xây dựng hoàn toàn trên **Elasticsearch aggregations**, không tính toán trên Postgres hay frontend.
+TaskSense's analytics system is built entirely on **Elasticsearch aggregations**, not calculated on Postgres or frontend.
 
 ```
 Client (React)
@@ -15,46 +15,46 @@ Client (React)
                                 └─ ProjectAnalyticsResponse (JSON)
 ```
 
-### Luồng dữ liệu vào ES
+### Stream data into ES
 
-Dữ liệu trong index `tasks` luôn đồng bộ với Postgres qua hai cơ chế:
+Data in index `tasks` is always synchronized with Postgres through two mechanisms:
 
-| Cơ chế | Trigger | Mục đích |
+| Mechanism | Triggers | Purpose |
 |---|---|---|
-| `EntityChangedEventListener` | Sau mỗi transaction commit | Realtime sync (low latency) |
-| `SyncEsWorker` | Cron 14:11 hàng ngày | Safety net — catch những record bị bỏ sót |
+| `EntityChangedEventListener` | After each transaction commit | Realtime sync (low latency) |
+| `SyncEsWorker` | Cron 14:11 daily | Safety net — catch missed records |
 
-Vì mỗi `save()` là **upsert theo document ID**, không bao giờ có dữ liệu trùng → kết quả aggregation chính xác.
+Because each `save()` is **upsert according to document ID**, there is never duplicate data → accurate aggregation results.
 
 ---
 
-## 2. Phân quyền
+## 2. Decentralization
 
-| Role | Quyền xem |
+| Role | Viewing rights |
 |---|---|
-| MANAGER | Toàn bộ — bao gồm **Member Performance** |
-| MEMBER / VIEWER | Tất cả trừ Member Performance |
+| MANAGER | Complete — including **Member Performance** |
+| MEMBER / VIEWER | All but Member Performance |
 
-Permission check ở backend: `@PreAuthorize("@perm.project(#projectId, 'VIEW_TASKS')")`.
-Permission check ở frontend: `showMemberWorkload = canManageMembers` (tính từ project permissions).
+Permission check on the backend: `@PreAuthorize("@perm.project(#projectId, 'VIEW_TASKS')")`.
+Permission check in frontend: `showMemberWorkload = canManageMembers` (counts from project permissions).
 
 ---
 
-## 3. Các chỉ số và cách tính
+## 3. Indicators and calculations
 
 ### 3.1 Total Tasks
 
-- **Giá trị**: Tổng số task thuộc project
+- **Value**: Total number of tasks in the project
 - **ES query**: `term(projectId)` → `hits.total`
-- **Dùng để**: Phân mẫu số cho tất cả các tỷ lệ %
+- **Used for**: Divide denominators for all percentages
 
 ---
 
 ### 3.2 Status Distribution
 
-- **Giá trị**: Số task theo từng trạng thái: `TODO`, `IN_PROGRESS`, `REVIEW`, `DONE`
-- **ES aggregation**: `terms` trên field `status` (keyword)
-- **Kết quả**: `Map<status, count>`
+- **Value**: Number of tasks by each status: `TODO`, `IN_PROGRESS`, `REVIEW`, `DONE`
+- **ES aggregation**: `terms` on field `status` (keyword)
+- **Result**: `Map<status, count>`
 
 ```
 status_dist:
@@ -65,9 +65,9 @@ status_dist:
 
 ### 3.3 Priority Distribution
 
-- **Giá trị**: Số task theo từng mức ưu tiên: `LOW`, `MEDIUM`, `HIGH`, `URGENT`
-- **ES aggregation**: `terms` trên field `priority` (keyword)
-- **Kết quả**: `Map<priority, count>`
+- **Value**: Number of tasks according to each priority level: `LOW`, `MEDIUM`, `HIGH`, `URGENT`
+- **ES aggregation**: `terms` on field `priority` (keyword)
+- **Result**: `Map<priority, count>`
 
 ```
 priority_dist:
@@ -78,10 +78,10 @@ priority_dist:
 
 ### 3.4 Overdue Count
 
-- **Giá trị**: Số task quá hạn mà chưa hoàn thành
-- **Điều kiện**: `dueDate < now` **AND** `status != DONE`
+- **Value**: Number of overdue tasks that have not been completed
+- **Conditions**: `dueDate < now` **AND** `status != DONE`
 - **ES aggregation**: `filter` (bool query)
-- **Kết quả**: `docCount` của filter bucket
+- **Result**: `docCount` of filter bucket
 
 ```
 overdue:
@@ -94,12 +94,12 @@ overdue:
 
 ---
 
-### 3.5 Completion Trend (30 ngày)
+### 3.5 Completion Trend (30 days)
 
-- **Giá trị**: Số task hoàn thành mỗi ngày trong 30 ngày gần nhất
-- **ES aggregation**: `filter` (completedAt >= 30d ago) → `date_histogram` theo ngày
-- **Kết quả**: `List<{date: "yyyy-MM-dd", count}>`
-- **Dùng để**: Line chart xu hướng + tính `avgDailyVelocity`
+- **Value**: Number of tasks completed per day in the last 30 days
+- **ES aggregation**: `filter` (completedAt >= 30d ago) → `date_histogram` by date
+- **Result**: `List<{date: "yyyy-MM-dd", count}>`
+- **Used for**: Line chart trend + calculate `avgDailyVelocity`
 
 ```
 completion_trend:
@@ -111,8 +111,8 @@ completion_trend:
 
 ### 3.6 Health Score
 
-- **Giá trị**: Điểm sức khoẻ tổng thể của project, thang 0–100
-- **Công thức**:
+- **Value**: Overall project health score, scale 0–100
+- **Formula**:
 
 ```
 completionRate = doneCount / totalTasks × 100
@@ -120,19 +120,19 @@ onTimeRate     = (1 - overdueCount / totalTasks) × 100
 healthScore    = round(completionRate × 0.6 + onTimeRate × 0.4)
 ```
 
-- **Phân loại**:
-  - `75–100` → **Healthy** (xanh lá)
-  - `50–74`  → **At Risk** (vàng)
-  - `0–49`   → **Critical** (đỏ)
+- **Classification**:
+  - `75–100` → **Healthy** (green)
+  - `50–74` → **At Risk** (gold)
+  - `0–49` → **Critical** (red)
 
-- **Không cần ES query riêng** — tính từ `statusDistribution["DONE"]` và `overdueCount` đã có.
+- **No need for separate ES query** — `statusDistribution["DONE"]` and `overdueCount` already exist.
 
 ---
 
 ### 3.7 Projected Completion Date
 
-- **Giá trị**: Ngày dự kiến hoàn thành toàn bộ task, dựa trên velocity hiện tại
-- **Công thức**:
+- **Value**: Expected date to complete the entire task, based on current velocity
+- **Formula**:
 
 ```
 avgDailyVelocity = sum(completionTrend) / 30        # task/ngày
@@ -141,20 +141,20 @@ daysNeeded       = ceil(remaining / avgDailyVelocity)
 projectedDate    = today + daysNeeded
 ```
 
-- **Trường hợp đặc biệt**:
-  - `remaining = 0` → trả về `today` (đã xong)
-  - `avgDailyVelocity = 0` → trả về `null` (không đủ dữ liệu để dự đoán)
+- **Special cases**:
+  - `remaining = 0` → returns `today` (done)
+  - `avgDailyVelocity = 0` → returns `null` (not enough data to predict)
 
-- **Không cần ES query riêng** — tính từ `completionTrend` đã có.
+- **No need for separate ES query** — `completionTrend` adjective already exists.
 
 ---
 
 ### 3.8 Sprint Velocity
 
-- **Giá trị**: Số task `DONE` trong từng sprint
-- **ES aggregation**: `filter` (DONE + sprintId exists) → `terms` trên `sprintId`
-- **Kết quả**: `List<{sprintId, completedCount}>`
-- **Frontend**: Join với sprint list để lấy tên sprint → Bar chart
+- **Value**: Number of tasks `DONE` in each sprint
+- **ES aggregation**: `filter` (DONE + sprintId exists) → `terms` on `sprintId`
+- **Result**: `List<{sprintId, completedCount}>`
+- **Frontend**: Join with sprint list to get sprint name → Bar chart
 
 ```
 sprint_velocity:
@@ -170,18 +170,18 @@ sprint_velocity:
 
 ### 3.9 Member Performance
 
-Mỗi thành viên có 4 chỉ số: `assignedCount`, `completedCount`, `overdueCount`, `performanceScore`.
+Each member has 4 indexes: `assignedCount`, `completedCount`, `overdueCount`, `performanceScore`.
 
-#### Cách thu thập — 3 aggregations ES:
+#### How to collect — 3 ES aggregations:
 
-**member_total** — tổng task đang assigned:
+**member_total** — total assigned tasks:
 ```
 member_total:
   nested(path="assignees")
     by_user: terms(field="assignees.id", size=100)
 ```
 
-**member_done** — task đã hoàn thành:
+**member_done** — task completed:
 ```
 member_done:
   filter(status = DONE)
@@ -189,7 +189,7 @@ member_done:
       by_user: terms(field="assignees.id", size=100)
 ```
 
-**member_overdue** — task quá hạn:
+**member_overdue** — task is overdue:
 ```
 member_overdue:
   filter(dueDate < now AND status != DONE)
@@ -197,9 +197,9 @@ member_overdue:
       by_user: terms(field="assignees.id", size=100)
 ```
 
-> **Lý do dùng `filter` trước `nested`**: Field `status` và `dueDate` nằm ở cấp task (root document), không phải trong nested `assignees`. Phải filter ở root level trước, rồi mới nested vào để đếm assignees của những task thoả điều kiện.
+> **Reason for using `filter` before `nested`**: Fields `status` and `dueDate` are at the task level (root document), not in nested `assignees`. Must filter at the root level first, then nested to count assignees of tasks that meet the conditions.
 
-#### Performance Score — công thức:
+#### Performance Score — formula:
 
 ```
 completionRate = completedCount / assignedCount         # 0–1
@@ -207,24 +207,24 @@ onTimeRate     = max(0, 1 - overdueCount / assignedCount)  # 0–1
 performanceScore = round((completionRate × 0.6 + onTimeRate × 0.4) × 100)
 ```
 
-- `assignedCount = 0` → score = 100 (không có task, không bị phạt)
-- Thang điểm và màu sắc giống Health Score (75+ xanh, 50–74 vàng, <50 đỏ)
+- `assignedCount = 0` → score = 100 (no task, no penalty)
+- Scale and color are similar to Health Score (75+ green, 50–74 yellow, <50 red)
 
 ---
 
-## 4. Giới hạn và điểm cần lưu ý
+## 4. Limitations and points to note
 
-| Điểm | Giải thích |
+| Score | Explanation |
 |---|---|
-| **Projected date là ước tính** | Dựa trên tốc độ 30 ngày gần nhất, không tính sprint deadline hay priority của task còn lại |
-| **Velocity = 0 nếu không có completion trong 30 ngày** | Project mới hoặc bị đình trệ sẽ không có predicted date |
-| **Member performance tính task assigned hiện tại** | Nếu member bị unassign khỏi task cũ, task đó không còn tính vào `assignedCount` của họ |
-| **Sprint velocity chỉ tính DONE** | Task ở REVIEW trong sprint không được tính vào velocity của sprint đó |
-| **ES cần online** | Nếu ES down, endpoint trả về lỗi 500. Không có fallback sang Postgres. |
+| **Projected date is an estimate** | Based on the latest 30-day speed, not counting the sprint deadline or priority of the remaining tasks |
+| **Velocity = 0 if there is no completion within 30 days** | New or stalled projects will not have a predicted date |
+| **Member performance calculates current assigned tasks** | If a member is unassigned from an old task, that task will no longer count towards their `assignedCount` |
+| **Sprint velocity only counts DONE** | Tasks in REVIEW during a sprint are not included in the velocity of that sprint
+| **ES needs to be online** | If ES is down, the endpoint returns error 500. There is no fallback to Postgres. |
 
 ---
 
-## 5. Cấu trúc dữ liệu response
+## 5. Response data structure
 
 ```json
 {
@@ -257,11 +257,11 @@ performanceScore = round((completionRate × 0.6 + onTimeRate × 0.4) × 100)
 
 ---
 
-## 6. Mở rộng trong tương lai (nếu cần)
+## 6. Future expansion (if needed)
 
-| Feature | Cách thực hiện |
+| Features | How to do |
 |---|---|
-| Cycle time trung bình (IN_PROGRESS → DONE) | Lưu thêm field `inProgressAt` vào TaskDocument, dùng `avg` aggregation trên `(completedAt - inProgressAt)` |
-| Burndown chart | Cần snapshot task count theo ngày — ES không hỗ trợ native, cần lưu daily snapshot riêng |
-| ML-based prediction | Export data từ ES → Python (scikit-learn / statsmodels) để train time-series model |
-| Anomaly detection | Dùng ES X-Pack ML (cần Elastic license) để phát hiện velocity bất thường |
+| Average cycle time (IN_PROGRESS → DONE) | Save additional field `inProgressAt` to TaskDocument, use `avg` aggregation on `(completedAt - inProgressAt)` |
+| Burndown chart | Need snapshot task count by day — ES does not support native, need to save daily snapshot separately |
+| ML-based prediction | Export data from ES → Python (scikit-learn / statsmodels) to train time-series model |
+| Anomaly detection | Use ES X-Pack ML (requires Elastic license) to detect abnormal velocity |

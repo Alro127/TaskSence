@@ -108,7 +108,7 @@ Relevant code:
 - `client/src/features/task/api/taskApi.ts`
 - `client/src/features/task/pages/TaskBoardPage.tsx`
 
-### 5. Kanban board currently relies on a hard fetch cap
+### 5. Kanban board currently relying on a hard fetch cap
 
 Board mode calls search with `size: 200` so that all columns can be rendered client-side for drag and drop.
 
@@ -126,7 +126,7 @@ Relevant code:
 
 If multiple tags are supported in the future, behavior is still undefined.
 
-Open question:
+Open questions:
 
 - Should `tagIds=1,2,3` mean tasks matching `ANY` selected tag?
 - Or should it mean tasks matching `ALL` selected tags?
@@ -137,7 +137,7 @@ Recommendation:
 
 ### 7. Need to confirm whether root tasks only should be shown
 
-The task board and list currently filter out subtasks on the frontend.
+The task board and list currently filters out subtasks on the frontend.
 
 Impact:
 
@@ -175,7 +175,7 @@ Move list view to server-backed pagination using actual totals from the API.
 
 ### Phase 4. Revisit Kanban loading strategy
 
-Short term:
+Short terms:
 
 - allow board filtering by sprint/tag using the improved search API
 
@@ -204,7 +204,7 @@ Suggested response:
 
 ## Summary
 
-This is not only a UI filtering problem.
+This is not just a UI filtering problem.
 
 The root issue is that sprint and tag navigation already exists, but the task search contract and the task page loading model have not been updated to support those new contexts.
 

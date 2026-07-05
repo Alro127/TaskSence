@@ -1,16 +1,16 @@
 # Project Plan: TaskSense (Aligned Scope)
 
-> Phiên bản này đồng bộ theo quyết định mới: **MVP không AI**, dùng **Elasticsearch cho Search + Analytics cơ bản**, AI chuyển sang **Phase 2**.
+> This version is synchronized according to the new decision: **MVP without AI**, uses **Elasticsearch for basic Search + Analytics**, AI moves to **Phase 2**.
 
-## I. Tổng quan
+## I. Overview
 
-| Danh mục       | Chi tiết                                                |
-| :------------- | :------------------------------------------------------ |
-| Thời gian      | 15 tuần (27/02/2026 - 29/06/2026)                       |
-| Nhân sự        | 2 thành viên fullstack                                  |
-| Mô hình        | Workspace-based cho team nhỏ 5-15 người                 |
-| Stack chính    | Spring Boot + React + PostgreSQL + Elasticsearch        |
-| Triển khai MVP | Local Docker Compose (Postgres + Elasticsearch + MinIO) |
+| Category | Details |
+| :------------- | :-------------------------------------------------------- |
+| Time | 15 weeks (February 27, 2026 - June 29, 2026) |
+| Human Resources | 2 fullstack members |
+| Model | Workspace-based for small teams of 5-15 people |
+| Main Stack | Spring Boot + React + PostgreSQL + Elasticsearch |
+| MVP Deployment | Local Docker Compose (Postgres + Elasticsearch + MinIO) |
 
 ---
 
@@ -18,160 +18,160 @@
 
 ### Phase 1 (Sprint 1-4) - MVP Delivery
 
-Mục tiêu: đưa sản phẩm chạy được end-to-end cho nhóm nhỏ, có search + dashboard cơ bản.
+Goal: bring a product that works end-to-end for a small team, with basic search + dashboard.
 
-- Auth + Profile cơ bản
+- Auth + Basic profile
 - Workspace + Project + Membership
 - Task CRUD + Kanban + fixed workflow status
 - Comment + Mention + Notification bell
 - File upload (MinIO)
-- Elasticsearch Search + Analytics (2 KPI)
+- Elasticsearch Search + Analytics (2 KPIs)
 - Export PDF/Excel
 
 ### Phase 2 (Sprint 5-8) - AI & Advanced
 
-Mục tiêu: mở rộng năng lực thông minh và tối ưu chất lượng sản phẩm.
+Objective: expand smart capacity and optimize product quality.
 
 - AI Smart Assign
 - AI Auto Subtask Generation
-- AI Chatbot (RAG với Elasticsearch)
-- Performance AI Evaluation (mở rộng từ activity signals)
-- Analytics mở rộng (workload by assignee, comment activity)
-- Hardening, polish, defense preparation
+- AI Chatbot (RAG with Elasticsearch)
+- Performance AI Evaluation (extended from activity signals)
+- Expanded analytics (workload by assignee, comment activity)
+- Hardening, polishing, defense preparation
 
 ---
 
-## III. Sprint Plan (8 Sprints)
+##III. Sprint Plan (8 Sprints)
 
 ## Sprint 1 - Foundation & Auth
 
-**Goal**: Thiết lập kiến trúc và hoàn thiện luồng xác thực.
+**Goal**: Set up the architecture and complete the authentication flow.
 
 - Setup backend/frontend skeleton
 - JWT auth + OTP verify + forgot/reset password
-- Profile cơ bản
+- Basic profiles
 - Flyway migration baseline
 
 **DoD**
 
-- Auth flows chạy ổn định
-- API response format thống nhất
+- Auth flows run stably
+- Uniform API response format
 
 ---
 
 ## Sprint 2 - Workspace & Project Core
 
-**Goal**: Quản lý không gian làm việc và dự án.
+**Goal**: Manage workspaces and projects.
 
 - Workspace CRUD + invite members
-- Project CRUD + membership + RBAC cơ bản
+- Project CRUD + membership + basic RBAC
 - UI dashboard workspace/project
 
 **DoD**
 
-- User tạo được workspace/project và thêm member theo role
+- User can create workspace/project and add members according to role
 
 ---
 
 ## Sprint 3 - Task Management & Collaboration
 
-**Goal**: Triển khai core task workflow.
+**Goal**: Implement core task workflow.
 
 - Task CRUD, checklist/subtask
-- Kanban drag-drop với status cố định: TODO, IN_PROGRESS, REVIEW, DONE
+- Kanban drag-drop with fixed status: TODO, IN_PROGRESS, REVIEW, DONE
 - Comment + mention
-- Notification bell (realtime scope cho notification)
+- Notification bell (realtime scope for notifications)
 
 **DoD**
 
-- Task lifecycle chạy end-to-end
-- Mention tạo notification đúng ngữ cảnh
+- Task lifecycle runs end-to-end
+- Mention creates notifications in the right context
 
 ---
 
 ## Sprint 4 - Search, Analytics, Attachments, Export (MVP Complete)
 
-**Goal**: Chốt MVP có tìm kiếm và dashboard.
+**Goal**: Final MVP with search and dashboard.
 
 - Elasticsearch integration (Spring Data Elasticsearch)
 - Batch sync PostgreSQL -> Elasticsearch
-- Search cho Task/Project/User (VI + EN)
+- Search for Task/Project/User (VI + EN)
 - KPI dashboard MVP:
   - Task throughput
   - Overdue trends
-- File upload với MinIO
+- File upload with MinIO
 - Export PDF/Excel
 
 **DoD**
 
-- Search trả kết quả đúng với filter/sort/highlight
-- KPI dashboard hiển thị đúng dữ liệu
-- File upload và export hoạt động
+- Search returns correct results with filter/sort/highlight
+- KPI dashboard displays correct data
+- File upload and export work
 
 ---
 
 ## Sprint 5 - AI Foundation
 
-**Goal**: Tạo nền tảng AI cho phase nâng cao.
+**Goal**: Create an AI foundation for the advanced phase.
 
 - LLM integration layer
 - Prompt/response contract
-- Guardrail cơ bản + fallback
-- Bắt đầu AI Smart Assign
+- Basic guardrail + fallback
+- Start AI Smart Assign
 
 **DoD**
 
-- Pipeline AI gọi được với dữ liệu thật trong môi trường dev
+- Pipeline AI can be called with real data in the dev environment
 
 ---
 
 ## Sprint 6 - AI Feature Completion
 
-**Goal**: Hoàn thiện AI nghiệp vụ chính.
+**Goal**: Complete main business AI.
 
-- AI Smart Assign hoàn chỉnh
+- Complete AI Smart Assign
 - AI Auto Subtask Generation
 - AI Chatbot RAG (Elasticsearch retrieval)
 
 **DoD**
 
-- 3 tính năng AI chạy được trong demo flow
+- 3 AI features running in demo flow
 
 ---
 
 ## Sprint 7 - Performance AI & Advanced Analytics
 
-**Goal**: Mở rộng đánh giá hiệu suất từ activity signals.
+**Goal**: Expands performance assessment from activity signals.
 
-- Performance AI evaluation (không dùng manual timer)
-- Bổ sung analytics:
+- Performance AI evaluation (do not use manual timer)
+- Additional analytics:
   - Workload by assignee
   - Comment activity
-- Tối ưu query + quality dashboard
+- Optimize query + quality dashboard
 
 **DoD**
 
-- Báo cáo hiệu suất có khả năng giải thích được từ dữ liệu hoạt động
+- Explainable performance reports from operational data
 
 ---
 
 ## Sprint 8 - Stabilization & Final Delivery
 
-**Goal**: Ổn định, chốt chất lượng và chuẩn bị bảo vệ.
+**Goal**: Stability, quality assurance and protection preparation.
 
-- Regression test
+- Regression testing
 - Bug fixing
-- Demo script
-- Slide + report final
+- Demo scripts
+- Slide + final report
 
 **DoD**
 
-- Demo ổn định toàn bộ flow chính
-- Tài liệu và trình bày hoàn thiện
+- Demo stabilizes the entire main flow
+- Complete documentation and presentation
 
 ---
 
-## IV. Backlog ưu tiên
+## IV. Priority backlog
 
 ### Must (MVP)
 
@@ -179,7 +179,7 @@ Mục tiêu: mở rộng năng lực thông minh và tối ưu chất lượng s
 - Task + Kanban + Comment + Notification bell
 - MinIO attachments
 - Elasticsearch search
-- Dashboard 2 KPI (throughput, overdue trends)
+- Dashboard 2 KPIs (throughput, overdue trends)
 - Export PDF/Excel
 
 ### Should (Phase 2)
@@ -194,18 +194,18 @@ Mục tiêu: mở rộng năng lực thông minh và tối ưu chất lượng s
 
 ## V. Risk & Mitigation
 
-1. **Scope overload với 2 dev**
+1. **Scope overload with 2 devs**
 
-- Mitigation: khóa MVP ở Sprint 4, AI dồn Phase 2.
+- Mitigation: lock MVP in Sprint 4, AI rushes Phase 2.
 
-2. **Dữ liệu search/analytics lệch với DB nguồn**
+2. **Search/analytics data is different from the source database**
 
-- Mitigation: batch sync có retry + manual reindex command.
+- Mitigation: batch sync has retry + manual reindex command.
 
-3. **AI không ổn định khi demo**
+3. **AI is unstable during demo**
 
-- Mitigation: fallback UX + mock response mode cho demo.
+- Mitigation: fallback UX + mock response mode for demo.
 
 4. **Upload/storage issue**
 
-- Mitigation: MinIO local ổn định trước; S3 để phase mở rộng.
+- Mitigation: MinIO local stabilizes first; S3 for extended phase.
