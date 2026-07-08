@@ -72,6 +72,7 @@ aws:
 
 server:
   port: 8080
+  forward-headers-strategy: framework
   servlet:
     context-path: /api/v1
   origin-allows:
