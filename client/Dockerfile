@@ -22,10 +22,9 @@ ENV VITE_API_BASE_URL=${VITE_API_BASE_URL} \
 
 COPY . .
 
-RUN echo "VITE_API_BASE_URL=${VITE_API_BASE_URL}" > .env && \
-    echo "VITE_API_AGENT_BASE_URL=${VITE_API_AGENT_BASE_URL}" >> .env && \
-    echo "VITE_WS_URL=${VITE_WS_URL}" >> .env && \
-    echo "VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}" >> .env
+RUN echo "VITE_API_BASE_URL=${VITE_API_BASE_URL}" > .env.local && \
+    echo "VITE_API_AGENT_BASE_URL=${VITE_API_AGENT_BASE_URL}" >> .env.local && \
+    echo "VITE_WS_URL=${VITE_WS_URL}" >> .env.local
 
 RUN npm run build
 
