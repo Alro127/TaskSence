@@ -1,8 +1,8 @@
 spring:
   application:
     name: TaskSense
-    backend-url: https://tasksense.io.vn/
-    frontend-url: https://tasksense.io.vn/
+    backend-url: ${APP_BACKEND_URL:https://tasksense.io.vn}
+    frontend-url: ${APP_FRONTEND_URL:https://tasksense.io.vn}
 
   datasource:
     url: jdbc:postgresql://localhost:5432/taskdb?options=-c%20TimeZone=Asia/Ho_Chi_Minh
@@ -72,6 +72,7 @@ aws:
 
 server:
   port: 8080
+  forward-headers-strategy: framework
   servlet:
     context-path: /api/v1
   origin-allows:
@@ -79,6 +80,8 @@ server:
     - http://localhost:5173
     - https://tasksense.app
     - http://localhost
+    - https://tasksense.io.vn
+    - ${APP_FRONTEND_URL:http://localhost:5173}
 
 security:
   jwt:

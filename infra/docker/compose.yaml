@@ -119,6 +119,7 @@ services:
       SPRING_ELASTICSEARCH_USERNAME: ""
       SPRING_ELASTICSEARCH_PASSWORD: ""
       SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET:?SECURITY_JWT_SECRET is required}
+      TASKSENSE_AI_SERVICE_URL: ${TASKSENSE_AI_SERVICE_URL:-http://tasksense-ai:8000}
 
       EMAIL_USERNAME: ${EMAIL_USERNAME:-}
       EMAIL_PASSWORD: ${EMAIL_PASSWORD:-}
@@ -229,9 +230,9 @@ services:
       context: ../../client
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: http://localhost/api/core/v1
-        VITE_API_AGENT_BASE_URL: http://localhost/api/chat/v1
-        VITE_WS_URL: ws://localhost/api/core/v1/ws
+        VITE_API_BASE_URL: /api/core/v1
+        VITE_API_AGENT_BASE_URL: /api/chat/v1
+        VITE_WS_URL: /api/core/v1/ws
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     container_name: tasksense_client
     restart: unless-stopped
