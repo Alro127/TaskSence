@@ -540,13 +540,13 @@ function QuickActionsCard() {
       color: "#643300",
       bg: "rgba(100,51,0,0.08)",
     },
-    {
-      icon: Settings,
-      label: "Settings",
-      onClick: () => navigate("/settings"),
-      color: "#444651",
-      bg: "rgba(68,70,81,0.08)",
-    },
+    // {
+    //   icon: Settings,
+    //   label: "Settings",
+    //   onClick: () => navigate("/settings"),
+    //   color: "#444651",
+    //   bg: "rgba(68,70,81,0.08)",
+    // },
   ];
 
   return (

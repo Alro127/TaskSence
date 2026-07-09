@@ -321,10 +321,6 @@ export function MainLayout() {
               >
                 <Menu className="h-5 w-5" />
               </button>
-
-              <p className="hidden text-xs font-medium uppercase tracking-widest text-[#444651] md:block">
-                Workspace
-              </p>
             </div>
 
             <div className="flex items-center gap-2 md:gap-3">
@@ -352,7 +348,7 @@ export function MainLayout() {
           </header>
 
           {/* Page content */}
-          <main className="flex-1 overflow-auto p-4 md:p-8">
+          <main className="flex-1 overflow-auto px-4 pb-4 pt-2 md:px-8 md:pb-8 md:pt-4">
             <Outlet />
           </main>
         </div>
