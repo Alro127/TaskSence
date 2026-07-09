@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { getApiErrorMessage } from "@/lib/utils";
+import { getApiErrorMessage, toISOStringWithTimezone } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -157,8 +157,8 @@ export function TaskFormSheet({
       description: description.trim() || undefined,
       priority: priority !== "none" ? priority : undefined,
       status: status !== "none" ? status : undefined,
-      startDate: startDate ? new Date(startDate).toISOString() : undefined,
-      dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+      startDate: startDate ? toISOStringWithTimezone(new Date(startDate)) : undefined,
+      dueDate: dueDate ? toISOStringWithTimezone(new Date(dueDate)) : undefined,
       sprintId: sprintSelection !== "NONE" ? Number(sprintSelection) : undefined,
       assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
       tagIds: tagIds.length > 0 ? tagIds : undefined,

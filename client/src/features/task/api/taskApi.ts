@@ -132,15 +132,18 @@ export const taskApi = createApi({
 
     deleteTask: builder.mutation<
       ApiResponse<void>,
-      { projectId: number; taskId: number }
+      { projectId: number; taskId: number; _parentTaskId?: number }
     >({
       query: ({ projectId, taskId }) => ({
         url: `/projects/${projectId}/tasks/${taskId}`,
         method: "DELETE",
       }),
-      invalidatesTags: (_result, _error, { projectId, taskId }) => [
+      invalidatesTags: (_result, _error, { projectId, taskId, _parentTaskId }) => [
         { type: "Task", id: `PROJECT_${projectId}` },
         { type: "Task", id: taskId },
+        ...(_parentTaskId != null
+          ? [{ type: "Task" as const, id: `SUBTASKS_${_parentTaskId}` }]
+          : []),
       ],
     }),
 

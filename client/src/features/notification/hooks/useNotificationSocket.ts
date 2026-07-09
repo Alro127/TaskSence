@@ -11,9 +11,14 @@ import { notificationApi } from "../api/notificationApi";
 import type { NotificationSocketMessage } from "@/types/api";
 import { getNotificationText } from "../utils/notificationUtils";
 
-const WS_URL =
+let WS_URL =
   (import.meta.env.VITE_WS_URL as string | undefined) ||
   "ws://localhost:8080/api/v1/ws";
+
+if (WS_URL.startsWith("/")) {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  WS_URL = `${protocol}//${window.location.host}${WS_URL}`;
+}
 
 /**
  * Manages a persistent STOMP WebSocket connection for the current user.

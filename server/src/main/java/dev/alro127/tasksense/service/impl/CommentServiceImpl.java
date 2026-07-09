@@ -229,12 +229,18 @@ public class CommentServiceImpl implements CommentService {
 
                 UserEntity currentUser = securityService.getCurrentUser();
 
-                boolean exists = reactionRepository
-                                .findByCommentIdAndUserIdAndIcon(commentId, currentUser.getId(), request.getIcon())
-                                .isPresent();
+                Optional<CommentReactionEntity> existingOpt = reactionRepository
+                                .findByCommentIdAndUserId(commentId, currentUser.getId());
 
-                if (exists)
+                if (existingOpt.isPresent()) {
+                        CommentReactionEntity existing = existingOpt.get();
+                        if (existing.getIcon().equals(request.getIcon())) {
+                                return;
+                        }
+                        existing.setIcon(request.getIcon());
+                        reactionRepository.save(existing);
                         return;
+                }
 
                 CommentEntity comment = commentRepository.findById(commentId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
