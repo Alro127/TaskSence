@@ -16,7 +16,6 @@ import {
   Activity,
   Timer,
   User,
-  Settings,
   TrendingUp,
 } from "lucide-react";
 import { motion } from "framer-motion";
