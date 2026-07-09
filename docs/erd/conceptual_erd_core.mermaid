@@ -1,0 +1,28 @@
+erDiagram
+    %% =====================================================================
+    %% CORE CONCEPTUAL/OBJECT ERD (CLEAN HIERARCHICAL LAYOUT)
+    %% =====================================================================
+
+    %% Cấu trúc phân cấp chính (Hierarchical flow)
+    User ||--o{ Workspace : "sở hữu"
+    Workspace ||--o{ WorkspaceMember : "gồm"
+    User ||--o{ WorkspaceMember : "tham gia làm"
+    
+    Workspace ||--o{ Project : "chứa"
+    Project ||--o{ ProjectMember : "gồm"
+    User ||--o{ ProjectMember : "tham gia làm"
+
+    Project ||--o{ Sprint : "thiết lập"
+    Project ||--o{ Task : "chứa"
+    Sprint |o--o{ Task : "thuộc chu kỳ"
+    Task }o--o{ User : "được giao cho"
+    Task ||--o{ Comment : "nhận"
+    Task }o--o{ Tag : "gắn nhãn"
+
+    %% Phân hệ Workflow & AI Guidance
+    Project ||--o{ Workflow : "tham chiếu quy trình"
+    Workflow ||--o{ WorkflowStep : "gồm các bước"
+    Workflow ||--o{ WorkflowGuidance : "phát sinh"
+    
+    Project ||--o| ProjectGuidanceProgress : "theo dõi tiến độ"
+    WorkflowGuidance ||--o{ ProjectGuidanceProgress : "điều khiển"

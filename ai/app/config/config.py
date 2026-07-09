@@ -136,7 +136,7 @@ def get_settings() -> Settings:
 		reload=_env_bool("RELOAD", True),
 		cors_origins=_env_csv(
 			"CORS_ORIGINS",
-			"http://localhost:3000,http://localhost:5173,https://tasksense.app",
+			"http://localhost:3000,http://localhost:5173,https://tasksense.app,https://tasksense.io.vn",
 		),
 		llm_provider=_env_str("LLM_PROVIDER", "gemini").lower(),
 		llm_embedding_provider=_env_str("LLM_EMBEDDING_PROVIDER", "openrouter").lower(),

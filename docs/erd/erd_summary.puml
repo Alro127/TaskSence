@@ -1,0 +1,161 @@
+@startuml
+!theme plain
+skinparam linetype ortho
+skinparam shadowing false
+skinparam class {
+    BackgroundColor #F8FAFC
+    BorderColor #475569
+    ArrowColor #64748B
+    FontName "Segoe UI"
+    FontSize 12
+}
+
+hide circle
+show legend
+
+legend right
+  |= Color |= Module |
+  |<#FFE4E6>| User & Security |
+  |<#FEF3C7>| Workspace & Collaboration |
+  |<#DCFCE7>| Project & Sprint |
+  |<#E0F2FE>| Task & Tag |
+  |<#F3E8FF>| Comment & Social |
+  |<#FAE8FF>| Workflow & Guidance |
+  |<#F1F5F9>| System, Chat & Integration |
+endlegend
+
+' =====================================================================
+' USER & SECURITY MODULE
+' =====================================================================
+package "User & Security" as user_module #FFE4E6 {
+  entity "users" as users
+  entity "user_skills" as user_skills
+  entity "team_templates" as team_templates
+}
+
+' =====================================================================
+' WORKSPACE & COLLABORATION MODULE
+' =====================================================================
+package "Workspace & Collaboration" as workspace_module #FEF3C7 {
+  entity "workspaces" as workspaces
+  entity "workspace_members" as workspace_members
+  entity "workspace_join_requests" as workspace_join_requests
+  entity "workspace_invites" as workspace_invites
+}
+
+' =====================================================================
+' PROJECT & SPRINT MODULE
+' =====================================================================
+package "Project & Sprint" as project_module #DCFCE7 {
+  entity "projects" as projects
+  entity "project_members" as project_members
+  entity "project_join_requests" as project_join_requests
+  entity "sprints" as sprints
+}
+
+' =====================================================================
+' TASK & TAG MODULE
+' =====================================================================
+package "Task & Tag" as task_module #E0F2FE {
+  entity "tasks" as tasks
+  entity "tags" as tags
+  entity "attachments" as attachments
+}
+
+' =====================================================================
+' COMMENT & SOCIAL MODULE
+' =====================================================================
+package "Comment & Social" as comment_module #F3E8FF {
+  entity "comments" as comments
+}
+
+' =====================================================================
+' WORKFLOW & GUIDANCE MODULE
+' =====================================================================
+package "Workflow & Guidance" as workflow_module #FAE8FF {
+  entity "workflows" as workflows
+  entity "workflow_steps" as workflow_steps
+  entity "workflow_ratings" as workflow_ratings
+  entity "workflow_favorites" as workflow_favorites
+  entity "workflow_comments" as workflow_comments
+  entity "workflow_guidance" as workflow_guidance
+  entity "project_guidance_progress" as project_guidance_progress
+  entity "project_guidance_target" as project_guidance_target
+}
+
+' =====================================================================
+' SYSTEM, CHAT & INTEGRATION MODULE
+' =====================================================================
+package "System, Chat & Integration" as system_module #F1F5F9 {
+  entity "notifications" as notifications
+  entity "chat_sessions" as chat_sessions
+  entity "chat_messages" as chat_messages
+}
+
+' =====================================================================
+' RELATIONSHIPS
+' =====================================================================
+users ||--o{ user_skills : "has skills"
+users ||--o{ team_templates : "owns team templates"
+team_templates }o--o{ users : "includes members"
+
+users ||--o{ workspaces : "owns workspaces"
+workspaces ||--o{ workspace_members : "contains"
+users ||--o{ workspace_members : "joined as member"
+workspaces ||--o{ workspace_join_requests : "receives requests"
+users ||--o{ workspace_join_requests : "submits join request"
+users |o--o{ workspace_join_requests : "reviews join request"
+workspaces ||--o{ workspace_invites : "sends invites"
+users ||--o{ workspace_invites : "created invite"
+
+workspaces ||--o{ projects : "contains projects"
+projects ||--o{ project_members : "contains"
+users ||--o{ project_members : "joined as member"
+projects ||--o{ project_join_requests : "receives requests"
+users ||--o{ project_join_requests : "submits join request"
+users |o--o{ project_join_requests : "reviews join request"
+projects ||--o{ sprints : "sprints configured"
+users ||--o{ sprints : "sprint created by"
+
+projects ||--o{ tasks : "has tasks"
+tasks |o--o{ tasks : "parent of subtask"
+sprints |o--o{ tasks : "assigned in sprint"
+users ||--o{ tasks : "created task"
+tasks }o--o{ users : "assigned to"
+projects ||--o{ tags : "defines tags"
+tasks }o--o{ tags : "tagged with"
+tasks ||--o{ attachments : "has attachments"
+users ||--o{ attachments : "uploaded attachment"
+
+tasks ||--o{ comments : "has discussion comments"
+users ||--o{ comments : "authored comment"
+comments |o--o{ comments : "reply to comment"
+comments }o--o{ users : "mentions user"
+comments }o--o{ users : "reacted by"
+
+projects ||--o{ workflows : "references source project"
+workflows |o--o{ projects : "source workflow for project"
+users ||--o{ workflows : "created workflow"
+workflows ||--o{ workflow_steps : "contains steps"
+sprints |o--o{ workflow_steps : "linked to source sprint"
+workflow_steps }o--o{ tasks : "maps task templates"
+workflows ||--o{ workflow_ratings : "receives ratings"
+users ||--o{ workflow_ratings : "rated by user"
+workflows ||--o{ workflow_favorites : "favorited by"
+users ||--o{ workflow_favorites : "favorited workflow"
+workflows ||--o{ workflow_comments : "has comments"
+users ||--o{ workflow_comments : "authored workflow comment"
+workflow_comments |o--o{ workflow_comments : "reply to comment"
+workflow_comments }o--o{ users : "mentions user"
+workflow_comments }o--o{ users : "reacted by"
+workflows ||--o{ workflow_guidance : "generates guidance spec"
+users |o--o{ workflow_guidance : "manually edited by"
+
+projects ||--o| project_guidance_progress : "has guidance tracker"
+workflow_guidance ||--o{ project_guidance_progress : "drives progress"
+project_guidance_progress ||--o{ project_guidance_target : "tracks target goals"
+
+users ||--o{ notifications : "receives notifications"
+users ||--o{ chat_sessions : "starts session"
+chat_sessions ||--o{ chat_messages : "contains messages"
+@enduml

@@ -1,0 +1,76 @@
+erDiagram
+    %% =====================================================================
+    %% SUMMARY CONCEPTUAL/OBJECT ERD (HIGH-LEVEL BUSINESS MODEL)
+    %% =====================================================================
+
+    %% 1. Phân hệ Thành viên & Kỹ năng
+    User ||--o{ Skill : "sở hữu kỹ năng"
+    User ||--o{ TeamTemplate : "tạo mẫu nhóm"
+    TeamTemplate }o--o{ User : "gồm thành viên"
+
+    %% 2. Phân hệ Không gian làm việc
+    User ||--o{ Workspace : "sở hữu không gian"
+    Workspace ||--o{ WorkspaceMember : "gồm thành viên"
+    User ||--o{ WorkspaceMember : "tham gia với vai trò"
+    Workspace ||--o{ WorkspaceJoinRequest : "nhận yêu cầu gia nhập"
+    User ||--o{ WorkspaceJoinRequest : "gửi yêu cầu gia nhập"
+    User |o--o{ WorkspaceJoinRequest : "phê duyệt yêu cầu gia nhập"
+    Workspace ||--o{ WorkspaceInvite : "phát hành thư mời"
+    User ||--o{ WorkspaceInvite : "tạo thư mời"
+
+    %% 3. Phân hệ Dự án & Agile
+    Workspace ||--o{ Project : "chứa dự án"
+    Project ||--o{ ProjectMember : "gồm thành viên"
+    User ||--o{ ProjectMember : "tham gia với vai trò"
+    Project ||--o{ ProjectJoinRequest : "nhận yêu cầu gia nhập"
+    User ||--o{ ProjectJoinRequest : "gửi yêu cầu gia nhập"
+    User |o--o{ ProjectJoinRequest : "phê duyệt yêu cầu gia nhập"
+    Project ||--o{ Sprint : "thiết lập chu kỳ"
+    User ||--o{ Sprint : "tạo chu kỳ"
+
+    %% 4. Phân hệ Công việc & Nhãn dán
+    Project ||--o{ Task : "chứa công việc"
+    Task |o--o{ Task : "chứa công việc con"
+    Sprint |o--o{ Task : "hoàn thành trong chu kỳ"
+    User ||--o{ Task : "tạo công việc"
+    Task }o--o{ User : "được giao cho"
+    Project ||--o{ Tag : "định nghĩa nhãn dán"
+    Task }o--o{ Tag : "gắn nhãn phân loại"
+    Task ||--o{ Attachment : "đính kèm tài liệu"
+    User ||--o{ Attachment : "tải lên tài liệu"
+
+    %% 5. Phân hệ Thảo luận & Tương tác
+    Task ||--o{ Comment : "nhận bình luận"
+    User ||--o{ Comment : "viết bình luận"
+    Comment |o--o{ Comment : "phản hồi bình luận"
+    Comment }o--o{ User : "nhắc tên thành viên"
+    Comment }o--o{ User : "nhận cảm xúc từ"
+
+    %% 6. Phân hệ Quy trình & AI Hướng dẫn
+    Workflow ||--o{ Project : "làm mẫu cho dự án"
+    Project ||--o{ Workflow : "tham chiếu quy trình nguồn"
+    User ||--o{ Workflow : "tạo quy trình mẫu"
+    Workflow ||--o{ WorkflowStep : "gồm các bước"
+    Sprint |o--o{ WorkflowStep : "liên kết chu kỳ nguồn"
+    WorkflowStep }o--o{ Task : "chứa mẫu việc"
+    Workflow ||--o{ WorkflowRating : "nhận đánh giá"
+    User ||--o{ WorkflowRating : "được đánh giá bởi"
+    Workflow }o--o{ User : "được yêu thích bởi"
+    Workflow ||--o{ WorkflowComment : "nhận bình luận"
+    User ||--o{ WorkflowComment : "viết bình luận"
+    WorkflowComment |o--o{ WorkflowComment : "phản hồi bình luận"
+    WorkflowComment }o--o{ User : "nhắc tên thành viên"
+    WorkflowComment }o--o{ User : "nhận cảm xúc từ"
+    Workflow ||--o{ WorkflowGuidance : "phát sinh đặc tả hướng dẫn"
+    User |o--o{ WorkflowGuidance : "chỉnh sửa đặc tả hướng dẫn"
+
+    %% Tiến trình chạy quy trình gợi ý
+    Project ||--o| ProjectGuidanceProgress : "theo dõi tiến độ quy trình"
+    WorkflowGuidance ||--o{ ProjectGuidanceProgress : "điều khiển tiến trình"
+    ProjectGuidanceProgress ||--o{ ProjectGuidanceTarget : "giám sát mục tiêu cụ thể"
+
+    %% 7. Phân hệ Trợ lý AI & Thông báo hệ thống
+    User ||--o{ Notification : "nhận thông báo"
+    User ||--o{ ChatSession : "bắt đầu phiên chat"
+    ChatSession ||--o{ ChatMessage : "chứa tin nhắn"
+    User ||--o{ Activity : "thực hiện hành động"

@@ -1,18 +1,18 @@
 ﻿# User Flows & Use Cases (Synced with UC-01 .. UC-46 from Documents.md)
 
-Tài liệu mô tả các luồng người dùng dự trên bộ 46 Use Cases mới nhất do có thay đổi về quy hoạch tính năng.
+The document describes user flows based on the latest set of 46 Use Cases due to feature planning changes.
 
 ## 1. Actors
 
-| Actor           | Mô tả                  | Quyền chính                                              |
-| :-------------- | :--------------------- | :------------------------------------------------------- |
-| Guest           | Người chưa đăng nhập   | Đăng ký, đăng nhập                                       |
-| User            | Người dùng đã xác thực | Cập nhật hồ sơ, quản lý workspace/project, thực thi task |
-| Workspace Owner | Chủ workspace          | Quản lý không gian làm việc và nhân sự cấp cao           |
-| Project Manager | Điều hành project      | Quản lý tiến độ, báo cáo, phân bổ nhân lực               |
-| Project Member  | Thành viên thực thi    | Làm task, comment, upload file                           |
-| Contributor     | Người đóng góp nổi bật | Tạo và chia sẻ workflow chuẩn cộng đồng                  |
-| AI Engine       | Tác nhân AI            | Đề xuất task, theo dõi rủi ro overload                   |
+| Actor | Description | Main rights |
+| :-------------- | :------------------------ | :-------------------------------------------------------- |
+| Guest | User not logged in | Register, log in |
+| User | Authenticated User | Update profile, manage workspace/project, execute tasks |
+| Workspace Owner | Workspace owner | Workspace management and senior personnel |
+| Project Manager | Project management | Progress management, reporting, human resource allocation |
+| Project Member | Execution member | Do tasks, comment, upload files |
+| Contributor | Featured Contributor | Create and share community-standard workflows |
+| AI Engine | AI Agent | Recommend tasks, monitor overload risks |
 
 ---
 
@@ -45,7 +45,7 @@ flowchart TD
     D --> E[Owner xử lý Request UC-14]
 ```
 
-**Mapped UC**: UC-05 đến UC-14
+**Mapped UC**: UC-05 to UC-14
 
 ### 2.3 Project Membership Flow
 
@@ -56,7 +56,7 @@ flowchart TD
     C --> D[Member tự rời/ Bị xóa]
 ```
 
-**Mapped UC**: UC-15 đến UC-24
+**Mapped UC**: UC-15 to UC-24
 
 ### 2.4 Task & Collaboration Flow
 
@@ -72,7 +72,7 @@ sequenceDiagram
     S-->>M: Cập nhật giao diện
 ```
 
-**Mapped UC**: UC-25 đến UC-31 (Đã merge Flow comment và tag)
+**Mapped UC**: UC-25 to UC-31 (Flow comments and tags merged)
 
 ### 2.5 AI & Reporting
 
@@ -86,7 +86,7 @@ flowchart LR
 
 **Mapped UC**: UC-32, UC-33, UC-34
 
-### 2.6 Workflow Knowledge Sharing Flow (Vốn tri thức)
+### 2.6 Workflow Knowledge Sharing Flow (Intellectual Capital)
 
 ```mermaid
 flowchart TD
@@ -97,7 +97,7 @@ flowchart TD
     E --> F["Tạo Project mới<br>từ Workflow mẫu (UC-43)"]
 ```
 
-**Mapped UC**: UC-35 đến UC-44
+**Mapped UC**: UC-35 to UC-44
 
 ### 2.7 Dashboard
 

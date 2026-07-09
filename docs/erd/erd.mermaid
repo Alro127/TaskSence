@@ -1,0 +1,377 @@
+erDiagram
+    %% =====================================================================
+    %% LOGICAL/CONCEPTUAL DETAILED ERD (MERMAID)
+    %% =====================================================================
+
+    %% Relationships
+    users ||--o{ user_skills : "has skills"
+    users ||--o{ team_templates : "owns team templates"
+    team_templates }o--o{ users : "includes members"
+
+    users ||--o{ workspaces : "owns workspaces"
+    workspaces ||--o{ workspace_members : "contains"
+    users ||--o{ workspace_members : "joined as member"
+    workspaces ||--o{ workspace_join_requests : "receives requests"
+    users ||--o{ workspace_join_requests : "submits join request"
+    users |o--o{ workspace_join_requests : "reviews join request"
+    workspaces ||--o{ workspace_invites : "sends invites"
+    users ||--o{ workspace_invites : "created invite"
+
+    workspaces ||--o{ projects : "contains projects"
+    projects ||--o{ project_members : "contains"
+    users ||--o{ project_members : "joined as member"
+    projects ||--o{ project_join_requests : "receives requests"
+    users ||--o{ project_join_requests : "submits join request"
+    users |o--o{ project_join_requests : "reviews join request"
+    projects ||--o{ sprints : "sprints configured"
+    users ||--o{ sprints : "sprint created by"
+
+    projects ||--o{ tasks : "has tasks"
+    tasks |o--o{ tasks : "parent of subtask"
+    sprints |o--o{ tasks : "assigned in sprint"
+    users ||--o{ tasks : "created task"
+    tasks }o--o{ users : "assigned to"
+    projects ||--o{ tags : "defines tags"
+    tasks }o--o{ tags : "tagged with"
+    tasks ||--o{ attachments : "has attachments"
+    users ||--o{ attachments : "uploaded attachment"
+
+    tasks ||--o{ comments : "has discussion comments"
+    users ||--o{ comments : "authored comment"
+    comments |o--o{ comments : "reply to comment"
+    comments }o--o{ users : "mentions user"
+    comments }o--o{ users : "reacted by"
+
+    projects ||--o{ workflows : "references source project"
+    workflows |o--o{ projects : "source workflow for project"
+    users ||--o{ workflows : "created workflow"
+    workflows ||--o{ workflow_steps : "contains steps"
+    sprints |o--o{ workflow_steps : "linked to source sprint"
+    workflow_steps }o--o{ tasks : "maps task templates"
+    workflows ||--o{ workflow_ratings : "receives ratings"
+    users ||--o{ workflow_ratings : "rated by user"
+    workflows ||--o{ workflow_favorites : "favorited by"
+    users ||--o{ workflow_favorites : "favorited workflow"
+    workflows ||--o{ workflow_comments : "has comments"
+    users ||--o{ workflow_comments : "authored workflow comment"
+    workflow_comments |o--o{ workflow_comments : "reply to comment"
+    workflow_comments }o--o{ users : "mentions user"
+    workflow_comments }o--o{ users : "reacted by"
+    workflows ||--o{ workflow_guidance : "generates guidance spec"
+    users |o--o{ workflow_guidance : "manually edited by"
+
+    projects ||--o| project_guidance_progress : "has guidance tracker"
+    workflow_guidance ||--o{ project_guidance_progress : "drives progress"
+    project_guidance_progress ||--o{ project_guidance_target : "tracks target goals"
+
+    users ||--o{ notifications : "receives notifications"
+    users ||--o{ chat_sessions : "starts session"
+    chat_sessions ||--o{ chat_messages : "contains messages"
+
+    %% Entity Definitions (No parentheses in types to prevent Mermaid errors)
+    users {
+        bigint id PK
+        varchar email UK
+        varchar password_hash
+        varchar full_name
+        boolean is_active
+        text avatar_url
+        varchar phone
+        varchar gender
+        date dob
+        text bio
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    user_skills {
+        bigint id PK
+        bigint user_id FK
+        varchar skill_name
+        int level
+    }
+
+    team_templates {
+        bigint id PK
+        bigint owner_id FK
+        varchar name
+        text description
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    workspaces {
+        bigint id PK
+        varchar name
+        text description
+        bigint owner_id FK
+        boolean is_public
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    workspace_members {
+        bigint id PK
+        bigint workspace_id FK
+        bigint user_id FK
+        varchar role
+        timestamptz joined_at
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    workspace_join_requests {
+        bigint id PK
+        bigint workspace_id FK
+        bigint user_id FK
+        varchar status
+        text message
+        bigint reviewed_by FK
+        timestamptz reviewed_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    workspace_invites {
+        bigint id PK
+        bigint workspace_id FK
+        varchar email
+        varchar role
+        varchar token UK
+        varchar status
+        bigint invited_by FK
+        timestamptz invited_at
+        timestamptz expired_at
+        timestamptz accepted_at
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    projects {
+        bigint id PK
+        bigint workspace_id FK
+        varchar name
+        text description
+        varchar status
+        date start_date
+        date end_date
+        bigint source_workflow_id FK
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    project_members {
+        bigint id PK
+        bigint project_id FK
+        bigint user_id FK
+        varchar role
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    project_join_requests {
+        bigint id PK
+        bigint project_id FK
+        bigint user_id FK
+        varchar status
+        text message
+        bigint reviewed_by FK
+        timestamptz reviewed_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    sprints {
+        bigint id PK
+        bigint project_id FK
+        varchar name
+        text goal
+        varchar status
+        date start_date
+        date end_date
+        bigint created_by FK
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    tasks {
+        bigint id PK
+        bigint project_id FK
+        bigint parent_task_id FK
+        bigint sprint_id FK
+        varchar title
+        text description
+        varchar priority
+        varchar status
+        timestamptz start_date
+        timestamptz due_date
+        timestamptz completed_at
+        int position
+        bigint created_by FK
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    tags {
+        bigint id PK
+        bigint project_id FK
+        varchar name
+        varchar color
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    attachments {
+        bigint id PK
+        bigint task_id FK
+        bigint uploader_id FK
+        text file_url
+        varchar file_type
+        bigint file_size
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    comments {
+        bigint id PK
+        bigint parent_comment_id FK
+        bigint task_id FK
+        bigint user_id FK
+        text content
+        boolean is_edited
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    workflows {
+        bigint id PK
+        bigint project_id FK
+        bigint created_by FK
+        varchar name
+        text description
+        varchar status
+        varchar generation_source
+        boolean ai_refinement_requested
+        timestamptz published_at
+        int publication_version
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    workflow_steps {
+        bigint id PK
+        bigint workflow_id FK
+        varchar title
+        text description
+        int position
+        varchar source_type
+        bigint source_sprint_id FK
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    workflow_ratings {
+        bigint id PK
+        bigint workflow_id FK
+        bigint user_id FK
+        int stars
+        text review_text
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    workflow_favorites {
+        bigint id PK
+        bigint workflow_id FK
+        bigint user_id FK
+        timestamptz created_at
+    }
+
+    workflow_comments {
+        bigint id PK
+        bigint parent_comment_id FK
+        bigint workflow_id FK
+        bigint user_id FK
+        text content
+        boolean is_edited
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    workflow_guidance {
+        bigint id PK
+        bigint workflow_id FK
+        int publication_version
+        jsonb raw_json
+        jsonb summary_json
+        timestamptz generated_at
+        boolean is_user_edited
+        bigint edited_by FK
+    }
+
+    project_guidance_progress {
+        bigint id PK
+        bigint project_id FK
+        bigint workflow_guidance_id FK
+        varchar current_step_id
+        boolean is_active
+        timestamptz started_at
+        timestamptz updated_at
+    }
+
+    project_guidance_target {
+        bigint id PK
+        bigint progress_id FK
+        varchar step_id
+        varchar target_type
+        int required_count
+        int current_count
+        jsonb target_metadata
+        boolean is_completed
+    }
+
+    notifications {
+        bigint id PK
+        bigint receiver_id FK
+        bigint actor_id
+        varchar type
+        varchar reference_type
+        bigint reference_id
+        jsonb payload
+        timestamptz read_at
+        timestamptz created_at
+    }
+
+    chat_sessions {
+        bigint id PK
+        bigint user_id FK
+        varchar title
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    chat_messages {
+        bigint id PK
+        bigint session_id FK
+        varchar role
+        text content
+        jsonb context
+        jsonb sources
+        timestamptz created_at
+    }
