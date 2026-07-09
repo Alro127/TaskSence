@@ -111,11 +111,11 @@ public class CommentController {
             @PathVariable Long commentId,
             @Valid @RequestBody CommentReactionRequest request) {
 
-        commentService.addReaction(commentId, request);
+        commentService.updateReaction(commentId, request);
 
         ApiResponse<Void> response = new ApiResponse<>(
                 "200",
-                "Add reaction successfully",
+                "Update reaction successfully",
                 null,
                 null
         );

@@ -65,6 +65,16 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
 
           const backendStepId = progress.currentStepId;
           console.log("[Guidance] Polled progress:", { backendStepId, completedCount: freshCompletedIds.size });
+
+          // Check if all steps are completed
+          const allStepsCompleted = activeGuidance.interactiveSteps.length > 0 &&
+            activeGuidance.interactiveSteps.every(s => freshCompletedIds.has(s.id));
+          
+          if (allStepsCompleted && !backendStepId) {
+            console.log("[Guidance] All steps completed, auto-dismissing overlay.");
+            setIsVisible(false);
+            return;
+          }
           
           if (!currentStepId) {
             console.log("[Guidance] Initializing currentStepId from backend:", backendStepId);
@@ -168,6 +178,20 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
           
           if (progress.isActive === false && !force) {
             console.log("[Guidance] Guidance is inactive on backend, skipping start.");
+            return;
+          }
+
+          // Check if all steps are already completed
+          const progressCompletedIds = new Set<string>(progress.completedStepIds);
+          const allStepsCompleted = guidance.interactiveSteps.length > 0 &&
+            guidance.interactiveSteps.every(s => progressCompletedIds.has(s.id));
+          
+          if (allStepsCompleted && !progress.currentStepId && !force) {
+            console.log("[Guidance] All steps already completed, skipping guidance display.");
+            setActiveGuidance(guidance);
+            setActiveProjectId(projectId);
+            setCompletedStepIds(progressCompletedIds);
+            // Don't show the overlay since everything is done
             return;
           }
 

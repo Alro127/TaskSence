@@ -285,12 +285,18 @@ public class WorkflowCommentServiceImpl implements WorkflowCommentService {
                 UserEntity currentUser = securityService.getCurrentUser();
                 WorkflowCommentEntity comment = getPublicCommentOrThrow(commentId);
 
-                boolean exists = reactionRepository
-                                .findByCommentIdAndUserIdAndIcon(commentId, currentUser.getId(), request.getIcon())
-                                .isPresent();
+                Optional<WorkflowCommentReactionEntity> existingOpt = reactionRepository
+                                .findByCommentIdAndUserId(commentId, currentUser.getId());
 
-                if (exists)
+                if (existingOpt.isPresent()) {
+                        WorkflowCommentReactionEntity existing = existingOpt.get();
+                        if (existing.getIcon().equals(request.getIcon())) {
+                                return;
+                        }
+                        existing.setIcon(request.getIcon());
+                        reactionRepository.save(existing);
                         return;
+                }
 
                 WorkflowCommentReactionEntity reaction = reactionRepository.save(WorkflowCommentReactionEntity.builder()
                                 .comment(comment)

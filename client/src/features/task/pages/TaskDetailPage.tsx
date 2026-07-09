@@ -43,7 +43,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn, getApiErrorMessage } from "@/lib/utils";
+import { cn, getApiErrorMessage, toISOStringWithTimezone } from "@/lib/utils";
 import type { TaskPriority, TaskStatus, UserSummaryResponse } from "@/types/api";
 
 import {
@@ -260,7 +260,7 @@ export function TaskDetailPage() {
       await updateTask({
         projectId,
         taskId,
-        startDate: value ? new Date(value).toISOString() : undefined,
+        startDate: value ? toISOStringWithTimezone(new Date(value)) : undefined,
       }).unwrap();
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to update start date"));
@@ -273,7 +273,7 @@ export function TaskDetailPage() {
       await updateTask({
         projectId,
         taskId,
-        dueDate: value ? new Date(value).toISOString() : undefined,
+        dueDate: value ? toISOStringWithTimezone(new Date(value)) : undefined,
       }).unwrap();
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Failed to update due date"));
@@ -335,7 +335,11 @@ export function TaskDetailPage() {
     if (!task) return;
     const taskTitle = task.title;
     try {
-      await deleteTask({ projectId, taskId }).unwrap();
+      await deleteTask({ 
+        projectId, 
+        taskId, 
+        ...(task.parentTaskId ? { _parentTaskId: task.parentTaskId } : {}) 
+      }).unwrap();
       setShowDeleteDialog(false);
       navigate(`/workspaces/${workspaceId}/projects/${projectId}/tasks`);
       const toastId = toast.success(`"${taskTitle}" deleted`, {
@@ -590,6 +594,7 @@ export function TaskDetailPage() {
               <div className="mt-3 space-y-0.5">
                 {subtasks.map((st) => {
                   const canToggleSubtask = st.permissions?.includes("UPDATE_STATUS") ?? true;
+                  const canDeleteSubtask = st.permissions?.includes("DELETE") ?? true;
                   return (
                     <div
                       key={st.id}
@@ -628,6 +633,21 @@ export function TaskDetailPage() {
                             <UserAvatar key={a.id} user={a} size="xs" />
                           ))}
                         </div>
+                      )}
+                      {canDeleteSubtask && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteTask({ projectId, taskId: st.id, _parentTaskId: taskId })
+                              .unwrap()
+                              .then(() => toast.success("Subtask deleted"))
+                              .catch((err) => toast.error(getApiErrorMessage(err, "Failed to delete subtask")));
+                          }}
+                          className="shrink-0 p-1 text-[#444651] hover:text-[#ba1a1a] opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Delete subtask"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       )}
                     </div>
                   );
