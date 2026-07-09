@@ -333,9 +333,17 @@ export function MainLayout() {
                 onClick={() => setIsProfileDrawerOpen(true)}
                 className="flex items-center gap-2 rounded-md bg-[#f4f3f1] px-2.5 py-1.5 text-sm font-medium text-[#1a1c1b] transition-colors hover:bg-[#e9e8e6] md:gap-2.5 md:px-3 md:py-2"
               >
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#233a87] text-[10px] font-bold text-white">
-                  {currentUser?.fullName?.charAt(0)?.toUpperCase() ?? "U"}
-                </div>
+                {currentUser?.avatarUrl ? (
+                  <img
+                    src={currentUser.avatarUrl}
+                    alt={currentUser.fullName || "User"}
+                    className="flex h-6 w-6 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#233a87] text-[10px] font-bold text-white">
+                    {currentUser?.fullName?.charAt(0)?.toUpperCase() ?? "U"}
+                  </div>
+                )}
                 <span className="hidden max-w-[120px] truncate sm:block">
                   {currentUser?.fullName || "Profile"}
                 </span>
